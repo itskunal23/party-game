@@ -91,20 +91,19 @@ The server is authoritative — clients never see each other's hands. Snapshots 
 
 ## How to play (Kunal & Nandini)
 
-Designed for **two phones, one room**:
+Designed for **two phones, one room** — **same link on both**:
 
-| Player | URL (prefill name) |
-|---|---|
-| Kunal | `https://your-host/?who=kunal` |
-| Nandini | `https://your-host/?who=nandini` |
+**https://party-game-armi.onrender.com**
 
-1. Both complete the questionnaire on their own phone.
-2. **Kunal** → **Start Chaos** → share the 4-letter room code.
-3. **Nandini** → enter code → **Join Chaos**.
-4. Kunal taps **Start Game**.
+(Optional: `?who=kunal` or `?who=nandini` only pre-fills a name in the questionnaire — not required.)
+
+1. Both open the link and complete the questionnaire on their own phone.
+2. **One person** → **Start Chaos** → share the 4-letter room code.
+3. **The other** → enter code → **Join Chaos**.
+4. Whoever created the room taps **Start Game**.
 5. Tap **Bartender** anytime for a couple roast using both profiles.
 
-**Same Wi‑Fi local test:** replace `localhost` with your machine's LAN IP (e.g. `http://192.168.1.42:3000/?who=kunal`).
+**Same Wi‑Fi local test:** `http://<your-lan-ip>:3000` on both phones.
 
 ---
 

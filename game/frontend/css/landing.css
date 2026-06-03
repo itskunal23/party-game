@@ -99,6 +99,20 @@
   color: rgba(91, 141, 239, 0.95);
 }
 
+.landing-same-url {
+  margin: 8px auto 0;
+  padding: 8px 14px;
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: rgba(255, 214, 10, 0.9);
+  background: rgba(255, 214, 10, 0.08);
+  border: 1px solid rgba(255, 214, 10, 0.22);
+  border-radius: 10px;
+  word-break: break-all;
+}
+
 .landing-welcome {
   margin-top: 12px;
   font-size: 14px;

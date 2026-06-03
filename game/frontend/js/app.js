@@ -740,8 +740,11 @@ function updateLandingForProfile(profile) {
   const retake = $('btn-landing-retake');
 
   if (roleEl) {
-    roleEl.textContent = LANDING_ROLE[who] ?? 'Two phones. One room. Zero dignity.';
+    roleEl.textContent = LANDING_ROLE[who] ?? 'Open this URL on both phones · one creates the room · one joins';
   }
+
+  const urlEl = $('landing-same-url');
+  if (urlEl) urlEl.textContent = window.location.host || 'party-game-armi.onrender.com';
 
   if (profile?.name && hasProfile()) {
     welcome?.classList.remove('hidden');
