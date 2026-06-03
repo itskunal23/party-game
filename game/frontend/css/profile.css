@@ -89,6 +89,43 @@
   margin-top: 1px;
 }
 
+/* ── Step dots (tap to jump) ─────────────────────────────────────────────────── */
+.pf-steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px 8px;
+  flex-shrink: 0;
+}
+
+.pf-step-dot {
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  min-height: 10px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: transform 0.15s var(--spring), background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.pf-step-dot--done {
+  background: rgba(91, 141, 239, 0.45);
+  border-color: rgba(91, 141, 239, 0.6);
+}
+
+.pf-step-dot--on {
+  transform: scale(1.35);
+  background: var(--brand-blue-bright);
+  border-color: var(--brand-blue-bright);
+  box-shadow: 0 0 12px rgba(91, 141, 239, 0.55);
+}
+
+.pf-step-dot:active { transform: scale(1.1); }
+
 /* ── Question area ──────────────────────────────────────────────────────────── */
 .pf-area {
   flex: 1;
@@ -406,17 +443,80 @@
 .pf-skip {
   padding: 0 18px;
   min-height: 56px;
-  background: transparent;
-  border: none;
-  color: rgba(255,255,255,0.35);
+  min-width: 88px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  color: rgba(255, 255, 255, 0.55);
   font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.pf-skip:active { color: rgba(255,255,255,0.6); }
+.pf-skip:active {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Kinks + limits combined screen ─────────────────────────────────────────── */
+.pf-dual-section {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.pf-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pf-section-block--kinks {
+  border-color: rgba(91, 141, 239, 0.22);
+  background: rgba(0, 51, 160, 0.08);
+}
+
+.pf-section-block--limits {
+  border-color: rgba(255, 59, 48, 0.2);
+  background: rgba(255, 59, 48, 0.05);
+}
+
+.pf-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pf-section-tag {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.pf-section-tag--kink { color: var(--brand-blue-bright); }
+.pf-section-tag--limit { color: #ff6b6b; }
+
+.pf-chip--limit.pf-chip--on,
+.pf-chips--limits .pf-chip--on {
+  background: rgba(255, 59, 48, 0.85);
+  border-color: #ff6b6b;
+  box-shadow: 0 3px 16px rgba(255, 59, 48, 0.35);
+}
+
+.pf-add-btn--limit {
+  border-color: rgba(255, 107, 107, 0.6);
+  color: #ff8a8a;
+  background: rgba(255, 59, 48, 0.12);
+}
+
+.pf-add-btn--limit:active { background: rgba(255, 59, 48, 0.22); }
 
 /* ── Completion card ────────────────────────────────────────────────────────── */
 .pf-complete-icon {

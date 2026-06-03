@@ -27,15 +27,15 @@ const QUESTIONS = [
     type: 'text',
     question: 'What the fuck\nshould we call you?',
     placeholder: 'Your name',
-    required: true,
+    required: false,
     maxLength: 20
   },
   {
     id: 'age',
     type: 'number',
     question: 'How old are\nyou, fucker?',
-    hint: '18+ only, obviously',
-    required: true,
+    hint: '18+ only — or skip if you want',
+    required: false,
     min: 18, max: 99,
     placeholder: '25'
   },
@@ -47,19 +47,12 @@ const QUESTIONS = [
     required: false
   },
   {
-    id: 'kinks',
-    type: 'chips-add',
-    question: 'What gets you\nhard / wet?',
-    hint: 'Public, CNC, taboo, drunk — pick or add your own filth',
-    options: KINKS,
-    required: false
-  },
-  {
-    id: 'limits',
-    type: 'chips-add',
-    question: 'Hard fucking limits?',
-    hint: 'Sacred lines. Bartender will NOT cross these.',
-    options: LIMITS,
+    id: '_kinksLimits',
+    type: 'kinks-limits',
+    question: 'Kinks &\nHard Limits',
+    hint: 'Into stuff up top · sacred lines down bottom · tap dots above to jump around',
+    kinkOptions: KINKS,
+    limitOptions: LIMITS,
     required: false
   },
   {
@@ -150,21 +143,47 @@ export function initProfile(el, onComplete) {
       </div>
       <div class="pf-step-num" id="pf-step-num">1 / ${QUESTIONS.length}</div>
     </div>
+    <nav class="pf-steps" id="pf-steps" aria-label="Question steps"></nav>
     <div class="pf-intro">
       <div class="pf-intro-label">Kunal & Nandini's Filth File</div>
-      <div class="pf-intro-sub">Kinks, limits, fantasies — everything Bhenchod Bartender needs to destroy you both.</div>
+      <div class="pf-intro-sub">Tap any dot to jump · Skip anytime · Back arrow works too</div>
     </div>
     <div class="pf-area" id="pf-area"></div>
     <div class="pf-bottom" id="pf-bottom">
-      <button class="pf-skip" id="pf-skip">Skip</button>
+      <button class="pf-skip" id="pf-skip">Skip →</button>
       <button class="pf-continue" id="pf-continue">Continue →</button>
     </div>`;
 
   document.getElementById('pf-back')?.addEventListener('click', _back);
   document.getElementById('pf-skip')?.addEventListener('click', _skip);
   document.getElementById('pf-continue')?.addEventListener('click', _continue);
+  _wireSwipe(el);
 
   _render(0, 'init');
+}
+
+function _wireSwipe(el) {
+  let startX = null;
+  el.addEventListener('touchstart', e => {
+    startX = e.changedTouches[0]?.clientX ?? null;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (startX == null) return;
+    const dx = (e.changedTouches[0]?.clientX ?? startX) - startX;
+    startX = null;
+    if (Math.abs(dx) < 72) return;
+    if (dx < 0 && _idx < QUESTIONS.length - 1) {
+      _save(QUESTIONS[_idx]);
+      _idx++;
+      _render(_idx, 'fwd');
+      haptic('light');
+    } else if (dx > 0 && _idx > 0) {
+      _save(QUESTIONS[_idx]);
+      _idx--;
+      _render(_idx, 'back');
+      haptic('light');
+    }
+  }, { passive: true });
 }
 
 // ─── Build roast context ──────────────────────────────────────────────────────
@@ -199,6 +218,17 @@ function _activeCard() {
 
 function _q(sel, root = _activeCard()) {
   return root?.querySelector(sel) ?? null;
+}
+
+function _chipsHTML(options, selected, onClass = 'pf-chip--on') {
+  const sel = Array.isArray(selected) ? selected : [];
+  const predefined = options.map(o =>
+    `<button type="button" class="pf-chip${sel.includes(o) ? ` ${onClass}` : ''}" data-val="${_ea(o)}">${o}</button>`
+  ).join('');
+  const custom = sel.filter(s => !options.includes(s)).map(o =>
+    `<button type="button" class="pf-chip ${onClass} pf-chip--custom" data-val="${_ea(o)}">${_e(o)} ×</button>`
+  ).join('');
+  return `${predefined}${custom}`;
 }
 
 // ─── Input HTML ───────────────────────────────────────────────────────────────
@@ -264,19 +294,47 @@ function _inputHTML(q) {
 
   if (q.type === 'chips-add') {
     const sel = Array.isArray(val) ? val : [];
-    const predefined = q.options.map(o =>
-      `<button type="button" class="pf-chip${sel.includes(o) ? ' pf-chip--on' : ''}" data-val="${_ea(o)}">${o}</button>`
-    ).join('');
-    const custom = sel.filter(s => !q.options.includes(s)).map(o =>
-      `<button type="button" class="pf-chip pf-chip--on pf-chip--custom" data-val="${_ea(o)}">${_e(o)} ×</button>`
-    ).join('');
     return `
-      <div class="pf-chips" id="pf-chips-multi">${predefined}${custom}</div>
+      <div class="pf-chips" id="pf-chips-multi">${_chipsHTML(q.options, sel)}</div>
       <div class="pf-add-row">
         <input class="pf-add-input" id="pf-add-input" type="text"
           placeholder="Type your own fuck..." maxlength="40"
           autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false">
         <button type="button" class="pf-add-btn" id="pf-add-btn">Add</button>
+      </div>`;
+  }
+
+  if (q.type === 'kinks-limits') {
+    const kinks = Array.isArray(_answers.kinks) ? _answers.kinks : [];
+    const limits = Array.isArray(_answers.limits) ? _answers.limits : [];
+    return `
+      <div class="pf-dual-section">
+        <section class="pf-section-block pf-section-block--kinks">
+          <div class="pf-section-head">
+            <span class="pf-section-tag pf-section-tag--kink">🔥 INTO</span>
+            <span class="pf-chips-count" id="pf-kinks-count">${kinks.length} picked</span>
+          </div>
+          <div class="pf-chips" id="pf-chips-kinks">${_chipsHTML(q.kinkOptions, kinks)}</div>
+          <div class="pf-add-row">
+            <input class="pf-add-input" id="pf-add-kinks" type="text"
+              placeholder="Add a kink..." maxlength="40"
+              autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false">
+            <button type="button" class="pf-add-btn" id="pf-add-kinks-btn">Add</button>
+          </div>
+        </section>
+        <section class="pf-section-block pf-section-block--limits">
+          <div class="pf-section-head">
+            <span class="pf-section-tag pf-section-tag--limit">🛑 OFF LIMITS</span>
+            <span class="pf-chips-count" id="pf-limits-count">${limits.length} picked</span>
+          </div>
+          <div class="pf-chips pf-chips--limits" id="pf-chips-limits">${_chipsHTML(q.limitOptions, limits, 'pf-chip--on pf-chip--limit')}</div>
+          <div class="pf-add-row">
+            <input class="pf-add-input" id="pf-add-limits" type="text"
+              placeholder="Add a limit..." maxlength="40"
+              autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false">
+            <button type="button" class="pf-add-btn pf-add-btn--limit" id="pf-add-limits-btn">Add</button>
+          </div>
+        </section>
       </div>`;
   }
 
@@ -319,6 +377,35 @@ function _cardHTML(q) {
     </div>`;
 }
 
+function _stepLabel(q) {
+  return q.question.split('\n')[0].slice(0, 12);
+}
+
+function _renderStepDots() {
+  const nav = document.getElementById('pf-steps');
+  if (!nav) return;
+  nav.innerHTML = QUESTIONS.map((q, i) =>
+    `<button type="button" class="pf-step-dot${i === _idx ? ' pf-step-dot--on' : ''}${i < _idx ? ' pf-step-dot--done' : ''}"
+      data-idx="${i}" aria-label="Step ${i + 1}: ${_ea(_stepLabel(q))}"
+      aria-current="${i === _idx ? 'step' : 'false'}"></button>`
+  ).join('');
+  nav.querySelectorAll('.pf-step-dot').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = parseInt(btn.dataset.idx, 10);
+      _goToStep(target);
+    });
+  });
+}
+
+function _goToStep(target) {
+  if (target < 0 || target >= QUESTIONS.length || target === _idx) return;
+  _save(QUESTIONS[_idx]);
+  haptic('light');
+  const dir = target > _idx ? 'fwd' : 'back';
+  _idx = target;
+  _render(_idx, dir);
+}
+
 function _render(idx, dir) {
   const q = QUESTIONS[idx];
   if (q.type === 'movie-search') {
@@ -341,11 +428,13 @@ function _render(idx, dir) {
 
   const skip = document.getElementById('pf-skip');
   const cont = document.getElementById('pf-continue');
-  if (skip) skip.style.display = q.required ? 'none' : '';
+  if (skip) skip.style.display = '';
   if (cont) {
     cont.textContent = idx === QUESTIONS.length - 1 ? "LET'S FUCKING GO 🔥" : 'Continue →';
     cont.style.flex = '1';
   }
+
+  _renderStepDots();
 
   const card = document.createElement('div');
   card.className = 'pf-card';
@@ -362,6 +451,62 @@ function _render(idx, dir) {
   }
 
   setTimeout(() => _wire(q), 60);
+
+  if (q.type === 'text' || q.type === 'number') {
+    setTimeout(() => _q('#pf-input', _activeCard())?.focus(), 120);
+  }
+}
+
+function _updateChipCount(root, chipsSel, countSel) {
+  const n = root?.querySelectorAll(`${chipsSel} .pf-chip--on`)?.length ?? 0;
+  const el = _q(countSel, root);
+  if (el) el.textContent = `${n} picked`;
+}
+
+function _wireChipsAdd(root, { chipsSel, inputSel, btnSel, options, onClass = 'pf-chip--on', onChange }) {
+  root.querySelectorAll(`${chipsSel} .pf-chip`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('pf-chip--custom')) { btn.remove(); onChange?.(); haptic('light'); return; }
+      btn.classList.toggle('pf-chip--on');
+      if (onClass.includes('pf-chip--limit') && btn.classList.contains('pf-chip--on')) {
+        btn.classList.add('pf-chip--limit');
+      } else {
+        btn.classList.remove('pf-chip--limit');
+      }
+      haptic('light');
+      if (btn.classList.contains('pf-chip--on')) _chipPop(btn);
+      onChange?.();
+    });
+  });
+
+  const addInput = _q(inputSel, root);
+  const doAdd = () => {
+    const val = addInput?.value?.trim();
+    if (!val) return;
+    const chips = _q(chipsSel, root);
+    const existing = [...(chips?.querySelectorAll('.pf-chip') ?? [])].find(b => b.dataset.val === val);
+    if (existing) {
+      existing.classList.add('pf-chip--on');
+      if (onClass.includes('limit')) existing.classList.add('pf-chip--limit');
+      _chipPop(existing);
+      addInput.value = '';
+      onChange?.();
+      return;
+    }
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `pf-chip ${onClass} pf-chip--custom`;
+    chip.dataset.val = val;
+    chip.textContent = `${val} ×`;
+    chip.addEventListener('click', () => { chip.remove(); onChange?.(); haptic('light'); });
+    chips?.appendChild(chip);
+    _chipPop(chip);
+    addInput.value = '';
+    haptic('medium');
+    onChange?.();
+  };
+  _q(btnSel, root)?.addEventListener('click', doAdd);
+  addInput?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
 }
 
 // ─── Event wiring ─────────────────────────────────────────────────────────────
@@ -423,35 +568,30 @@ function _wire(q) {
   }
 
   if (q.type === 'chips-add') {
-    root.querySelectorAll('#pf-chips-multi .pf-chip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.classList.contains('pf-chip--custom')) { btn.remove(); haptic('light'); return; }
-        btn.classList.toggle('pf-chip--on');
-        haptic('light');
-        if (btn.classList.contains('pf-chip--on')) _chipPop(btn);
-      });
+    _wireChipsAdd(root, {
+      chipsSel: '#pf-chips-multi',
+      inputSel: '#pf-add-input',
+      btnSel: '#pf-add-btn',
+      options: q.options
     });
+  }
 
-    const addInput = _q('#pf-add-input', root);
-    const doAdd = () => {
-      const val = addInput?.value?.trim();
-      if (!val) return;
-      const chips = _q('#pf-chips-multi', root);
-      const existing = [...(chips?.querySelectorAll('.pf-chip') ?? [])].find(b => b.dataset.val === val);
-      if (existing) { existing.classList.add('pf-chip--on'); _chipPop(existing); addInput.value = ''; return; }
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'pf-chip pf-chip--on pf-chip--custom';
-      chip.dataset.val = val;
-      chip.textContent = `${val} ×`;
-      chip.addEventListener('click', () => { chip.remove(); haptic('light'); });
-      chips?.appendChild(chip);
-      _chipPop(chip);
-      addInput.value = '';
-      haptic('medium');
-    };
-    _q('#pf-add-btn', root)?.addEventListener('click', doAdd);
-    addInput?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
+  if (q.type === 'kinks-limits') {
+    _wireChipsAdd(root, {
+      chipsSel: '#pf-chips-kinks',
+      inputSel: '#pf-add-kinks',
+      btnSel: '#pf-add-kinks-btn',
+      options: q.kinkOptions,
+      onChange: () => _updateChipCount(root, '#pf-chips-kinks', '#pf-kinks-count')
+    });
+    _wireChipsAdd(root, {
+      chipsSel: '#pf-chips-limits',
+      inputSel: '#pf-add-limits',
+      btnSel: '#pf-add-limits-btn',
+      options: q.limitOptions,
+      onClass: 'pf-chip--on pf-chip--limit',
+      onChange: () => _updateChipCount(root, '#pf-chips-limits', '#pf-limits-count')
+    });
   }
 
   if (q.type === 'movie-search') {
@@ -560,6 +700,11 @@ function _readValue(q) {
     }
     case 'chips-add':
       return [...(root?.querySelectorAll('#pf-chips-multi .pf-chip--on') ?? [])].map(c => c.dataset.val);
+    case 'kinks-limits':
+      return {
+        kinks: [...(root?.querySelectorAll('#pf-chips-kinks .pf-chip--on') ?? [])].map(c => c.dataset.val),
+        limits: [...(root?.querySelectorAll('#pf-chips-limits .pf-chip--on') ?? [])].map(c => c.dataset.val)
+      };
     case 'movie-search':
       return [..._movieSelected];
     case 'drink-why':
@@ -590,6 +735,12 @@ function _save(q) {
     const { height, weight } = val || {};
     if (height) _answers.height = height;
     if (weight) _answers.weight = weight;
+  } else if (q.type === 'kinks-limits') {
+    const { kinks, limits } = val || {};
+    if (kinks?.length) _answers.kinks = kinks;
+    else delete _answers.kinks;
+    if (limits?.length) _answers.limits = limits;
+    else delete _answers.limits;
   } else if (q.type === 'drink-why') {
     const { favDrink, drinkWhy } = val || {};
     if (favDrink) _answers.favDrink = favDrink;
@@ -605,21 +756,13 @@ function _save(q) {
 }
 
 function _continue() {
-  const q = QUESTIONS[_idx];
-  const val = _readValue(q);
-  if (!_isValid(q, val)) {
-    _shake(_q('#pf-input-wrap', _activeCard()));
-    haptic('medium');
-    return;
-  }
-  _save(q);
+  _save(QUESTIONS[_idx]);
   haptic('medium');
   if (_idx < QUESTIONS.length - 1) { _idx++; _render(_idx, 'fwd'); }
   else _complete();
 }
 
 function _skip() {
-  _save(QUESTIONS[_idx]);
   haptic('light');
   if (_idx < QUESTIONS.length - 1) { _idx++; _render(_idx, 'fwd'); }
   else _complete();
@@ -634,7 +777,11 @@ function _back() {
 }
 
 function _complete() {
-  if (!_answers.name) return;
+  if (!_answers.name) {
+    const who = new URLSearchParams(window.location.search).get('who')?.toLowerCase();
+    _answers.name = URL_NAME_KEYS[who] ?? 'Player';
+    localStorage.setItem('gfy_player_name', _answers.name);
+  }
   _answers.completedAt = Date.now();
   localStorage.setItem(PROFILE_KEY, JSON.stringify(_answers));
 
