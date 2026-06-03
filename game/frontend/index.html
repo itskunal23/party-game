@@ -199,7 +199,7 @@
   <!-- ── SCREEN: Game ───────────────────────────────────────────────────── -->
   <div id="screen-game" class="screen hidden">
 
-    <!-- Top bar -->
+    <!-- Compact stats -->
     <div class="game-topbar">
       <span class="game-topbar-item" id="deck-count">🌊 —</span>
       <span class="game-topbar-item" id="sets-progress">📦 0/13</span>
@@ -207,24 +207,22 @@
       <span class="game-topbar-item" id="my-score">📚 0</span>
     </div>
 
+    <!-- Other player — primary ask target at top -->
+    <div id="partner-zone" class="partner-zone"></div>
+
     <p id="turn-hint" class="turn-hint hidden"></p>
 
     <!-- Completed sets (face-up books) -->
     <div id="my-books-row" class="my-books-row"></div>
 
-    <!-- Opponents -->
-    <div id="opponent-zone"></div>
-
-    <!-- Center: draw pile (the pond) -->
+    <!-- Center: draw pile (the pond) — alternate swipe target -->
     <div id="center-zone">
-      <div class="draw-pile" id="draw-pile-el">
+      <div class="draw-pile draw-pile--drop" id="draw-pile-el">
         <div class="draw-pile-label">POND</div>
         <div class="draw-pile-count" id="pond-count"></div>
+        <div class="pond-ask-hint" id="pond-ask-hint">↑ or drop here to ask</div>
       </div>
     </div>
-
-    <!-- Player selector (shown during drag) -->
-    <div id="player-selector" class="hidden"></div>
 
     <!-- Action banner -->
     <div id="action-banner" class="hidden"></div>
@@ -232,22 +230,22 @@
     <!-- Your hand (fan layout — cards positioned by GSAP) -->
     <div id="hand-zone"></div>
 
-    <!-- Action zone -->
+    <!-- Action zone — what to do next -->
     <div id="action-zone"></div>
 
     <!-- Bottom toolbar -->
     <div class="game-toolbar">
-      <button class="toolbar-btn" id="btn-drink-log">
+      <button type="button" class="toolbar-btn" id="btn-drink-log">
         <span class="toolbar-icon">🍺</span>
         <span>Drinks</span>
       </button>
-      <button class="toolbar-btn" id="btn-ai-host">
-        <span class="toolbar-icon">🍸</span>
-        <span>Bartender</span>
-      </button>
-      <button class="toolbar-btn" id="btn-side-games">
+      <button type="button" class="toolbar-btn" id="btn-side-games">
         <span class="toolbar-icon">🎲</span>
         <span>Side Games</span>
+      </button>
+      <button type="button" class="toolbar-btn toolbar-btn--muted" id="btn-ai-host">
+        <span class="toolbar-icon">🍸</span>
+        <span>Roast</span>
       </button>
     </div>
 

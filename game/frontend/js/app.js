@@ -89,7 +89,7 @@ async function runSetupSequence(msg) {
   $('my-books-row')?.classList.remove('my-books-row--locked');
 
   renderHand();
-  renderOpponents();
+  renderPartnerZone();
   renderMyBooks();
   updateGameHud();
   updateActionZone();
@@ -109,13 +109,14 @@ function updateGameHud() {
   if (pondCount) pondCount.textContent = gs?.deckCount > 0 ? String(gs.deckCount) : '';
 
   const hint = $('turn-hint');
+  const partner = state.players.find(p => p.id !== state.myId);
   if (hint && gs?.phase === 'playing') {
     const cur = state.players.find(p => p.id === gs.currentTurnPlayerId);
     const isMe = gs.currentTurnPlayerId === state.myId;
     hint.classList.remove('hidden');
     hint.textContent = isMe
-      ? 'Your turn — pick a card you hold and ask someone for that set'
-      : `${cur?.name ?? '…'} is fishing for shame…`;
+      ? `Your turn — swipe a card ↑ to ${partner?.name ?? 'them'} or tap card → tap their name`
+      : `${cur?.name ?? '…'} is asking for a set…`;
   } else if (hint) {
     hint.classList.add('hidden');
   }
@@ -274,171 +275,160 @@ function renderHand() {
 
 // ─── Card tap — select / deselect with spring ─────────────────────────────────
 function _onCardTap(wrapper, card) {
-  if (!gsapReady()) return;
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
   if (!isMyTurn) return;
 
   haptic('light');
 
   if (state.selectedCard?.rank === card.rank) {
-    // Deselect — spring back to fan position
     state.selectedCard = null;
     wrapper.classList.remove('is-selected');
     wrapper.style.zIndex = wrapper._fan.z;
-    gsap.to(wrapper, { y: wrapper._fan.y, scale: 1, duration: 0.45, ease: 'back.out(1.6)', overwrite: true });
+    if (gsapReady()) {
+      gsap.to(wrapper, { y: wrapper._fan.y, scale: 1, duration: 0.45, ease: 'back.out(1.6)', overwrite: true });
+    }
   } else {
-    // Deselect previous
     if (state.selectedCard) {
       const prev = document.querySelector(`.hand-card-wrapper[data-rank="${state.selectedCard.rank}"]`);
       if (prev) {
         prev.classList.remove('is-selected');
         prev.style.zIndex = prev._fan?.z ?? 1;
-        gsap.to(prev, { y: prev._fan?.y ?? 0, scale: 1, duration: 0.32, ease: 'back.out(1.5)', overwrite: true });
+        if (gsapReady()) {
+          gsap.to(prev, { y: prev._fan?.y ?? 0, scale: 1, duration: 0.32, ease: 'back.out(1.5)', overwrite: true });
+        }
       }
     }
-    // Select with elastic spring lift
     state.selectedCard = card;
     state.selectedTarget = null;
     wrapper.classList.add('is-selected');
     wrapper.style.zIndex = 50;
-    gsap.to(wrapper, { y: -40, scale: 1.08, duration: 0.5, ease: 'elastic.out(1, 0.5)', overwrite: true });
+    if (gsapReady()) {
+      gsap.to(wrapper, { y: -40, scale: 1.08, duration: 0.5, ease: 'elastic.out(1, 0.5)', overwrite: true });
+    } else {
+      wrapper.style.transform = 'translateY(-40px) scale(1.08)';
+    }
   }
 
-  document.querySelectorAll('.opponent-card.targeted').forEach(e => e.classList.remove('targeted'));
+  document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
   updateActionZone();
+  updatePartnerHints();
 }
 
 // ─── Drag — physical card lift ────────────────────────────────────────────────
 function _onCardTouchStart(e, wrapper, card) {
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
-  if (!isMyTurn || !gsapReady()) return;
+  if (!isMyTurn) return;
   const t = e.touches[0];
-  _drag = { wrapper, card, startX: t.clientX, startY: t.clientY, dx: 0, dy: 0, active: false, overId: null };
+  _drag = { wrapper, card, startX: t.clientX, startY: t.clientY, dx: 0, dy: 0, active: false, dropTarget: null };
   haptic('light');
-  // Touch-down: slight scale increase + enhanced shadow
-  gsap.to(wrapper, { scale: 1.07, duration: 0.14, ease: 'power2.out', overwrite: true });
+  if (gsapReady()) {
+    gsap.to(wrapper, { scale: 1.07, duration: 0.14, ease: 'power2.out', overwrite: true });
+  }
+}
+
+function _setDragMode(on) {
+  $('screen-game')?.classList.toggle('game--dragging', on);
+}
+
+function _hitDropZone(cx, cy) {
+  const partners = document.querySelectorAll('.partner-drop');
+  for (const el of partners) {
+    const r = el.getBoundingClientRect();
+    if (cx >= r.left - 12 && cx <= r.right + 12 && cy >= r.top - 12 && cy <= r.bottom + 16) {
+      return { type: 'partner', playerId: el.dataset.pid, name: el.dataset.name, el };
+    }
+  }
+  const pond = $('draw-pile-el');
+  if (pond) {
+    const r = pond.getBoundingClientRect();
+    if (cx >= r.left - 16 && cx <= r.right + 16 && cy >= r.top - 16 && cy <= r.bottom + 16) {
+      const opp = state.players.find(p => p.id !== state.myId);
+      if (opp) return { type: 'pond', playerId: opp.id, name: opp.name, el: pond };
+    }
+  }
+  return null;
+}
+
+function _updateDropHover(cx, cy) {
+  document.querySelectorAll('.partner-drop, .draw-pile--drop').forEach(el => {
+    el.classList.remove('drop-hot');
+  });
+  const hit = _hitDropZone(cx, cy);
+  if (_drag) _drag.dropTarget = hit;
+  hit?.el?.classList.add('drop-hot');
 }
 
 function _onDragMove(e) {
-  if (!_drag || !gsapReady()) return;
+  if (!_drag) return;
   const t = e.touches ? e.touches[0] : e;
   _drag.dx = t.clientX - _drag.startX;
   _drag.dy = t.clientY - _drag.startY;
 
-  if (!_drag.active && _drag.dy < -22) {
+  if (!_drag.active && _drag.dy < -18) {
     _drag.active = true;
     e.preventDefault();
-    _showPlayerSelector();
+    _setDragMode(true);
+    state.selectedCard = _drag.card;
   }
 
   if (_drag.active) {
     e.preventDefault();
-    const { x, y } = _drag.wrapper._fan;
-    // Card lifts, tilts naturally with drag direction
-    gsap.set(_drag.wrapper, {
-      x: x + _drag.dx,
-      y: y + _drag.dy,
-      rotation: _drag.dx * 0.1,
-      scale: 1.12,
-      zIndex: 300
-    });
-    _updateSelectorHover(t.clientX, t.clientY);
-
-    // Nearby cards react — push away from dragged card
-    const allWrappers = [...document.querySelectorAll('.hand-card-wrapper')];
-    const dragIdx = allWrappers.indexOf(_drag.wrapper);
-    allWrappers.forEach((w, j) => {
-      if (w === _drag.wrapper || !w._fan) return;
-      const dist = Math.abs(j - dragIdx);
-      if (dist <= 2) {
-        const pushX = Math.max(0, (3 - dist)) * 8;
-        const pushY = Math.max(0, (3 - dist)) * 4;
-        const dir = j < dragIdx ? -1 : 1;
-        gsap.to(w, {
-          x: w._fan.x + dir * pushX,
-          y: w._fan.y - pushY,
-          duration: 0.22,
-          overwrite: true
-        });
-      }
-    });
+    const { x, y } = _drag.wrapper._fan ?? { x: 0, y: 0 };
+    if (gsapReady()) {
+      gsap.set(_drag.wrapper, {
+        x: x + _drag.dx,
+        y: y + _drag.dy,
+        rotation: _drag.dx * 0.1,
+        scale: 1.12,
+        zIndex: 300
+      });
+    } else {
+      _drag.wrapper.style.transform = `translate(${x + _drag.dx}px, ${y + _drag.dy}px) rotate(${_drag.dx * 0.1}deg) scale(1.12)`;
+      _drag.wrapper.style.zIndex = '300';
+    }
+    _updateDropHover(t.clientX, t.clientY);
   }
 }
 
 function _onDragEnd(e) {
-  if (!_drag || !gsapReady()) return;
+  if (!_drag) return;
   const drag = _drag;
   _drag = null;
+  _setDragMode(false);
+  document.querySelectorAll('.partner-drop, .draw-pile--drop').forEach(el => el.classList.remove('drop-hot'));
 
-  if (drag.active && drag.overId) {
+  const t = e.changedTouches?.[0];
+  const drop = t ? _hitDropZone(t.clientX, t.clientY) : drag.dropTarget;
+
+  if (drag.active && drop) {
     haptic('medium');
     state.selectedCard = drag.card;
-    state.selectedTarget = { id: drag.overId };
+    state.selectedTarget = { id: drop.playerId, name: drop.name };
     sendAsk();
-    _hidePlayerSelector();
-  } else {
-    // Spring return with momentum
-    const { x, y, rot } = drag.wrapper._fan;
-    gsap.to(drag.wrapper, {
-      x, y, rotation: rot, scale: 1,
-      duration: 0.65,
+    _springCardHome(drag.wrapper);
+    return;
+  }
+
+  _springCardHome(drag.wrapper);
+}
+
+function _springCardHome(wrapper) {
+  if (!wrapper?._fan) return;
+  const { x, y, rot } = wrapper._fan;
+  const selected = state.selectedCard?.rank === wrapper.dataset.rank;
+  const targetY = selected ? -40 : y;
+  const targetScale = selected ? 1.08 : 1;
+  if (gsapReady()) {
+    gsap.to(wrapper, {
+      x, y: targetY, rotation: rot, scale: targetScale,
+      duration: 0.55,
       ease: 'elastic.out(1, 0.52)',
       overwrite: true
     });
-    _hidePlayerSelector();
-
-    // Restore all nearby cards to fan positions
-    document.querySelectorAll('.hand-card-wrapper').forEach(w => {
-      if (!w._fan || w === drag.wrapper) return;
-      gsap.to(w, {
-        x: w._fan.x, y: w._fan.y, rotation: w._fan.rot,
-        duration: 0.42,
-        ease: 'back.out(1.5)',
-        overwrite: true
-      });
-    });
+  } else {
+    wrapper.style.transform = '';
+    wrapper.style.zIndex = selected ? '50' : String(wrapper._fan.z);
   }
-}
-
-// ─── Player selector ──────────────────────────────────────────────────────────
-function _showPlayerSelector() {
-  const sel = $('player-selector');
-  if (!sel) return;
-  sel.innerHTML = '';
-
-  const opponents = state.players.filter(p => p.id !== state.myId);
-  if (!opponents.length) return;
-
-  opponents.forEach(player => {
-    const btn = document.createElement('div');
-    btn.className = 'player-bubble';
-    btn.dataset.pid = player.id;
-    btn.textContent = player.name;
-    sel.appendChild(btn);
-  });
-
-  sel.classList.remove('hidden');
-  if (gsapReady()) {
-    gsap.fromTo(sel.children,
-      { y: 24, opacity: 0, scale: 0.9 },
-      { y: 0, opacity: 1, scale: 1, duration: 0.35, stagger: 0.07, ease: 'back.out(1.8)' }
-    );
-  }
-}
-
-function _hidePlayerSelector() {
-  $('player-selector')?.classList.add('hidden');
-}
-
-function _updateSelectorHover(cx, cy) {
-  let overId = null;
-  document.querySelectorAll('.player-bubble').forEach(b => {
-    const r = b.getBoundingClientRect();
-    const hit = cx >= r.left - 18 && cx <= r.right + 18 && cy >= r.top - 18 && cy <= r.bottom + 26;
-    b.classList.toggle('hovered', hit);
-    if (hit) overId = b.dataset.pid;
-  });
-  if (_drag) _drag.overId = overId;
 }
 
 // ─── GFY overlay — premium dramatic moment ────────────────────────────────────
@@ -497,63 +487,101 @@ function launchConfetti(container) {
   }
 }
 
-// ─── Opponent zone ────────────────────────────────────────────────────────────
-function renderOpponents() {
-  const zone = $('opponent-zone');
+// ─── Partner zone (other player at top) ───────────────────────────────────────
+function renderPartnerZone() {
+  const zone = $('partner-zone');
   if (!zone) return;
   zone.innerHTML = '';
 
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
+  const opponents = state.players.filter(p => p.id !== state.myId);
 
-  state.players.filter(p => p.id !== state.myId).forEach(p => {
+  if (!opponents.length) {
+    zone.innerHTML = '<p class="partner-empty">Waiting for your partner…</p>';
+    return;
+  }
+
+  opponents.forEach(p => {
     const isActive = p.isCurrentTurn;
     const isTargeted = state.selectedTarget?.id === p.id;
+    const hasCardSelected = !!state.selectedCard;
 
     const div = document.createElement('div');
-    div.className = `opponent-card${isActive ? ' opponent--active' : ''}${isTargeted ? ' targeted' : ''}`;
+    div.className = `partner-drop${isActive ? ' partner-drop--active' : ''}${isTargeted ? ' targeted' : ''}${hasCardSelected && isMyTurn ? ' partner-drop--ready' : ''}`;
     div.dataset.pid = p.id;
+    div.dataset.name = p.name;
+    div.setAttribute('role', 'button');
+    div.tabIndex = isMyTurn ? 0 : -1;
 
     const stack = document.createElement('div');
-    stack.className = 'opp-card-stack';
-    const show = Math.min(p.cardCount, 6);
+    stack.className = 'partner-stack';
+    const show = Math.min(p.cardCount, 5);
     for (let i = 0; i < show; i++) {
       const b = renderCardBack();
-      b.classList.add('opp-card-mini');
+      b.classList.add('partner-card-mini');
       stack.appendChild(b);
     }
     if (p.cardCount === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'opp-no-cards';
-      empty.textContent = '—';
-      stack.appendChild(empty);
+      stack.innerHTML = '<span class="partner-no-cards">No cards left</span>';
     }
 
-    const nameRow = document.createElement('div');
-    nameRow.className = 'opp-name-row';
-    nameRow.innerHTML = `<span class="opp-name">${p.name}</span>${isActive ? '<span class="opp-turn-dot"></span>' : ''}`;
+    div.innerHTML = `
+      <span class="partner-drop-badge">${isMyTurn ? 'DROP CARD TO ASK' : 'THEIR TURN'}</span>
+      <div class="partner-drop-main">
+        <div class="partner-stack-slot"></div>
+        <div class="partner-meta">
+          <span class="partner-name">${p.name}</span>
+          <span class="partner-stats">🃏 ${p.cardCount} cards · 📚 ${p.books.length} sets</span>
+          <span class="partner-hint">${isMyTurn ? '↑ Swipe a card here · or tap card then tap me' : 'Waiting for their ask…'}</span>
+        </div>
+      </div>`;
+    div.querySelector('.partner-stack-slot')?.appendChild(stack);
 
-    const booksEl = document.createElement('div');
-    booksEl.className = 'opp-books';
-    booksEl.textContent = `📚 ${p.books.length}`;
-
-    div.appendChild(nameRow);
-    div.appendChild(stack);
-    div.appendChild(booksEl);
-
+    if (!isMyTurn) div.classList.add('partner-drop--disabled');
     if (isMyTurn) {
-      div.addEventListener('click', () => selectTarget(p, div));
+      div.addEventListener('click', () => selectPartner(p, div));
     }
     zone.appendChild(div);
   });
 }
 
-function selectTarget(player, el) {
-  document.querySelectorAll('.opponent-card.targeted').forEach(e => e.classList.remove('targeted'));
-  if (state.selectedTarget?.id === player.id) { state.selectedTarget = null; updateActionZone(); return; }
+function updatePartnerHints() {
+  const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
+  document.querySelectorAll('.partner-drop').forEach(el => {
+    const hint = el.querySelector('.partner-hint');
+    if (!hint) return;
+    if (!isMyTurn) {
+      hint.textContent = 'Waiting for their ask…';
+      return;
+    }
+    if (state.selectedCard) {
+      hint.textContent = `Tap to ask for "${state.selectedCard.scenario.slice(0, 32)}${state.selectedCard.scenario.length > 32 ? '…' : ''}"`;
+      el.classList.add('partner-drop--ready');
+    } else {
+      hint.textContent = '↑ Swipe a card here · or tap card then tap me';
+      el.classList.remove('partner-drop--ready');
+    }
+  });
+}
+
+function selectPartner(player, el) {
+  if (state.gameState?.currentTurnPlayerId !== state.myId) return;
+  document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
+  if (state.selectedTarget?.id === player.id) {
+    state.selectedTarget = null;
+    updateActionZone();
+    updatePartnerHints();
+    return;
+  }
   state.selectedTarget = player;
   el.classList.add('targeted');
   haptic('light');
+  if (state.selectedCard) {
+    sendAsk();
+    return;
+  }
   updateActionZone();
+  updatePartnerHints();
 }
 
 // ─── Action zone ──────────────────────────────────────────────────────────────
@@ -561,24 +589,30 @@ function updateActionZone() {
   const zone = $('action-zone');
   if (!zone) return;
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
+  const partner = state.players.find(p => p.id !== state.myId);
 
   if (!isMyTurn) {
     const current = state.players.find(p => p.id === state.gameState?.currentTurnPlayerId);
-    zone.innerHTML = `<p class="waiting-text">${current?.name ?? '…'} is choosing…</p>`;
+    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> ${current?.name ?? 'Partner'} is picking a card to ask for…</p>`;
     return;
   }
   if (!state.selectedCard) {
-    zone.innerHTML = `<p class="waiting-text">Drag a card up — or tap then pick a player</p>`;
+    zone.innerHTML = `<p class="action-guide"><span class="action-guide-icon">①</span> Pick a card from your hand below</p>
+      <p class="action-guide action-guide--sub"><span class="action-guide-icon">②</span> Swipe it ↑ to <strong>${partner?.name ?? 'them'}</strong> or the pond</p>`;
     return;
   }
   if (!state.selectedTarget) {
-    zone.innerHTML = `<p class="waiting-text">Now tap a player above to ask them</p>`;
+    const short = state.selectedCard.scenario.length > 36
+      ? `${state.selectedCard.scenario.slice(0, 36)}…`
+      : state.selectedCard.scenario;
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">✓</span> Asking for: <strong>${short}</strong></p>
+      <p class="action-guide action-guide--sub"><span class="action-guide-icon">②</span> Swipe ↑ or tap <strong>${partner?.name ?? 'partner'}</strong> at the top</p>`;
     return;
   }
 
   zone.innerHTML = `
-    <button class="btn-ask" id="btn-ask">
-      Ask ${state.selectedTarget.name} for "${state.selectedCard.scenario}"
+    <button type="button" class="btn-ask" id="btn-ask">
+      Ask ${state.selectedTarget.name} for this set
     </button>`;
   $('btn-ask')?.addEventListener('click', sendAsk);
 }
@@ -589,7 +623,10 @@ function sendAsk() {
   API.send({ type: 'ask', rank: state.selectedCard.rank, targetId: state.selectedTarget.id });
   state.selectedCard = null;
   state.selectedTarget = null;
-  if ($('action-zone')) $('action-zone').innerHTML = `<p class="waiting-text">Waiting for response…</p>`;
+  document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
+  if ($('action-zone')) $('action-zone').innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">📨</span> Asked — waiting for their answer…</p>`;
+  updatePartnerHints();
+  renderHand();
 }
 
 // ─── Toast overlay — book completion ─────────────────────────────────────────
@@ -918,9 +955,10 @@ function wireHandlers() {
 
     if (!_dealingLocked) {
       renderHand();
-      renderOpponents();
+      renderPartnerZone();
       renderMyBooks();
       updateActionZone();
+      updatePartnerHints();
     }
 
     if (msg.gameState.lastAction) {
