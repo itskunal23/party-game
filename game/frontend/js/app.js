@@ -39,9 +39,25 @@ let _aiCooldownUntil = 0;
 let _drag = null;
 let _dealingLocked = false;
 
-// ─── Hand slot metadata (horizontal row — no overlap) ────────────────────────
-function handSlotMeta(i) {
-  return { x: 0, y: 0, rot: 0, z: i + 1 };
+const RANK_ORDER = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+function rankSortKey(rank) {
+  const i = RANK_ORDER.indexOf(rank);
+  return i === -1 ? 99 : i;
+}
+
+function _clearHandTransform(wrapper) {
+  if (!wrapper) return;
+  if (gsapReady()) gsap.killTweensOf(wrapper);
+  wrapper.style.transform = '';
+  wrapper.style.zIndex = '';
+}
+
+function _syncHandSelectionClass(wrapper) {
+  if (!wrapper) return;
+  const selected = state.selectedCard?.rank === wrapper.dataset.rank;
+  wrapper.classList.toggle('is-selected', selected);
+  wrapper.style.zIndex = selected ? '50' : '';
 }
 
 // ─── Screen helpers ───────────────────────────────────────────────────────────
@@ -287,64 +303,72 @@ function renderCardBack() {
   return div;
 }
 
-// ─── Hand rendering (horizontal row, scroll when needed) ───────────────────
+function buildHandCardStack(card, count, interactive) {
+  const stack = document.createElement('div');
+  stack.className = 'hand-card-stack';
+
+  if (count >= 3) {
+    const layer2 = document.createElement('div');
+    layer2.className = 'hand-card-stack__layer hand-card-stack__layer--2';
+    layer2.setAttribute('aria-hidden', 'true');
+    stack.appendChild(layer2);
+  }
+  if (count >= 2) {
+    const layer1 = document.createElement('div');
+    layer1.className = 'hand-card-stack__layer hand-card-stack__layer--1';
+    layer1.setAttribute('aria-hidden', 'true');
+    stack.appendChild(layer1);
+  }
+
+  stack.appendChild(renderCard(card, interactive));
+
+  if (count > 1) {
+    const badge = document.createElement('span');
+    badge.className = 'card-count-badge';
+    badge.textContent = String(count);
+    badge.setAttribute('aria-label', `${count} cards of rank ${card.rank}`);
+    stack.appendChild(badge);
+  }
+
+  return stack;
+}
+
+// ─── Hand rendering — horizontal row; duplicates stacked in one slot ─────────
 function renderHand() {
   const zone = $('hand-zone');
   if (!zone) return;
   zone.innerHTML = '';
 
-  const byScenario = {};
+  const byRank = {};
   for (const c of state.myHand) {
-    if (!byScenario[c.scenario]) byScenario[c.scenario] = [];
-    byScenario[c.scenario].push(c);
+    if (!byRank[c.rank]) byRank[c.rank] = [];
+    byRank[c.rank].push(c);
   }
 
-  const groups = Object.entries(byScenario);
+  const groups = Object.entries(byRank).sort(
+    (a, b) => rankSortKey(a[0]) - rankSortKey(b[0])
+  );
   const n = groups.length;
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
 
   zone.classList.toggle('hand-zone--centered', n > 0 && n <= 3);
 
-  groups.forEach(([, cards], i) => {
+  groups.forEach(([rank, cards], i) => {
     const card = cards[0];
-    const isSelected = state.selectedCard?.rank === card.rank;
-    const slot = handSlotMeta(i);
+    const count = cards.length;
+    const isSelected = state.selectedCard?.rank === rank;
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'hand-card-wrapper' + (isSelected ? ' is-selected' : '');
-    wrapper.dataset.rank = card.rank;
+    wrapper.className = 'hand-card-wrapper'
+      + (isSelected ? ' is-selected' : '')
+      + (count > 1 ? ' hand-card-wrapper--stacked' : '');
+    wrapper.dataset.rank = rank;
     wrapper.dataset.scenario = card.scenario;
-    wrapper._fan = slot;
-    wrapper.style.setProperty('--wobble-i', i);
-    wrapper.style.zIndex = isSelected ? 50 : slot.z;
+    wrapper.style.setProperty('--deal-i', i);
+    if (isSelected) wrapper.style.zIndex = '50';
 
-    const el = renderCard(card, isMyTurn);
-    if (cards.length > 1) {
-      const badge = document.createElement('span');
-      badge.className = 'card-count-badge';
-      badge.textContent = cards.length;
-      el.appendChild(badge);
-    }
-    wrapper.appendChild(el);
+    wrapper.appendChild(buildHandCardStack(card, count, isMyTurn));
     zone.appendChild(wrapper);
-
-    if (!gsapReady()) return;
-
-    const gsapY = isSelected ? -40 : 0;
-    const gsapScale = isSelected ? 1.08 : 1;
-    gsap.set(wrapper, { x: 0, y: gsapY, rotation: 0, scale: gsapScale });
-
-    if (!isSelected) {
-      gsap.from(wrapper, {
-        y: 48,
-        opacity: 0,
-        scale: 0.92,
-        duration: 0.45,
-        delay: i * 0.04,
-        ease: 'back.out(1.4)',
-        overwrite: true
-      });
-    }
 
     wrapper.addEventListener('touchstart', e => _onCardTouchStart(e, wrapper, card), { passive: true });
     wrapper.addEventListener('click', e => { e.stopPropagation(); _onCardTap(wrapper, card); });
@@ -364,30 +388,20 @@ function _onCardTap(wrapper, card) {
   if (state.selectedCard?.rank === card.rank) {
     state.selectedCard = null;
     wrapper.classList.remove('is-selected');
-    wrapper.style.zIndex = wrapper._fan.z;
-    if (gsapReady()) {
-      gsap.to(wrapper, { y: 0, scale: 1, duration: 0.45, ease: 'back.out(1.6)', overwrite: true });
-    }
+    _clearHandTransform(wrapper);
   } else {
     if (state.selectedCard) {
       const prev = document.querySelector(`.hand-card-wrapper[data-rank="${state.selectedCard.rank}"]`);
       if (prev) {
         prev.classList.remove('is-selected');
-        prev.style.zIndex = prev._fan?.z ?? 1;
-        if (gsapReady()) {
-          gsap.to(prev, { y: 0, scale: 1, duration: 0.32, ease: 'back.out(1.5)', overwrite: true });
-        }
+        _clearHandTransform(prev);
       }
     }
     state.selectedCard = card;
     state.selectedTarget = null;
     wrapper.classList.add('is-selected');
-    wrapper.style.zIndex = 50;
-    if (gsapReady()) {
-      gsap.to(wrapper, { y: -40, scale: 1.08, duration: 0.5, ease: 'elastic.out(1, 0.5)', overwrite: true });
-    } else {
-      wrapper.style.transform = 'translateY(-40px) scale(1.08)';
-    }
+    wrapper.style.zIndex = '50';
+    _clearHandTransform(wrapper);
   }
 
   document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
@@ -402,9 +416,6 @@ function _onCardTouchStart(e, wrapper, card) {
   const t = e.touches[0];
   _drag = { wrapper, card, startX: t.clientX, startY: t.clientY, dx: 0, dy: 0, active: false, dropTarget: null };
   haptic('light');
-  if (gsapReady()) {
-    gsap.to(wrapper, { scale: 1.07, duration: 0.14, ease: 'power2.out', overwrite: true });
-  }
 }
 
 function _setDragMode(on) {
@@ -451,23 +462,15 @@ function _onDragMove(e) {
     _setDragMode(true);
     _drag.wrapper.classList.add('is-dragging');
     state.selectedCard = _drag.card;
+    _drag.wrapper.classList.add('is-selected');
+    _drag.wrapper.style.zIndex = '300';
   }
 
   if (_drag.active) {
     e.preventDefault();
-    const baseY = state.selectedCard?.rank === _drag.wrapper.dataset.rank ? -40 : 0;
-    if (gsapReady()) {
-      gsap.set(_drag.wrapper, {
-        x: _drag.dx,
-        y: baseY + _drag.dy,
-        rotation: _drag.dx * 0.08,
-        scale: 1.1,
-        zIndex: 300
-      });
-    } else {
-      _drag.wrapper.style.transform = `translate(${_drag.dx}px, ${baseY + _drag.dy}px) rotate(${_drag.dx * 0.08}deg) scale(1.1)`;
-      _drag.wrapper.style.zIndex = '300';
-    }
+    const baseY = -40;
+    _drag.wrapper.style.transform =
+      `translate(${_drag.dx}px, ${baseY + _drag.dy}px) rotate(${_drag.dx * 0.08}deg) scale(1.1)`;
     _updateDropHover(t.clientX, t.clientY);
   }
 }
@@ -496,21 +499,10 @@ function _onDragEnd(e) {
 }
 
 function _springCardHome(wrapper) {
-  if (!wrapper?._fan) return;
-  const selected = state.selectedCard?.rank === wrapper.dataset.rank;
-  const targetY = selected ? -40 : 0;
-  const targetScale = selected ? 1.08 : 1;
-  if (gsapReady()) {
-    gsap.to(wrapper, {
-      x: 0, y: targetY, rotation: 0, scale: targetScale,
-      duration: 0.55,
-      ease: 'elastic.out(1, 0.52)',
-      overwrite: true
-    });
-  } else {
-    wrapper.style.transform = '';
-    wrapper.style.zIndex = selected ? '50' : String(wrapper._fan.z);
-  }
+  if (!wrapper) return;
+  wrapper.classList.remove('is-dragging');
+  _clearHandTransform(wrapper);
+  _syncHandSelectionClass(wrapper);
 }
 
 // ─── GFY overlay — premium dramatic moment ────────────────────────────────────

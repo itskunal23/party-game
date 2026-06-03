@@ -1,28 +1,88 @@
-/* ── Hand card wrapper (horizontal row, GSAP for lift/drag only) ─────────── */
+/* ── Hand card wrapper — flex row slot (layout stays in CSS, not GSAP) ───── */
 .hand-card-wrapper {
   position: relative;
-  flex-shrink: 0;
-  scroll-snap-align: center;
+  flex: 0 0 auto;
+  width: 132px;
   touch-action: pan-x;
   user-select: none;
   cursor: grab;
-  will-change: transform;
   -webkit-user-drag: none;
   filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45));
+  transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+  animation: handDealIn 0.42s cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
+  animation-delay: calc(var(--deal-i, 0) * 0.04s);
 }
 
-.hand-card-wrapper:not(.is-selected):not(.is-dragging) .card {
+.hand-card-wrapper--stacked {
+  width: 148px;
+  padding-left: 12px;
+}
+
+.hand-card-wrapper.is-selected {
+  animation: none;
+  transform: translateY(-40px) scale(1.08);
+  z-index: 50;
+}
+
+.hand-card-wrapper.is-dragging {
+  transition: none;
+  filter: drop-shadow(0 28px 48px rgba(0, 51, 160, 0.35));
+}
+
+.hand-card-wrapper:not(.is-selected):not(.is-dragging) .hand-card-stack .card {
   animation: handWobble 4s ease-in-out infinite;
-  animation-delay: calc(var(--wobble-i, 0) * 0.3s);
+  animation-delay: calc(var(--deal-i, 0) * 0.3s);
+}
+
+@keyframes handDealIn {
+  from { opacity: 0; transform: translateY(36px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Duplicate copies sit behind the face card in the same slot */
+.hand-card-stack {
+  position: relative;
+  width: 132px;
+  height: 192px;
+}
+
+.hand-card-stack__layer {
+  position: absolute;
+  width: 132px;
+  height: 192px;
+  border-radius: 20px;
+  border: 1px solid rgba(160, 160, 160, 0.22);
+  background: linear-gradient(160deg, #FFFEF8 0%, #F7F3EC 100%);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+  pointer-events: none;
+}
+
+.hand-card-stack__layer--1 {
+  top: -5px;
+  left: -6px;
+  z-index: 0;
+  opacity: 0.93;
+}
+
+.hand-card-stack__layer--2 {
+  top: -10px;
+  left: -12px;
+  z-index: -1;
+  opacity: 0.86;
+}
+
+.hand-card-stack .card {
+  position: relative;
+  z-index: 1;
+}
+
+.hand-card-stack .card-count-badge {
+  z-index: 3;
 }
 
 @keyframes handWobble {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
-}
-
-.hand-card-wrapper.is-dragging {
-  filter: drop-shadow(0 28px 48px rgba(0, 51, 160, 0.35));
 }
 
 .hand-card-wrapper:active { cursor: grabbing; }
@@ -124,15 +184,16 @@
   background: var(--brand-blue);
   color: white;
   font-weight: 800;
-  font-size: 11px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+  font-size: 12px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1.5px solid white;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* ── Card back ─────────────────────────────────────────────────────────────── */
