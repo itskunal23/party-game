@@ -20,8 +20,9 @@
   inset: 0;
   background:
     radial-gradient(ellipse 120% 80% at 50% -20%, rgba(0, 51, 160, 0.55) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 90% 30%, rgba(255, 45, 120, 0.14) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 60% at 10% 70%, rgba(0, 255, 200, 0.08) 0%, transparent 55%),
     radial-gradient(ellipse 80% 50% at 90% 30%, rgba(91, 141, 239, 0.22) 0%, transparent 50%),
-    radial-gradient(ellipse 70% 60% at 10% 70%, rgba(0, 34, 128, 0.35) 0%, transparent 55%),
     linear-gradient(180deg, #06102a 0%, #020612 45%, #030818 100%);
 }
 

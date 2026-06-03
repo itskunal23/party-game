@@ -55,7 +55,7 @@ export function createApp() {
   });
 
   app.post('/api/host', async (req, res) => {
-    const { mode, playerName, scenario, profile, playersContext, gameContext, streakInfo, otherPlayer } = req.body;
+    const { mode, playerName, scenario, profile, playersContext, gameContext, streakInfo, otherPlayer, sessionMemory } = req.body;
     if (!mode || !playerName) return res.status(400).json({ error: 'missing fields' });
 
     if (!AI_KEY) {
@@ -63,7 +63,7 @@ export function createApp() {
     }
 
     try {
-      const userPrompt = buildPrompt(mode, { playerName, scenario, profile, playersContext, gameContext, streakInfo, otherPlayer });
+      const userPrompt = buildPrompt(mode, { playerName, scenario, profile, playersContext, gameContext, streakInfo, otherPlayer, sessionMemory });
       const line = await nvidiaChat(HOST_MODEL, [
         { role: 'system', content: BARTENDER_PERSONA },
         { role: 'user', content: userPrompt }

@@ -1,0 +1,288 @@
+/* Multi-stage book celebration — FIFA-goal energy on Boeing Blue + neon bar */
+
+#screen-toast {
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(255, 45, 120, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 30%, rgba(0, 51, 160, 0.55) 0%, transparent 62%),
+    radial-gradient(ellipse at 80% 90%, rgba(0, 255, 200, 0.08) 0%, transparent 40%),
+    linear-gradient(165deg, #0a1028 0%, #030818 55%, #020612 100%);
+}
+
+.book-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  padding: 0 20px;
+}
+
+.book-stage--slam {
+  animation: bookSlam 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes bookSlam {
+  0%   { transform: scale(0.2) rotate(-18deg); opacity: 0; filter: blur(8px); }
+  55%  { transform: scale(1.15) rotate(4deg); opacity: 1; filter: blur(0); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.book-slam-cards {
+  display: flex;
+  gap: 4px;
+  perspective: 600px;
+}
+
+.book-slam-card {
+  width: 52px;
+  height: 72px;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #fffef8, #f0ebe0);
+  border: 2px solid var(--brand-blue);
+  box-shadow: var(--shadow-neon-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  animation: cardMerge 0.45s ease-out forwards;
+}
+
+.book-slam-card:nth-child(1) { animation-delay: 0s; transform: rotate(-12deg) translateX(20px); }
+.book-slam-card:nth-child(2) { animation-delay: 0.06s; transform: rotate(-4deg) translateX(8px); }
+.book-slam-card:nth-child(3) { animation-delay: 0.12s; transform: rotate(4deg) translateX(-8px); }
+.book-slam-card:nth-child(4) { animation-delay: 0.18s; transform: rotate(12deg) translateX(-20px); }
+
+@keyframes cardMerge {
+  to { transform: rotate(0) translateX(0); }
+}
+
+.book-stage-label {
+  font-family: var(--font-brand);
+  font-size: clamp(1.8rem, 7vw, 2.8rem);
+  color: var(--neon-gold);
+  text-shadow: 0 0 24px rgba(255, 214, 10, 0.5);
+  letter-spacing: 1px;
+}
+
+.book-dare-chip {
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.88);
+  text-align: center;
+  max-width: 320px;
+  box-shadow: var(--shadow-neon-blue);
+}
+
+.book-dare-chip strong {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--neon-cyan);
+  margin-bottom: 6px;
+}
+
+#screen-toast.screen-shake {
+  animation: screenShakeBook 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes screenShakeBook {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-6px, 2px); }
+  30% { transform: translate(6px, -2px); }
+  45% { transform: translate(-4px, 1px); }
+  60% { transform: translate(4px, -1px); }
+}
+
+/* Achievement pop */
+#achievement-toast {
+  position: fixed;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-120%);
+  z-index: 2500;
+  padding: 12px 20px;
+  border-radius: 100px;
+  background: rgba(10, 12, 28, 0.92);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 214, 10, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 51, 160, 0.45), 0 0 24px rgba(255, 45, 120, 0.15);
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  white-space: nowrap;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+#achievement-toast.is-visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Chaos event banner */
+#chaos-banner {
+  position: fixed;
+  top: calc(var(--safe-top) + 56px);
+  left: 16px;
+  right: 16px;
+  z-index: 1400;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 45, 120, 0.22), rgba(0, 51, 160, 0.35));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-align: center;
+  transform: translateY(-140%);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: var(--shadow-neon-pink);
+}
+
+#chaos-banner.is-visible {
+  transform: translateY(0);
+}
+
+.chaos-banner-title {
+  font-family: var(--font-brand);
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+  color: var(--neon-gold);
+}
+
+.chaos-banner-tag {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 4px;
+}
+
+/* Drink choice sheet */
+.drink-choice-sheet {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 24px 20px calc(var(--safe-bottom) + 20px);
+  border-radius: 24px 24px 0 0;
+  background: var(--glass-bg-mid);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+}
+
+.drink-choice-sheet h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.drink-choice-sheet p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.drink-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.drink-choice-btn {
+  min-height: 52px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.drink-choice-btn:active { transform: scale(0.97); }
+
+.drink-choice-btn--selected {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 16px rgba(0, 255, 200, 0.25);
+}
+
+.drink-choice-custom {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: white;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.drink-choice-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.drink-choice-actions button {
+  flex: 1;
+  min-height: 52px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.drink-choice-assign {
+  background: var(--brand-blue);
+  color: white;
+  box-shadow: var(--shadow-neon-blue);
+}
+
+.drink-assigned-box {
+  max-width: 340px;
+  padding: 28px 24px;
+  border-radius: 24px;
+  background: var(--glass-bg-mid);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  text-align: center;
+}
+
+.drink-assigned-box h2 {
+  font-family: var(--font-brand);
+  font-size: 1.8rem;
+  margin: 0 0 12px;
+  color: var(--neon-gold);
+}
+
+.drink-assigned-drink {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 12px 0;
+}
+
+.drink-assigned-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.drink-assigned-actions button {
+  min-height: 52px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+}

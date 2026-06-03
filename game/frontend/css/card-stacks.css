@@ -1,23 +1,38 @@
 /* ── Hand card wrapper (fan positioned, GSAP controlled) ─────────────────── */
 .hand-card-wrapper {
   position: absolute;
-  bottom: 16px;
+  bottom: 20px;
   left: 50%;
-  margin-left: -55px;
+  margin-left: -68px;
   touch-action: none;
   user-select: none;
   cursor: grab;
   will-change: transform;
   -webkit-user-drag: none;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45));
+}
+
+.hand-card-wrapper:not(.is-selected):not(.is-dragging) {
+  animation: handWobble 4s ease-in-out infinite;
+  animation-delay: calc(var(--wobble-i, 0) * 0.3s);
+}
+
+@keyframes handWobble {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.hand-card-wrapper.is-dragging {
+  filter: drop-shadow(0 28px 48px rgba(0, 51, 160, 0.35));
 }
 
 .hand-card-wrapper:active { cursor: grabbing; }
 
 /* ── Card base ─────────────────────────────────────────────────────────────── */
 .card {
-  width: 110px;
-  height: 160px;
-  border-radius: 18px;
+  width: 132px;
+  height: 192px;
+  border-radius: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -50,9 +65,10 @@
 /* Selected state */
 .hand-card-wrapper.is-selected .card--face {
   box-shadow:
-    0 24px 52px rgba(0,0,0,0.65),
-    0 4px 12px rgba(0,0,0,0.4),
+    0 32px 64px rgba(0,0,0,0.7),
     0 0 0 3px var(--brand-blue),
+    0 0 32px rgba(0, 51, 160, 0.5),
+    0 0 48px rgba(255, 45, 120, 0.12),
     inset 0 1px 0 rgba(255,255,255,0.85);
 }
 

@@ -6,7 +6,11 @@ import { apiPost } from './api.js';
 import {
   hasProfile, getProfile, initProfile, clearProfile, buildProfileContext
 } from './profile.js';
-import { initLandingMotion, wireLandingJoin } from './landing.js';
+import {
+  createSessionState, recordEvent, updateStatsFromAction, onBookComplete,
+  formatSessionMemory
+} from './session-memory.js';
+import { maybeTriggerChaos, clearExpiredChaos } from './chaos-events.js';
 
 let _pendingRoomCode = null;
 
@@ -22,10 +26,14 @@ let state = {
   selectedTarget: null,
   roomCode: null,
   profile: null,
-  playerStats: {}
+  playerStats: {},
+  session: null,
+  pendingDrinkChoice: null,
+  _shownPendingDrinkKeys: new Set()
 };
 
 let _lastCommentedActionSig = null;
+let _lastProcessedActionSig = null;
 let _aiCooldownUntil = 0;
 let _drag = null;
 let _dealingLocked = false;
@@ -180,6 +188,41 @@ function playTone(freq, type, duration, vol = 0.22) {
 function playDeal() { playTone(440, 'sine', 0.08, 0.15); }
 function playGFY()  { [220, 196, 165].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.15), i * 70)); }
 function playBook() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.28), i * 90)); }
+function playBookSlam() {
+  [180, 220, 280, 440].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.12, 0.28), i * 55));
+  setTimeout(playBook, 400);
+}
+
+function _wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function showAchievementToast(ach) {
+  const el = $('achievement-toast');
+  if (!el || !ach) return;
+  el.textContent = `${ach.emoji} ${ach.label} unlocked!`;
+  el.classList.add('is-visible');
+  haptic('heavy');
+  setTimeout(() => el.classList.remove('is-visible'), 3200);
+}
+
+function showChaosBanner(event) {
+  const el = $('chaos-banner');
+  if (!el || !event) return;
+  el.innerHTML = `
+    <div class="chaos-banner-title">${event.emoji} ${event.title}</div>
+    <div class="chaos-banner-tag">${event.tagline}</div>`;
+  el.classList.remove('hidden');
+  el.classList.add('is-visible');
+  haptic('heavy');
+  recordEvent(state.session, {
+    type: 'chaos',
+    playerName: 'Room',
+    summary: `Chaos: ${event.title}`
+  });
+  setTimeout(() => {
+    el.classList.remove('is-visible');
+    setTimeout(() => el.classList.add('hidden'), 500);
+  }, 4500);
+}
 
 // ─── GSAP guard ───────────────────────────────────────────────────────────────
 function gsapReady() { return typeof gsap !== 'undefined'; }
@@ -237,6 +280,7 @@ function renderHand() {
     wrapper.dataset.rank = card.rank;
     wrapper.dataset.scenario = card.scenario;
     wrapper._fan = pos;
+    wrapper.style.setProperty('--wobble-i', i);
     wrapper.style.zIndex = isSelected ? 50 : pos.z;
 
     const el = renderCard(card, isMyTurn);
@@ -251,8 +295,8 @@ function renderHand() {
 
     if (!gsapReady()) return;
 
-    const gsapY = isSelected ? -40 : pos.y;
-    const gsapScale = isSelected ? 1.08 : 1;
+    const gsapY = isSelected ? -52 : pos.y;
+    const gsapScale = isSelected ? 1.1 : 1;
     gsap.set(wrapper, { x: pos.x, y: gsapY, rotation: pos.rot, scale: gsapScale });
 
     if (!isSelected) {
@@ -306,7 +350,7 @@ function _onCardTap(wrapper, card) {
     wrapper.classList.add('is-selected');
     wrapper.style.zIndex = 50;
     if (gsapReady()) {
-      gsap.to(wrapper, { y: -40, scale: 1.08, duration: 0.5, ease: 'elastic.out(1, 0.5)', overwrite: true });
+      gsap.to(wrapper, { y: -52, scale: 1.1, duration: 0.5, ease: 'elastic.out(1, 0.5)', overwrite: true });
     } else {
       wrapper.style.transform = 'translateY(-40px) scale(1.08)';
     }
@@ -371,6 +415,7 @@ function _onDragMove(e) {
     _drag.active = true;
     e.preventDefault();
     _setDragMode(true);
+    _drag.wrapper.classList.add('is-dragging');
     state.selectedCard = _drag.card;
   }
 
@@ -398,6 +443,7 @@ function _onDragEnd(e) {
   const drag = _drag;
   _drag = null;
   _setDragMode(false);
+  drag.wrapper?.classList.remove('is-dragging');
   document.querySelectorAll('.partner-drop, .draw-pile--drop').forEach(el => el.classList.remove('drop-hot'));
 
   const t = e.changedTouches?.[0];
@@ -419,8 +465,8 @@ function _springCardHome(wrapper) {
   if (!wrapper?._fan) return;
   const { x, y, rot } = wrapper._fan;
   const selected = state.selectedCard?.rank === wrapper.dataset.rank;
-  const targetY = selected ? -40 : y;
-  const targetScale = selected ? 1.08 : 1;
+  const targetY = selected ? -52 : y;
+  const targetScale = selected ? 1.1 : 1;
   if (gsapReady()) {
     gsap.to(wrapper, {
       x, y: targetY, rotation: rot, scale: targetScale,
@@ -608,16 +654,12 @@ function updateActionZone() {
     const short = state.selectedCard.scenario.length > 36
       ? `${state.selectedCard.scenario.slice(0, 36)}…`
       : state.selectedCard.scenario;
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">✓</span> Asking for: <strong>${short}</strong></p>
-      <p class="action-guide action-guide--sub"><span class="action-guide-icon">②</span> Swipe ↑ or tap <strong>${partner?.name ?? 'partner'}</strong> at the top</p>`;
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">✓</span> <strong>${short}</strong></p>
+      <p class="action-guide action-guide--sub"><span class="action-guide-icon">↑</span> Throw it at <strong>${partner?.name ?? 'partner'}</strong> — swipe or tap them</p>`;
     return;
   }
 
-  zone.innerHTML = `
-    <button type="button" class="btn-ask" id="btn-ask">
-      Ask ${state.selectedTarget.name} for this set
-    </button>`;
-  $('btn-ask')?.addEventListener('click', sendAsk);
+  zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">📨</span> Releasing…</p>`;
 }
 
 function sendAsk() {
@@ -632,20 +674,153 @@ function sendAsk() {
   renderHand();
 }
 
-// ─── Toast overlay — book completion ─────────────────────────────────────────
-function showToast(playerName, scenario) {
+// ─── Multi-stage book celebration ───────────────────────────────────────────
+async function showBookCelebration(playerName, scenario, playerId) {
+  const meta = scenarioMeta(scenario);
+  const toastScreen = $('screen-toast');
   const el = $('toast-content');
-  if (el) {
-    el.innerHTML = `Sweet I officially have<br><span class="toast-card">${scenario}</span><br><span class="toast-name">— ${playerName}</span>`;
-  }
+  if (!el) return;
+
   showScreen('toast');
   haptic('heavy');
-  playBook();
+
+  // Stage 1 — cards slam together
+  el.innerHTML = `
+    <div class="book-stage book-stage--slam">
+      <div class="book-slam-cards">
+        <div class="book-slam-card">${meta.emoji}</div>
+        <div class="book-slam-card">${meta.emoji}</div>
+        <div class="book-slam-card">${meta.emoji}</div>
+        <div class="book-slam-card">${meta.emoji}</div>
+      </div>
+      <div class="book-stage-label">SET LOCKED</div>
+    </div>`;
+  playBookSlam();
+  await _wait(900);
+
+  // Stage 2 — screen shake
+  toastScreen?.classList.add('screen-shake');
+  haptic('heavy');
+  await _wait(550);
+  toastScreen?.classList.remove('screen-shake');
+
+  // Stage 3 — official book phrase
+  el.innerHTML = `Sweet I officially have<br><span class="toast-card">${scenario}</span><br><span class="toast-name">— ${playerName}</span>`;
   if (gsapReady()) {
-    gsap.from('#toast-content', { scale: 0.45, opacity: 0, duration: 0.55, ease: 'elastic.out(1, 0.45)' });
+    gsap.from('#toast-content', { scale: 0.5, opacity: 0, duration: 0.5, ease: 'elastic.out(1, 0.45)' });
     launchConfetti($('screen-toast'));
   }
-  setTimeout(() => { if (state.screen === 'toast') showScreen('game'); }, 3200);
+  await _wait(1400);
+
+  // Stage 4 — dare chip (short, not a paragraph wall)
+  const dareShort = meta.dare?.length > 120 ? `${meta.dare.slice(0, 117)}…` : meta.dare;
+  el.innerHTML += `
+    <div class="book-dare-chip">
+      <strong>Dare</strong>
+      ${dareShort ?? 'Do the filth.'}
+    </div>`;
+  if (gsapReady()) {
+    gsap.from('.book-dare-chip', { y: 24, opacity: 0, duration: 0.4, ease: 'power2.out' });
+  }
+  await _wait(2200);
+
+  if (state.screen === 'toast') showScreen('game');
+}
+
+// ─── Drink assignment UI ──────────────────────────────────────────────────────
+const DRINK_PRESET_LABELS = [
+  { label: 'Beer 🍺', drinkLabel: 'Beer' },
+  { label: 'Wine 🍷', drinkLabel: 'Wine' },
+  { label: 'Shot 🥃', drinkLabel: 'Shot' },
+  { label: 'Cocktail 🍹', drinkLabel: 'Cocktail' }
+];
+
+function showChooseLoserDrink(msg) {
+  const panel = $('drink-choice-panel');
+  const content = $('drink-choice-content');
+  if (!panel || !content || !msg.losers?.length) return;
+
+  state.pendingDrinkChoice = msg;
+  const loser = msg.losers[0];
+  let selected = DRINK_PRESET_LABELS[0].drinkLabel;
+
+  content.innerHTML = `
+    <div class="drink-choice-sheet">
+      <h2>Assign the drink</h2>
+      <p>${loser.name} takes it for completing your set — <em>${msg.scenario.slice(0, 48)}${msg.scenario.length > 48 ? '…' : ''}</em></p>
+      <div class="drink-choice-grid" id="drink-choice-grid">
+        ${DRINK_PRESET_LABELS.map((d, i) =>
+          `<button type="button" class="drink-choice-btn${i === 0 ? ' drink-choice-btn--selected' : ''}" data-drink="${d.drinkLabel}">${d.label}</button>`
+        ).join('')}
+      </div>
+      <input class="drink-choice-custom" id="drink-choice-custom" type="text" placeholder="Or name their poison…" maxlength="40" autocomplete="off">
+      <div class="drink-choice-actions">
+        <button type="button" class="drink-choice-assign" id="drink-choice-assign">Assign drink</button>
+      </div>
+    </div>`;
+
+  panel.classList.remove('hidden');
+  haptic('medium');
+
+  content.querySelectorAll('.drink-choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      content.querySelectorAll('.drink-choice-btn').forEach(b => b.classList.remove('drink-choice-btn--selected'));
+      btn.classList.add('drink-choice-btn--selected');
+      selected = btn.dataset.drink;
+      haptic('light');
+    });
+  });
+
+  $('drink-choice-assign')?.addEventListener('click', () => {
+    const custom = $('drink-choice-custom')?.value?.trim();
+    const drinkLabel = custom || selected;
+    API.send({
+      type: 'chooseDrink',
+      loserId: loser.id,
+      drinkLabel,
+      scenario: msg.scenario
+    });
+    panel.classList.add('hidden');
+    state.pendingDrinkChoice = null;
+    haptic('heavy');
+  }, { once: true });
+}
+
+function showDrinkAssignedModal(pending) {
+  if (!pending?.length) return;
+  const latest = pending[pending.length - 1];
+  const key = `${latest.scenario}-${latest.drinkLabel}-${latest.assignedBy}`;
+  if (state._shownPendingDrinkKeys.has(key)) return;
+  state._shownPendingDrinkKeys.add(key);
+
+  const modal = $('drink-assigned-modal');
+  if (!modal) return;
+
+  modal.innerHTML = `
+    <div class="drink-assigned-box">
+      <h2>Drink assigned</h2>
+      <p>${latest.assignedBy ?? latest.toastFor ?? 'Partner'} says you drink:</p>
+      <div class="drink-assigned-drink">${latest.drinkLabel}</div>
+      <p style="font-size:13px;color:var(--text-secondary)">For set: ${latest.scenario.slice(0, 40)}…</p>
+      <div class="drink-assigned-actions">
+        <button type="button" class="drink-choice-assign" id="drink-log-now">🍺 Log it now</button>
+        <button type="button" style="background:rgba(255,255,255,0.1);color:white" id="drink-skip">Skip</button>
+      </div>
+    </div>`;
+  modal.classList.remove('hidden');
+  haptic('heavy');
+
+  $('drink-log-now')?.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    $('bac-panel-container')?.classList.remove('hidden');
+    haptic('light');
+  }, { once: true });
+
+  $('drink-skip')?.addEventListener('click', () => {
+    API.send({ type: 'skipDrink', scenario: latest.scenario });
+    modal.classList.add('hidden');
+    haptic('light');
+  }, { once: true });
 }
 
 // ─── Action banner ────────────────────────────────────────────────────────────
@@ -725,13 +900,13 @@ function renderLobbyPlayers(players) {
 
 // ─── Home screen profile display ─────────────────────────────────────────────
 const BARTENDER_PREVIEW_LINES = [
-  "Bhenchod — Kunal dom energy, Nandini sub energy. Paatal Lok writers could never.",
+  "Bhenchod — Kunal dom, Nandini sub. Paatal Lok writers could never.",
   "Dhurandhar-level filth on your questionnaire. Same team, zero mercy.",
   "Farzi chaos on the cards. Kunal runs the table — absolute cinema.",
   "Dhootha twist energy tonight. Kunal in charge, Nandini taking it.",
   "Bad Boy of Bollywood roast loaded. Limits sacred. Kinks weaponized.",
   "The Night Manager of this room is Kunal. Bartender just narrates.",
-  "Hathiram read your filth files. Case closed. You're both fucked.",
+  "Hathiram in Paatal Lok read your filth files. Case closed.",
   "Samay Raina meets Mirzapur — dom/sub, not couple warfare.",
 ];
 
@@ -877,22 +1052,30 @@ function showBartenderTranscript(line) {
   }
 }
 
+function _bartenderSessionContext(playerName) {
+  const stats = state.playerStats[state.players.find(p => p.name === playerName)?.id ?? state.myId] ?? {};
+  return formatSessionMemory(state.session, stats, playerName);
+}
+
 async function triggerBartender(mode, opts = {}) {
   const now = Date.now();
   if (now < _aiCooldownUntil) return;
   _aiCooldownUntil = now + 5000;
 
   const playersContext = opts.playersContext ?? _buildPlayersContext();
+  const playerName = opts.playerName ?? 'Player';
+  const sessionMemory = opts.sessionMemory ?? _bartenderSessionContext(playerName);
 
   const result = await apiPost('/api/host', {
     mode,
-    playerName: opts.playerName,
+    playerName,
     scenario:   opts.scenario   ?? null,
     profile:    opts.profile    ?? null,
     playersContext,
     streakInfo: opts.streakInfo ?? null,
     otherPlayer: opts.otherPlayer ?? null,
-    gameContext: `${state.players.length} players — Kunal & Nandini session`
+    sessionMemory,
+    gameContext: opts.gameContext ?? `${state.players.length} players — Kunal & Nandini session`
   }).catch(() => null);
 
   if (result?.line) showBartenderTranscript(result.line);
@@ -900,23 +1083,57 @@ async function triggerBartender(mode, opts = {}) {
 
 function _ensureStats(playerId) {
   if (!state.playerStats[playerId]) {
-    state.playerStats[playerId] = { gfyMisses: 0, luckyDraws: 0, steals: 0, books: 0, consecutiveMisses: 0 };
+    state.playerStats[playerId] = {
+      gfyMisses: 0, luckyDraws: 0, steals: 0, books: 0,
+      consecutiveMisses: 0, successfulAsks: 0, consecutiveBooks: 0,
+      _achievements: new Set()
+    };
   }
   return state.playerStats[playerId];
 }
 
 function updatePlayerStats(action, players) {
-  const s = _ensureStats(action.fromId);
-  if (action.type === 'gfy') {
-    if (action.continueTurn) { s.luckyDraws++; s.consecutiveMisses = 0; }
-    else { s.gfyMisses++; s.consecutiveMisses++; }
-  } else if (action.type === 'got') {
-    s.steals += action.count ?? 1;
-    s.consecutiveMisses = 0;
-  }
+  _ensureStats(action.fromId);
+  _processAction(state.session, action, players);
   if (players) {
     players.forEach(p => { _ensureStats(p.id).books = p.books?.length ?? 0; });
   }
+}
+
+function _processAction(session, action, players) {
+  if (!session) return;
+  clearExpiredChaos(session);
+
+  const earned = updateStatsFromAction(state.playerStats[action.fromId] ?? _ensureStats(action.fromId), action);
+  earned.forEach(a => showAchievementToast(a));
+
+  const fromP = players?.find(p => p.id === action.fromId);
+  if (action.type === 'got') {
+    recordEvent(session, {
+      type: 'got',
+      playerName: fromP?.name,
+      summary: `${fromP?.name ?? '?'} stole ${action.count} cards`
+    });
+  } else if (action.type === 'gfy') {
+    recordEvent(session, {
+      type: action.continueTurn ? 'lucky' : 'gfy',
+      playerName: fromP?.name,
+      summary: action.continueTurn
+        ? `${fromP?.name ?? '?'} lucky pond draw`
+        : `${fromP?.name ?? '?'} GFY miss`
+    });
+    if (!action.continueTurn && session.pondTax && action.fromId === state.myId) {
+      showDrinkAssignedModal([{
+        scenario: 'Pond Tax',
+        drinkLabel: 'One drink — Pond Tax',
+        assignedBy: 'Chaos Event',
+        toastFor: 'Bartender'
+      }]);
+    }
+  }
+
+  const chaos = maybeTriggerChaos(session);
+  if (chaos) showChaosBanner(chaos);
 }
 
 // ─── WebSocket event routing ──────────────────────────────────────────────────
@@ -955,7 +1172,10 @@ function wireHandlers() {
   API.onMessage('gameStarted', msg => {
     acquireWakeLock();
     state.playerStats = {};
+    state.session = createSessionState();
+    state._shownPendingDrinkKeys = new Set();
     _lastCommentedActionSig = null;
+    _lastProcessedActionSig = null;
     _aiCooldownUntil = 0;
     showScreen('game');
     runSetupSequence(msg);
@@ -966,6 +1186,7 @@ function wireHandlers() {
     state.players = msg.players;
     state.gameState = msg.gameState;
     state.pendingDrinks = msg.pendingDrinks;
+    if (msg.pendingDrinks?.length) showDrinkAssignedModal(msg.pendingDrinks);
 
     updateGameHud();
 
@@ -980,8 +1201,12 @@ function wireHandlers() {
     if (msg.gameState.lastAction) {
       const action = msg.gameState.lastAction;
       const sig = JSON.stringify(action);
-      updatePlayerStats(action, msg.players);
-      showActionBanner(action);
+
+      if (sig !== _lastProcessedActionSig) {
+        _lastProcessedActionSig = sig;
+        updatePlayerStats(action, msg.players);
+        showActionBanner(action);
+      }
 
       if (sig !== _lastCommentedActionSig && action.type === 'gfy' && action.fromId === state.myId) {
         _lastCommentedActionSig = sig;
@@ -1005,8 +1230,16 @@ function wireHandlers() {
   });
 
   API.onMessage('bookComplete', msg => {
-    showToast(msg.playerName, msg.scenario);
+    onBookComplete(state.playerStats, msg.playerId);
     _ensureStats(msg.playerId).books++;
+    recordEvent(state.session, {
+      type: 'book',
+      playerName: msg.playerName,
+      summary: `${msg.playerName} completed book "${msg.scenario.slice(0, 30)}…"`
+    });
+
+    showBookCelebration(msg.playerName, msg.scenario, msg.playerId);
+
     const isMe = msg.playerId === state.myId;
     const profile = isMe
       ? getProfile()
@@ -1019,8 +1252,10 @@ function wireHandlers() {
       profile,
       streakInfo,
       otherPlayer: _partnerName(msg.playerId)
-    }), 3400);
+    }), 4800);
   });
+
+  API.onMessage('chooseLoserDrink', msg => showChooseLoserDrink(msg));
 
   API.onMessage('gameOver', msg => showResults(msg));
   API.onMessage('error', msg => showBanner(msg.message, true));
@@ -1152,7 +1387,12 @@ export function init() {
 
   const bacContainer = $('bac-panel-container');
   if (bacContainer) {
-    initBac(bacContainer, drink => API.send({ type: 'logDrink', drink }));
+    initBac(bacContainer, drink => {
+      const payload = state.session?.powerHour
+        ? { ...drink, oz: (drink.oz ?? 12) * 2, label: `${drink.label} (Power Hour)` }
+        : drink;
+      API.send({ type: 'logDrink', drink: payload });
+    });
   }
 
   state.profile = getProfile();

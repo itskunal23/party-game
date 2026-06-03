@@ -1,4 +1,4 @@
-const CACHE = 'gfy-v5';
+const CACHE = 'gfy-v6';
 
 const STATIC_SHELL = [
   '/',
@@ -7,9 +7,11 @@ const STATIC_SHELL = [
   '/css/styles.css',
   '/css/landing.css',
   '/css/profile.css',
+  '/css/profile-gate.css',
   '/css/card-stacks.css',
   '/css/game-theatre.css',
   '/css/gfy-board.css',
+  '/css/book-celebration.css',
   '/js/app.js',
   '/js/landing.js',
   '/js/api.js',
@@ -17,6 +19,8 @@ const STATIC_SHELL = [
   '/js/bac.js',
   '/js/mobile.js',
   '/js/profile.js',
+  '/js/session-memory.js',
+  '/js/chaos-events.js',
   '/js/sidegames/hub.js',
   '/js/sidegames/uno.js',
   '/offline.html'

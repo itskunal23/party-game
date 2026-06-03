@@ -30,9 +30,11 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/landing.css">
   <link rel="stylesheet" href="/css/profile.css">
+  <link rel="stylesheet" href="/css/profile-gate.css">
   <link rel="stylesheet" href="/css/card-stacks.css">
   <link rel="stylesheet" href="/css/game-theatre.css">
   <link rel="stylesheet" href="/css/gfy-board.css">
+  <link rel="stylesheet" href="/css/book-celebration.css">
 
   <!-- GSAP -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
@@ -65,7 +67,7 @@
             <span class="lp-logo-mark">GFY</span>
             <h1 class="lp-logo">GO FUCK<br>YOURSELF</h1>
           </div>
-          <p class="lp-tagline">The party card game<br>where your friends tell you<br>to go fuck yourself.</p>
+          <p class="lp-tagline">Late-night bar energy.<br>Two phones. One filthy host.<br>Absolute cinema.</p>
 
           <div class="lp-hero-actions">
             <button type="button" class="lp-btn lp-btn--primary" data-lp-start id="btn-lp-start-hero">Start Chaos</button>
@@ -118,7 +120,7 @@
           <div class="lp-chat">
             <p class="lp-chat-scene">Kunal whiffs a draw — still runs the room.</p>
             <blockquote class="lp-chat-bubble lp-chat-bubble--host">
-              Sloppy dom hour, saala — Hathiram would still let you lead the case.
+              Sloppy dom hour, saala — Hathiram in Paatal Lok would still let you lead the case.
             </blockquote>
             <p class="lp-chat-scene">Nandini completes a set.</p>
             <blockquote class="lp-chat-bubble lp-chat-bubble--host">
@@ -391,6 +393,10 @@
     <div class="gfy-text">GO FUCK<br>YOURSELF</div>
     <div class="gfy-sub" id="gfy-sub"></div>
   </div>
+
+  <!-- Achievement + chaos overlays -->
+  <div id="achievement-toast" aria-live="polite"></div>
+  <div id="chaos-banner" class="hidden" aria-live="assertive"></div>
 
   <!-- Bhenchod Bartender transcript — tap to dismiss -->
   <div id="bartender-transcript" class="hidden" role="button" tabindex="0" aria-label="Dismiss bartender roast">

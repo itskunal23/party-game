@@ -1,7 +1,7 @@
 /* Bangers loaded via <link> in HTML — SF Pro resolved by OS on iOS/macOS */
 
 :root {
-  <!-- Brand - Boeing Blue party palette -->
+  /* Brand — Boeing Blue anchor + neon cocktail bar accents */
   --brand-blue: #0033A0;
   --brand-blue-light: #4A6CC0;
   --brand-blue-bright: #5B8DEF;
@@ -11,6 +11,16 @@
   --brand-silver: #C0C0C0;
   --brand-white: #FFFFFF;
   --brand-ice: #A8D4FF;
+
+  /* Neon cocktail bar (Jackbox × late-night bar × Apple glass) */
+  --neon-pink: #FF2D78;
+  --neon-cyan: #00FFC8;
+  --neon-gold: #FFD60A;
+  --neon-magenta-glow: rgba(255, 45, 120, 0.45);
+  --neon-cyan-glow: rgba(0, 255, 200, 0.35);
+  --shadow-neon-blue: 0 0 32px rgba(0, 51, 160, 0.55), 0 0 64px rgba(91, 141, 239, 0.2);
+  --shadow-neon-pink: 0 0 28px rgba(255, 45, 120, 0.35);
+  --shadow-neon-gold: 0 0 24px rgba(255, 214, 10, 0.4);
 
   /* Legacy aliases */
   --brand-orange: var(--brand-blue);
@@ -54,21 +64,24 @@
   --radius-xl: 28px;
   --radius-full: 100px;
 
-  /* Liquid Glass */
-  --glass-bg: rgba(26, 26, 36, 0.78);
-  --glass-bg-mid: rgba(18, 18, 28, 0.88);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-border-subtle: rgba(255, 255, 255, 0.07);
-  --glass-blur: blur(40px) saturate(180%);
-  --glass-blur-light: blur(20px) saturate(150%);
+  /* Liquid Glass — dark bar surfaces */
+  --glass-bg: rgba(12, 14, 32, 0.82);
+  --glass-bg-mid: rgba(8, 10, 24, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-border-subtle: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(40px) saturate(200%);
+  --glass-blur-light: blur(24px) saturate(170%);
 
   /* Text */
   --text-primary: rgba(255, 255, 255, 0.95);
   --text-secondary: rgba(255, 255, 255, 0.52);
   --text-tertiary: rgba(255, 255, 255, 0.28);
 
-  /* Background base */
+  /* Background base — late-night bar */
   --bg-base: #030818;
+  --bg-bar-radial: radial-gradient(ellipse 90% 60% at 50% -10%, rgba(0, 51, 160, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 95% 20%, rgba(255, 45, 120, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 35% at 5% 80%, rgba(0, 255, 200, 0.06) 0%, transparent 45%);
 
   /* Shadows */
   --shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07);
@@ -108,7 +121,7 @@ body {
   height: 100%;
   height: 100dvh;
   overflow: hidden;
-  background: var(--bg-base);
+  background: var(--bg-bar-radial), var(--bg-base);
   font-family: var(--font-body);
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;

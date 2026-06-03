@@ -1,0 +1,39 @@
+/* Profile gate + quick picks — 60-second onboarding path */
+.pf-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+  margin: 8px auto 0;
+}
+
+.pf-gate-btn {
+  min-height: 56px;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  letter-spacing: -0.2px;
+}
+
+.pf-gate-btn--play {
+  background: var(--brand-blue);
+  color: white;
+  box-shadow: var(--shadow-neon-blue);
+}
+
+.pf-gate-btn--more {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--glass-border);
+}
+
+.pf-quick-count {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  margin: 0 0 12px;
+}

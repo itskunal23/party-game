@@ -25,14 +25,66 @@ const QUESTIONS = [
   {
     id: 'name',
     type: 'text',
+    tier: 'core',
     question: 'What the fuck\nshould we call you?',
     placeholder: 'Your name',
     required: false,
     maxLength: 20
   },
   {
+    id: 'weight',
+    type: 'pick-one',
+    tier: 'core',
+    question: 'How much do\nyou weigh?',
+    hint: 'US lbs — calibrates drunk meter · tap one',
+    required: false,
+    autoAdvance: true,
+    options: [
+      { label: 'Under 130 lbs', sub: 'Lightweight', value: 120 },
+      { label: '130 – 170 lbs', sub: 'Middleweight', value: 150 },
+      { label: '171 – 210 lbs', sub: 'Heavy hitter', value: 190 },
+      { label: '211+ lbs', sub: 'Absolute unit', value: 230 }
+    ]
+  },
+  {
+    id: 'partnerRoast',
+    type: 'text',
+    tier: 'core',
+    question: 'Roast me\nfor what?',
+    placeholder: 'Habits, kinks, things they know too well…',
+    hint: 'Goes straight to Bhenchod Bartender',
+    required: false,
+    maxLength: 150
+  },
+  {
+    id: 'mediaFaves',
+    type: 'movie-search',
+    tier: 'core',
+    question: 'Favorite movie\nor show?',
+    placeholder: 'Paatal Lok, Dhurandhar, Farzi…',
+    hint: 'Tap suggestions — up to 3 titles',
+    required: false
+  },
+  {
+    id: 'quickKinks',
+    type: 'quick-picks',
+    tier: 'core',
+    question: 'Pick 3\ninterests',
+    hint: 'Tap up to 3 — bartender ammo',
+    max: 3,
+    options: KINKS.slice(0, 18),
+    required: false
+  },
+  {
+    id: '_gate',
+    type: 'gate',
+    question: 'Core file\nlocked.',
+    hint: '~60 seconds done. Play now or add more filth?'
+  },
+  {
     id: 'age',
     type: 'pick-one',
+    tier: 'extended',
     question: 'How old are\nyou, fucker?',
     hint: '18+ only — tap your range',
     required: false,
@@ -47,6 +99,7 @@ const QUESTIONS = [
   {
     id: 'height',
     type: 'pick-one',
+    tier: 'extended',
     question: 'How tall\nare you?',
     hint: 'US feet — tap one',
     required: false,
@@ -59,24 +112,11 @@ const QUESTIONS = [
     ]
   },
   {
-    id: 'weight',
-    type: 'pick-one',
-    question: 'How much do\nyou weigh?',
-    hint: 'US lbs — calibrates your drunk meter',
-    required: false,
-    autoAdvance: true,
-    options: [
-      { label: 'Under 130 lbs', sub: 'Lightweight', value: 120 },
-      { label: '130 – 170 lbs', sub: 'Middleweight', value: 150 },
-      { label: '171 – 210 lbs', sub: 'Heavy hitter', value: 190 },
-      { label: '211+ lbs', sub: 'Absolute unit', value: 230 }
-    ]
-  },
-  {
     id: '_kinksLimits',
     type: 'kinks-limits',
+    tier: 'extended',
     question: 'Kinks &\nHard Limits',
-    hint: 'Into stuff up top · sacred lines down bottom · tap dots above to jump around',
+    hint: 'Into stuff up top · sacred lines down bottom',
     kinkOptions: KINKS,
     limitOptions: LIMITS,
     required: false
@@ -84,31 +124,16 @@ const QUESTIONS = [
   {
     id: 'fantasyConfess',
     type: 'text',
-    question: "Dirtiest fantasy\nyou'll actually admit?",
+    tier: 'extended',
+    question: "Dirtiest fantasy\nyou'll admit?",
     placeholder: 'The one that would end you on roast night...',
     required: false,
     maxLength: 120
   },
   {
-    id: 'partnerRoast',
-    type: 'text',
-    question: 'What should the bartender\nroast you for tonight?',
-    placeholder: 'Kinks, habits, things Kunal/Nandini knows too well...',
-    hint: 'This goes straight to Bhenchod Bartender. No mercy.',
-    required: false,
-    maxLength: 150
-  },
-  {
-    id: 'mediaFaves',
-    type: 'movie-search',
-    question: 'Dark cinema\nthat owns you?',
-    placeholder: 'Dhurandhar, Paatal Lok, Sacred Games...',
-    hint: 'AI suggests more filth — tap to add',
-    required: false
-  },
-  {
     id: '_drink',
     type: 'drink-why',
+    tier: 'extended',
     question: "What's your\nfucking poison?",
     hint: 'Drink + why the fuck you drink it',
     required: false
@@ -116,6 +141,7 @@ const QUESTIONS = [
   {
     id: 'swearWord',
     type: 'text',
+    tier: 'extended',
     question: "Fav fucking\nswear word?",
     placeholder: 'e.g. bhenchod, fuck, cunt...',
     required: false,
@@ -180,7 +206,7 @@ export function initProfile(el, onComplete) {
     <nav class="pf-steps" id="pf-steps" aria-label="Question steps"></nav>
     <div class="pf-intro">
       <div class="pf-intro-label">Kunal & Nandini's Filth File</div>
-      <div class="pf-intro-sub">Tap a row on age/size screens · Skip anytime · Dots jump you around</div>
+      <div class="pf-intro-sub">Core file in ~60 sec · Play now at the gate · Skip anytime</div>
     </div>
     <div class="pf-area" id="pf-area"></div>
     <div class="pf-bottom" id="pf-bottom">
@@ -483,6 +509,21 @@ function _inputHTML(q) {
         placeholder="Why the fuck though..." maxlength="150">${_e(_answers.drinkWhy ?? '')}</textarea>`;
   }
 
+  if (q.type === 'quick-picks') {
+    const sel = Array.isArray(_answers.kinks) ? _answers.kinks : [];
+    return `
+      <p class="pf-quick-count" id="pf-quick-count">${sel.length} / ${q.max ?? 3} picked</p>
+      <div class="pf-chips" id="pf-chips-quick">${_chipsHTML(q.options, sel)}</div>`;
+  }
+
+  if (q.type === 'gate') {
+    return `
+      <div class="pf-gate">
+        <button type="button" class="pf-gate-btn pf-gate-btn--play" id="pf-gate-play">🔥 Play now</button>
+        <button type="button" class="pf-gate-btn pf-gate-btn--more" id="pf-gate-more">Add more filth</button>
+      </div>`;
+  }
+
   return '';
 }
 
@@ -548,13 +589,14 @@ function _render(idx, dir) {
   const skip = document.getElementById('pf-skip');
   const cont = document.getElementById('pf-continue');
   const isPickOne = q.type === 'pick-one';
+  const isGate = q.type === 'gate';
   if (skip) {
-    skip.style.display = '';
+    skip.style.display = isGate ? 'none' : '';
     skip.classList.toggle('pf-skip--solo', isPickOne);
   }
   if (cont) {
     cont.textContent = idx === QUESTIONS.length - 1 ? "Let's fucking go" : 'Continue';
-    cont.style.display = isPickOne ? 'none' : '';
+    cont.style.display = (isPickOne || isGate) ? 'none' : '';
     cont.disabled = false;
     cont.classList.remove('pf-continue--busy');
   }
@@ -737,6 +779,38 @@ function _wire(q) {
     });
   }
 
+  if (q.type === 'quick-picks') {
+    const max = q.max ?? 3;
+    root.querySelectorAll('#pf-chips-quick .pf-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const on = btn.classList.contains('pf-chip--on');
+        const count = root.querySelectorAll('#pf-chips-quick .pf-chip--on').length;
+        if (!on && count >= max) {
+          haptic('heavy');
+          _shake(root.querySelector('#pf-quick-count'));
+          return;
+        }
+        btn.classList.toggle('pf-chip--on');
+        haptic('light');
+        if (btn.classList.contains('pf-chip--on')) _chipPop(btn);
+        const n = root.querySelectorAll('#pf-chips-quick .pf-chip--on').length;
+        const el = _q('#pf-quick-count', root);
+        if (el) el.textContent = `${n} / ${max} picked`;
+      });
+    });
+  }
+
+  if (q.type === 'gate') {
+    _q('#pf-gate-play', root)?.addEventListener('click', () => {
+      haptic('heavy');
+      _complete();
+    });
+    _q('#pf-gate-more', root)?.addEventListener('click', () => {
+      haptic('medium');
+      if (_idx < QUESTIONS.length - 1) { _idx++; _render(_idx, 'fwd'); }
+    });
+  }
+
   if (q.type === 'movie-search') {
     const movieInput = _q('#pf-movie-input', root);
     movieInput?.addEventListener('input', () => {
@@ -791,6 +865,10 @@ function _fetchMovieSuggestions(query, root = _activeCard()) {
 
 function _addMovie(title, root = _activeCard()) {
   if (_movieSelected.includes(title)) return;
+  if (_movieSelected.length >= 3) {
+    haptic('heavy');
+    return;
+  }
   _movieSelected.push(title);
   const selectedEl = _q('#pf-movie-selected', root);
   if (!selectedEl) return;
@@ -852,6 +930,8 @@ function _readValue(q) {
       };
     case 'movie-search':
       return [..._movieSelected];
+    case 'quick-picks':
+      return [...(root?.querySelectorAll('#pf-chips-quick .pf-chip--on') ?? [])].map(c => c.dataset.val);
     case 'drink-why':
       return {
         favDrink: _q('#pf-drink-input', root)?.value?.trim() ?? '',
@@ -890,10 +970,19 @@ function _save(q) {
     const { favDrink, drinkWhy } = val || {};
     if (favDrink) _answers.favDrink = favDrink;
     if (drinkWhy) _answers.drinkWhy = drinkWhy;
+  } else if (q.type === 'quick-picks') {
+    if (val?.length) _answers.kinks = val;
+    else delete _answers.kinks;
+  } else if (q.type === 'gate') {
+    /* gate actions call _complete or advance directly */
   } else {
     const empty = val === null || val === '' || (Array.isArray(val) && !val.length);
     if (!empty) {
-      _answers[q.id] = val;
+      if (q.id === 'weight' && typeof val === 'number') {
+        _answers.weight = { value: val, unit: 'lb' };
+      } else {
+        _answers[q.id] = val;
+      }
       if (q.id === 'name') localStorage.setItem('gfy_player_name', String(val));
     }
   }
