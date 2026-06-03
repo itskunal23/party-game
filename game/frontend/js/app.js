@@ -11,6 +11,7 @@ import {
   formatSessionMemory
 } from './session-memory.js';
 import { maybeTriggerChaos, clearExpiredChaos } from './chaos-events.js';
+import { initLandingMotion, wireLandingJoin } from './landing.js';
 
 let _pendingRoomCode = null;
 
