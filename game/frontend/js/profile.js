@@ -47,12 +47,6 @@ const QUESTIONS = [
     required: false
   },
   {
-    id: 'describe5',
-    type: 'words5',
-    question: 'Describe your\nfilthy self in 5 words',
-    required: false
-  },
-  {
     id: 'kinks',
     type: 'chips-add',
     question: 'What gets you\nhard / wet?',
@@ -197,6 +191,16 @@ export function buildProfileContext(profile) {
   return lines.filter(Boolean).join('\n');
 }
 
+// ─── DOM helpers (avoid duplicate IDs while cards animate out) ────────────────
+function _activeCard() {
+  const cards = document.querySelectorAll('#pf-area .pf-card');
+  return cards.length ? cards[cards.length - 1] : null;
+}
+
+function _q(sel, root = _activeCard()) {
+  return root?.querySelector(sel) ?? null;
+}
+
 // ─── Input HTML ───────────────────────────────────────────────────────────────
 function _inputHTML(q) {
   const val = _answers[q.id];
@@ -213,6 +217,7 @@ function _inputHTML(q) {
       <div class="pf-numunit pf-numunit--solo">
         <button type="button" class="pf-stepper" data-d="-1">−</button>
         <input class="pf-num-input" id="pf-input" type="number"
+          inputmode="numeric" pattern="[0-9]*"
           min="${q.min}" max="${q.max}" step="1"
           value="${val ?? ''}" placeholder="${q.placeholder ?? ''}">
         <button type="button" class="pf-stepper" data-d="1">+</button>
@@ -348,21 +353,12 @@ function _render(idx, dir) {
 
   const area = document.getElementById('pf-area');
   if (!area) return;
-  const old = area.querySelector('.pf-card');
+  area.querySelector('.pf-card')?.remove();
+  area.appendChild(card);
 
-  if (dir === 'init' || !old || typeof gsap === 'undefined') {
-    if (old) old.remove();
-    area.appendChild(card);
-    if (typeof gsap !== 'undefined') {
-      gsap.from(card, { y: 48, opacity: 0, duration: 0.5, ease: 'back.out(1.4)' });
-    }
-  } else {
-    const outY = dir === 'fwd' ? -56 : 56;
-    const inY  = dir === 'fwd' ?  72 : -72;
-    area.appendChild(card);
-    gsap.set(card, { y: inY, opacity: 0 });
-    gsap.to(old, { y: outY, opacity: 0, duration: 0.2, ease: 'power2.in', onComplete: () => old.remove() });
-    gsap.to(card, { y: 0, opacity: 1, duration: 0.44, ease: 'back.out(1.5)', delay: 0.12 });
+  if (typeof gsap !== 'undefined') {
+    const fromY = dir === 'back' ? -56 : dir === 'init' ? 48 : 72;
+    gsap.from(card, { y: fromY, opacity: 0, duration: 0.44, ease: 'back.out(1.5)' });
   }
 
   setTimeout(() => _wire(q), 60);
@@ -370,39 +366,45 @@ function _render(idx, dir) {
 
 // ─── Event wiring ─────────────────────────────────────────────────────────────
 function _wire(q) {
+  const root = _activeCard();
+  if (!root) return;
+
   if (q.type === 'text') {
-    document.getElementById('pf-input')?.addEventListener('keydown', e => {
+    _q('#pf-input', root)?.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); _continue(); }
     });
   }
 
   if (q.type === 'number') {
-    document.querySelectorAll('.pf-stepper').forEach(btn => {
+    root.querySelectorAll('.pf-stepper').forEach(btn => {
       btn.addEventListener('click', () => {
-        const input = document.getElementById('pf-input');
+        const input = _q('#pf-input', root);
         if (!input) return;
-        const cur = parseInt(input.value) || parseInt(input.placeholder) || q.min;
-        const next = Math.min(q.max, Math.max(q.min, cur + parseInt(btn.dataset.d)));
+        const cur = parseInt(input.value, 10);
+        const base = Number.isNaN(cur) ? q.min : cur;
+        const next = Math.min(q.max, Math.max(q.min, base + parseInt(btn.dataset.d, 10)));
         input.value = next;
         haptic('light');
       });
     });
-    document.getElementById('pf-input')?.addEventListener('keydown', e => {
+    _q('#pf-input', root)?.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); _continue(); }
     });
   }
 
   if (q.type === 'body-stats') {
-    document.querySelectorAll('.pf-stepper').forEach(btn => {
+    root.querySelectorAll('.pf-stepper').forEach(btn => {
       btn.addEventListener('click', () => {
         const field = btn.dataset.field;
-        const input = document.getElementById(field === 'height' ? 'pf-height-val' : 'pf-weight-val');
+        const input = _q(field === 'height' ? '#pf-height-val' : '#pf-weight-val', root);
         if (!input) return;
         const isH = field === 'height';
         const [min, max, step] = isH ? [4.0, 7.5, 0.1] : [66, 440, 1];
-        const cur = parseFloat(input.value) || parseFloat(input.placeholder) || min;
-        const next = Math.min(max, Math.max(min, cur + parseInt(btn.dataset.d) * step));
-        input.value = isH ? next.toFixed(1) : Math.round(next);
+        const cur = parseFloat(input.value);
+        const base = Number.isNaN(cur) ? (isH ? parseFloat(input.placeholder) : parseInt(input.placeholder, 10)) : cur;
+        const delta = parseInt(btn.dataset.d, 10) * step;
+        const next = Math.min(max, Math.max(min, base + delta));
+        input.value = isH ? next.toFixed(1) : String(Math.round(next));
         haptic('light');
       });
     });
@@ -410,10 +412,10 @@ function _wire(q) {
 
   if (q.type === 'words5') {
     for (let i = 0; i < 5; i++) {
-      document.getElementById(`pf-word-${i}`)?.addEventListener('keydown', e => {
+      _q(`#pf-word-${i}`, root)?.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === 'Tab') {
           e.preventDefault();
-          const next = document.getElementById(`pf-word-${i + 1}`);
+          const next = _q(`#pf-word-${i + 1}`, root);
           if (next) next.focus(); else _continue();
         }
       });
@@ -421,7 +423,7 @@ function _wire(q) {
   }
 
   if (q.type === 'chips-add') {
-    document.querySelectorAll('#pf-chips-multi .pf-chip').forEach(btn => {
+    root.querySelectorAll('#pf-chips-multi .pf-chip').forEach(btn => {
       btn.addEventListener('click', () => {
         if (btn.classList.contains('pf-chip--custom')) { btn.remove(); haptic('light'); return; }
         btn.classList.toggle('pf-chip--on');
@@ -430,13 +432,13 @@ function _wire(q) {
       });
     });
 
-    const addInput = document.getElementById('pf-add-input');
+    const addInput = _q('#pf-add-input', root);
     const doAdd = () => {
       const val = addInput?.value?.trim();
       if (!val) return;
-      const existing = [...document.querySelectorAll('#pf-chips-multi .pf-chip')].find(b => b.dataset.val === val);
+      const chips = _q('#pf-chips-multi', root);
+      const existing = [...(chips?.querySelectorAll('.pf-chip') ?? [])].find(b => b.dataset.val === val);
       if (existing) { existing.classList.add('pf-chip--on'); _chipPop(existing); addInput.value = ''; return; }
-      const chips = document.getElementById('pf-chips-multi');
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'pf-chip pf-chip--on pf-chip--custom';
@@ -448,26 +450,28 @@ function _wire(q) {
       addInput.value = '';
       haptic('medium');
     };
-    document.getElementById('pf-add-btn')?.addEventListener('click', doAdd);
+    _q('#pf-add-btn', root)?.addEventListener('click', doAdd);
     addInput?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
   }
 
   if (q.type === 'movie-search') {
-    const movieInput = document.getElementById('pf-movie-input');
+    const movieInput = _q('#pf-movie-input', root);
     movieInput?.addEventListener('input', () => {
       clearTimeout(_movieDebounce);
       const query = movieInput.value.trim();
-      if (!query) { document.getElementById('pf-movie-suggestions').innerHTML = ''; return; }
-      _movieDebounce = setTimeout(() => _fetchMovieSuggestions(query), 600);
+      const suggestEl = _q('#pf-movie-suggestions', root);
+      if (!query) { if (suggestEl) suggestEl.innerHTML = ''; return; }
+      _movieDebounce = setTimeout(() => _fetchMovieSuggestions(query, root), 600);
     });
     movieInput?.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         e.preventDefault();
         const val = movieInput.value.trim();
-        if (val) { _addMovie(val); movieInput.value = ''; document.getElementById('pf-movie-suggestions').innerHTML = ''; }
+        const suggestEl = _q('#pf-movie-suggestions', root);
+        if (val) { _addMovie(val, root); movieInput.value = ''; if (suggestEl) suggestEl.innerHTML = ''; }
       }
     });
-    document.querySelectorAll('.pf-chip--movie').forEach(btn => {
+    root.querySelectorAll('.pf-chip--movie').forEach(btn => {
       btn.addEventListener('click', () => {
         _movieSelected = _movieSelected.filter(m => m !== btn.dataset.val);
         btn.remove(); haptic('light'); _updateMovieEmpty();
@@ -476,8 +480,8 @@ function _wire(q) {
   }
 }
 
-function _fetchMovieSuggestions(query) {
-  const suggestEl = document.getElementById('pf-movie-suggestions');
+function _fetchMovieSuggestions(query, root = _activeCard()) {
+  const suggestEl = _q('#pf-movie-suggestions', root);
   if (!suggestEl) return;
   suggestEl.innerHTML = `<span class="pf-loading">🎬 Finding filth...</span>`;
   fetch('/api/movie-suggest', {
@@ -493,7 +497,7 @@ function _fetchMovieSuggestions(query) {
     ).join('');
     suggestEl.querySelectorAll('.pf-chip--suggest').forEach(btn => {
       btn.addEventListener('click', () => {
-        _addMovie(btn.dataset.val);
+        _addMovie(btn.dataset.val, root);
         btn.remove();
         haptic('light');
       });
@@ -502,10 +506,10 @@ function _fetchMovieSuggestions(query) {
   .catch(() => { suggestEl.innerHTML = ''; });
 }
 
-function _addMovie(title) {
+function _addMovie(title, root = _activeCard()) {
   if (_movieSelected.includes(title)) return;
   _movieSelected.push(title);
-  const selectedEl = document.getElementById('pf-movie-selected');
+  const selectedEl = _q('#pf-movie-selected', root);
   if (!selectedEl) return;
   selectedEl.querySelector('.pf-movie-empty')?.remove();
   const chip = document.createElement('button');
@@ -515,14 +519,14 @@ function _addMovie(title) {
   chip.textContent = `${title} ×`;
   chip.addEventListener('click', () => {
     _movieSelected = _movieSelected.filter(m => m !== title);
-    chip.remove(); haptic('light'); _updateMovieEmpty();
+    chip.remove(); haptic('light'); _updateMovieEmpty(root);
   });
   selectedEl.appendChild(chip);
   _chipPop(chip);
 }
 
-function _updateMovieEmpty() {
-  const el = document.getElementById('pf-movie-selected');
+function _updateMovieEmpty(root = _activeCard()) {
+  const el = _q('#pf-movie-selected', root);
   if (el && !el.querySelector('.pf-chip')) {
     el.innerHTML = '<span class="pf-movie-empty">Nothing selected yet</span>';
   }
@@ -530,16 +534,20 @@ function _updateMovieEmpty() {
 
 // ─── Read / Save / Navigate ───────────────────────────────────────────────────
 function _readValue(q) {
+  const root = _activeCard();
   switch (q.type) {
     case 'text':
-      return document.getElementById('pf-input')?.value?.trim() ?? '';
+      return _q('#pf-input', root)?.value?.trim() ?? '';
     case 'number': {
-      const v = document.getElementById('pf-input')?.value;
-      return v ? parseInt(v) : null;
+      const input = _q('#pf-input', root);
+      const raw = input?.value?.trim() ?? '';
+      if (!raw) return null;
+      const n = parseInt(raw, 10);
+      return Number.isNaN(n) ? null : n;
     }
     case 'body-stats': {
-      const hv = document.getElementById('pf-height-val')?.value;
-      const wv = document.getElementById('pf-weight-val')?.value;
+      const hv = _q('#pf-height-val', root)?.value;
+      const wv = _q('#pf-weight-val', root)?.value;
       return {
         height: hv ? { value: parseFloat(hv), unit: 'ft' } : null,
         weight: wv ? { value: parseFloat(wv), unit: 'lb' } : null
@@ -547,17 +555,17 @@ function _readValue(q) {
     }
     case 'words5': {
       const words = [];
-      for (let i = 0; i < 5; i++) words.push(document.getElementById(`pf-word-${i}`)?.value?.trim() ?? '');
+      for (let i = 0; i < 5; i++) words.push(_q(`#pf-word-${i}`, root)?.value?.trim() ?? '');
       return words.filter(Boolean);
     }
     case 'chips-add':
-      return [...document.querySelectorAll('#pf-chips-multi .pf-chip--on')].map(c => c.dataset.val);
+      return [...(root?.querySelectorAll('#pf-chips-multi .pf-chip--on') ?? [])].map(c => c.dataset.val);
     case 'movie-search':
       return [..._movieSelected];
     case 'drink-why':
       return {
-        favDrink: document.getElementById('pf-drink-input')?.value?.trim() ?? '',
-        drinkWhy: document.getElementById('pf-why-input')?.value?.trim() ?? ''
+        favDrink: _q('#pf-drink-input', root)?.value?.trim() ?? '',
+        drinkWhy: _q('#pf-why-input', root)?.value?.trim() ?? ''
       };
     default: return null;
   }
@@ -565,6 +573,12 @@ function _readValue(q) {
 
 function _isValid(q, val) {
   if (!q.required) return true;
+  if (q.type === 'number') {
+    if (val === null || val === undefined || Number.isNaN(val)) return false;
+    if (q.min != null && val < q.min) return false;
+    if (q.max != null && val > q.max) return false;
+    return true;
+  }
   if (val === null || val === undefined || val === '') return false;
   if (Array.isArray(val) && !val.length) return false;
   return true;
@@ -593,7 +607,11 @@ function _save(q) {
 function _continue() {
   const q = QUESTIONS[_idx];
   const val = _readValue(q);
-  if (!_isValid(q, val)) { _shake(document.getElementById('pf-input-wrap')); haptic('medium'); return; }
+  if (!_isValid(q, val)) {
+    _shake(_q('#pf-input-wrap', _activeCard()));
+    haptic('medium');
+    return;
+  }
   _save(q);
   haptic('medium');
   if (_idx < QUESTIONS.length - 1) { _idx++; _render(_idx, 'fwd'); }

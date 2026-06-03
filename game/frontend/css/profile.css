@@ -6,6 +6,13 @@
   overflow: hidden;
 }
 
+#profile-wizard {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 /* ── Top bar ────────────────────────────────────────────────────────────────── */
 .pf-top {
   display: flex;
