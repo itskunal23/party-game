@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# Local agent tooling (not part of the app runtime)
+.agents/
+skills-lock.json

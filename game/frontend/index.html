@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0033A0">
+  <meta name="description" content="The party card game where chaos is the only rule">
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GFY">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <!-- Splash screens (iPhone sizes) -->
+  <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="/icons/splash-390x844.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" href="/icons/splash-375x812.png">
+
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+
+  <title>Go Fuck Yourself!</title>
+
+  <!-- Brand font only — SF Pro system stack used for all UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&display=swap">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/profile.css">
+  <link rel="stylesheet" href="/css/card-stacks.css">
+  <link rel="stylesheet" href="/css/game-theatre.css">
+  <link rel="stylesheet" href="/css/gfy-board.css">
+
+  <!-- GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+</head>
+<body>
+
+  <!-- Reconnection toast -->
+  <div id="connection-toast" class="hidden">Reconnecting…</div>
+
+  <!-- ── SCREEN: Profile onboarding ────────────────────────────────────── -->
+  <div id="screen-profile" class="screen hidden">
+    <div id="profile-wizard"></div>
+  </div>
+
+  <!-- ── SCREEN: Home ───────────────────────────────────────────────────── -->
+  <div id="screen-home" class="screen hidden">
+
+    <div class="home-party-bg" aria-hidden="true">
+      <div class="home-party-lights"></div>
+      <span class="home-float-emoji home-float-emoji--1">🍸</span>
+      <span class="home-float-emoji home-float-emoji--2">🥃</span>
+      <span class="home-float-emoji home-float-emoji--3">🍺</span>
+      <div class="home-drink-bar">
+        <div class="home-cocktail home-cocktail--left">
+          <div class="home-glass home-glass--tall">
+            <div class="home-liquid"></div>
+            <div class="home-bubbles">
+              <span class="home-bubble"></span>
+              <span class="home-bubble"></span>
+              <span class="home-bubble"></span>
+            </div>
+          </div>
+        </div>
+        <div class="home-cocktail home-cocktail--mid">
+          <div class="home-shaker"></div>
+        </div>
+        <div class="home-cocktail home-cocktail--right">
+          <div class="home-glass home-glass--martini">
+            <div class="home-liquid"></div>
+            <div class="home-bubbles">
+              <span class="home-bubble"></span>
+              <span class="home-bubble"></span>
+              <span class="home-bubble"></span>
+              <span class="home-bubble"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-hero">
+      <div class="home-logo">GFY</div>
+      <div class="home-wordmark">Go Fuck Yourself!</div>
+    </div>
+
+    <!-- Shown when profile exists -->
+    <div class="home-greeting hidden" id="home-greeting">
+      <div class="home-greeting-name" id="home-greeting-name"></div>
+      <div class="home-greeting-traits" id="home-greeting-traits"></div>
+      <div class="bartender-preview hidden" id="bartender-preview">
+        <span class="bartender-preview-icon">🍸</span>
+        <span class="bartender-preview-line" id="bartender-preview-line"></span>
+      </div>
+      <button class="home-edit-profile" id="btn-edit-profile">Edit Profile</button>
+    </div>
+
+    <!-- Shown when no profile -->
+    <div class="home-name-form hidden" id="home-name-form">
+      <input id="input-name" type="text" placeholder="Your name" maxlength="20"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+
+    <div class="home-actions">
+      <button class="action-card action-card--create" id="btn-create">
+        <span class="action-card-icon">🔥</span>
+        <span class="action-card-title">Start Chaos</span>
+        <span class="action-card-sub">Kunal — create room, share code with Nandini</span>
+      </button>
+
+      <div class="action-card action-card--join">
+        <div class="action-card-join-top">
+          <span class="action-card-icon">🚪</span>
+          <span class="action-card-title">Join Chaos</span>
+        </div>
+        <div class="action-card-join-row">
+          <input id="input-code" type="text" placeholder="Room code" maxlength="4"
+                 autocomplete="off" autocorrect="off" spellcheck="false">
+          <button id="btn-join">Join</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── SCREEN: Lobby ──────────────────────────────────────────────────── -->
+  <div id="screen-lobby" class="screen hidden">
+    <h1 class="lobby-title">Lobby</h1>
+
+    <div class="lobby-code-wrap">
+      <span class="lobby-code-label">Room Code</span>
+      <span id="lobby-code"></span>
+      <button class="btn-secondary" id="btn-copy-code" style="min-height:44px;font-size:15px;padding:10px 20px;">Copy Code</button>
+    </div>
+
+    <ul id="lobby-player-list"></ul>
+
+    <p class="lobby-waiting" id="lobby-waiting">Waiting for Kunal & Nandini… (2 phones, same room)</p>
+
+    <button class="btn-primary hidden" id="btn-start" style="max-width:320px">Start Game</button>
+  </div>
+
+  <!-- ── SCREEN: Game ───────────────────────────────────────────────────── -->
+  <div id="screen-game" class="screen hidden">
+
+    <!-- Top bar -->
+    <div class="game-topbar">
+      <span class="game-topbar-item" id="deck-count">🃏 —</span>
+      <span class="game-topbar-item" id="room-code-display"></span>
+      <span class="game-topbar-item" id="my-score">📚 0</span>
+    </div>
+
+    <!-- Opponents -->
+    <div id="opponent-zone"></div>
+
+    <!-- Center: draw pile -->
+    <div id="center-zone">
+      <div class="draw-pile" id="draw-pile-el">
+        <div class="draw-pile-label">GFY</div>
+      </div>
+    </div>
+
+    <!-- Player selector (shown during drag) -->
+    <div id="player-selector" class="hidden"></div>
+
+    <!-- Action banner -->
+    <div id="action-banner" class="hidden"></div>
+
+    <!-- Your hand (fan layout — cards positioned by GSAP) -->
+    <div id="hand-zone"></div>
+
+    <!-- Action zone -->
+    <div id="action-zone"></div>
+
+    <!-- Bottom toolbar -->
+    <div class="game-toolbar">
+      <button class="toolbar-btn" id="btn-drink-log">
+        <span class="toolbar-icon">🍺</span>
+        <span>Drinks</span>
+      </button>
+      <button class="toolbar-btn" id="btn-ai-host">
+        <span class="toolbar-icon">🍸</span>
+        <span>Bartender</span>
+      </button>
+      <button class="toolbar-btn" id="btn-side-games">
+        <span class="toolbar-icon">🎲</span>
+        <span>Side Games</span>
+      </button>
+    </div>
+
+    <!-- BAC panel (slide up) -->
+    <div id="bac-panel-container" class="hidden"></div>
+
+    <!-- Side game panel -->
+    <div id="sidegame-panel" class="hidden">
+      <div id="sidegame-content"></div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN: Toast (book completion) ───────────────────────────────── -->
+  <div id="screen-toast" class="screen hidden">
+    <div id="toast-content"></div>
+    <span class="toast-dismiss-hint">Tap to dismiss</span>
+  </div>
+
+  <!-- ── SCREEN: Results ───────────────────────────────────────────────── -->
+  <div id="screen-results" class="screen hidden">
+    <div id="results-content"></div>
+    <button class="btn-primary" id="btn-play-again" style="max-width:300px">Play Again</button>
+  </div>
+
+  <!-- Phase banner (reusable overlay) -->
+  <div class="phase-banner" id="phase-banner"></div>
+
+  <!-- Drink choice panel — winner picks what loser drinks -->
+  <div id="drink-choice-panel" class="hidden">
+    <div id="drink-choice-content"></div>
+  </div>
+
+  <!-- Drink assigned modal — loser sees their sentence -->
+  <div id="drink-assigned-modal" class="hidden"></div>
+
+  <!-- GFY overlay — full screen rejection moment -->
+  <div id="gfy-overlay" class="hidden">
+    <div class="gfy-text">GO FUCK<br>YOURSELF</div>
+    <div class="gfy-sub" id="gfy-sub"></div>
+  </div>
+
+  <!-- App entry -->
+  <script type="module" src="/js/app.js"></script>
+
+  <!-- Service worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
