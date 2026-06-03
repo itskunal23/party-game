@@ -79,6 +79,9 @@ export const SCENARIOS = [
   }
 ];
 
+export const TOTAL_SETS = SCENARIOS.length;
+export const CARDS_PER_SET = 4;
+
 export function createDeck() {
   const deck = [];
   for (const s of SCENARIOS) {

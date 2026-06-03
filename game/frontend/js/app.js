@@ -1,7 +1,7 @@
 import * as API from './api.js';
 import { initMobile, acquireWakeLock, releaseWakeLock, haptic } from './mobile.js';
 import { initBac } from './bac.js';
-import { SCENARIOS } from './game.js';
+import { SCENARIOS, TOTAL_SETS } from './game.js';
 import { apiPost } from './api.js';
 import {
   hasProfile, getProfile, initProfile, clearProfile, buildProfileContext
@@ -25,6 +25,7 @@ let state = {
 let _lastCommentedActionSig = null;
 let _aiCooldownUntil = 0;
 let _drag = null;
+let _dealingLocked = false;
 
 // ─── Fan layout math — curved arc from center ─────────────────────────────────
 function fanPosition(i, n) {
@@ -55,6 +56,102 @@ function showScreen(name) {
 }
 
 function $(id) { return document.getElementById(id); }
+
+function showPhaseBanner(text, duration = 1800) {
+  return new Promise(resolve => {
+    const el = $('phase-banner');
+    if (!el) { resolve(); return; }
+    el.textContent = text;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+    setTimeout(() => {
+      el.classList.remove('show');
+      resolve();
+    }, duration);
+  });
+}
+
+async function runSetupSequence(msg) {
+  _dealingLocked = true;
+  $('hand-zone')?.classList.add('hand-zone--locked');
+  $('center-zone')?.classList.add('center-zone--locked');
+  $('my-books-row')?.classList.add('my-books-row--locked');
+
+  await showPhaseBanner('🔀 Shuffling the deck…', 1500);
+  await showPhaseBanner(`🃏 Dealing ${msg.cardsDealt} cards to each player`, 1600);
+  await showPhaseBanner(`🌊 ${msg.deckCount} cards in the pond`, 1400);
+  await showPhaseBanner(`${msg.firstPlayerName ?? 'Player'} goes first`, 1800);
+
+  _dealingLocked = false;
+  $('hand-zone')?.classList.remove('hand-zone--locked');
+  $('center-zone')?.classList.remove('center-zone--locked');
+  $('my-books-row')?.classList.remove('my-books-row--locked');
+
+  renderHand();
+  renderOpponents();
+  renderMyBooks();
+  updateGameHud();
+  updateActionZone();
+}
+
+function updateGameHud() {
+  const me = state.players.find(p => p.id === state.myId);
+  const gs = state.gameState;
+  if ($('my-score')) $('my-score').textContent = `📚 ${me?.books?.length ?? 0}`;
+  if ($('deck-count')) $('deck-count').textContent = `🌊 ${gs?.deckCount ?? '—'}`;
+  if ($('sets-progress')) {
+    const done = gs?.completedSets ?? 0;
+    const total = gs?.totalSets ?? TOTAL_SETS;
+    $('sets-progress').textContent = `📦 ${done}/${total}`;
+  }
+  const pondCount = $('pond-count');
+  if (pondCount) pondCount.textContent = gs?.deckCount > 0 ? String(gs.deckCount) : '';
+
+  const hint = $('turn-hint');
+  if (hint && gs?.phase === 'playing') {
+    const cur = state.players.find(p => p.id === gs.currentTurnPlayerId);
+    const isMe = gs.currentTurnPlayerId === state.myId;
+    hint.classList.remove('hidden');
+    hint.textContent = isMe
+      ? 'Your turn — pick a card you hold and ask someone for that set'
+      : `${cur?.name ?? '…'} is fishing for shame…`;
+  } else if (hint) {
+    hint.classList.add('hidden');
+  }
+}
+
+function renderMyBooks() {
+  const row = $('my-books-row');
+  if (!row) return;
+  const me = state.players.find(p => p.id === state.myId);
+  const books = me?.books ?? [];
+  if (!books.length) {
+    row.innerHTML = '<p class="books-empty">Completed sets appear here (4 of a kind)</p>';
+    return;
+  }
+  row.innerHTML = books.map(scenario => {
+    const meta = scenarioMeta(scenario);
+    return `<div class="book-set"><span class="book-set-emoji">${meta.emoji}</span><span class="book-set-name">${scenario}</span></div>`;
+  }).join('');
+}
+
+function flashLuckyDraw(action) {
+  const drawn = action.drawnCard;
+  if (!drawn) return;
+  const banner = $('action-banner');
+  if (!banner) return;
+  const fromP = state.players.find(p => p.id === action.fromId);
+  const s = scenarioMeta(drawn.scenario);
+  banner.innerHTML = `
+    <div class="lucky-draw-flash">
+      <div class="lucky-draw-label">🍀 Lucky draw from the pond!</div>
+      <div class="lucky-draw-card">${s.emoji} ${drawn.scenario}</div>
+      <div class="lucky-draw-sub">${fromP?.name ?? 'Player'} shows the group — turn continues</div>
+    </div>`;
+  banner.classList.remove('hidden');
+  setTimeout(() => banner.classList.add('hidden'), 4200);
+}
 
 // ─── Audio (Web Audio API) ────────────────────────────────────────────────────
 let _audioCtx = null;
@@ -498,7 +595,9 @@ function sendAsk() {
 // ─── Toast overlay — book completion ─────────────────────────────────────────
 function showToast(playerName, scenario) {
   const el = $('toast-content');
-  if (el) el.innerHTML = `CHEERS TO<br><span class="toast-name">${playerName}</span><br>FOR THEIR<br><span class="toast-card">${scenario}!</span>`;
+  if (el) {
+    el.innerHTML = `Sweet I officially have<br><span class="toast-card">${scenario}</span><br><span class="toast-name">— ${playerName}</span>`;
+  }
   showScreen('toast');
   haptic('heavy');
   playBook();
@@ -519,17 +618,23 @@ function showActionBanner(action) {
   let text = '';
 
   if (action.type === 'got') {
-    text = `${fromP?.name ?? '?'} got ${action.count} "${sName}" from ${toP?.name ?? '?'}!`;
+    text = `${fromP?.name ?? '?'} got ${action.count} "${sName}" from ${toP?.name ?? '?'} — turn continues!`;
   } else if (action.type === 'gfy') {
     const lucky = action.continueTurn;
     text = lucky
-      ? `🍀 ${fromP?.name ?? '?'} drew lucky — "${sName}"!`
-      : `💀 ${fromP?.name ?? '?'} told to Go Fuck Yourself.`;
-    playGFY();
+      ? `🍀 ${fromP?.name ?? '?'} drew a match from the pond!`
+      : `${toP?.name ?? '?'}: "Go Fuck Yourself!" — ${fromP?.name ?? '?'} draws from the pond.`;
 
-    if (!lucky && action.fromId === state.myId) {
+    if (lucky) {
+      playBook();
+      flashLuckyDraw(action);
+      return;
+    }
+
+    playGFY();
+    if (action.fromId === state.myId) {
       showGFYOverlay(fromP?.name ?? 'You', toP?.name ?? '?');
-    } else if (!lucky && gsapReady()) {
+    } else if (gsapReady()) {
       gsap.fromTo('#screen-game',
         { x: -8 },
         { x: 8, duration: 0.05, ease: 'power1.inOut', yoyo: true, repeat: 7,
@@ -647,6 +752,27 @@ function _partnerName(forPlayerId) {
   return state.players.find(p => p.id !== forPlayerId)?.name ?? null;
 }
 
+function dismissBartenderTranscript() {
+  $('bartender-transcript')?.classList.add('hidden');
+}
+
+function showBartenderTranscript(line) {
+  const overlay = $('bartender-transcript');
+  const textEl = $('bartender-transcript-line');
+  if (!overlay || !textEl) return;
+  textEl.textContent = line;
+  overlay.classList.remove('hidden');
+  haptic('light');
+  if (gsapReady()) {
+    gsap.from('.bartender-transcript-inner', {
+      scale: 0.88,
+      opacity: 0,
+      duration: 0.35,
+      ease: 'back.out(1.4)'
+    });
+  }
+}
+
 async function triggerBartender(mode, opts = {}) {
   const now = Date.now();
   if (now < _aiCooldownUntil) return;
@@ -665,7 +791,7 @@ async function triggerBartender(mode, opts = {}) {
     gameContext: `${state.players.length} players — Kunal & Nandini session`
   }).catch(() => null);
 
-  if (result?.line) showBanner(`🍸 ${result.line}`);
+  if (result?.line) showBartenderTranscript(result.line);
 }
 
 function _ensureStats(playerId) {
@@ -722,12 +848,13 @@ function wireHandlers() {
   API.onMessage('playerJoined', () => { /* playerList follows */ });
   API.onMessage('botJoined', msg => showBanner(msg.message));
 
-  API.onMessage('gameStarted', () => {
+  API.onMessage('gameStarted', msg => {
     acquireWakeLock();
     state.playerStats = {};
     _lastCommentedActionSig = null;
     _aiCooldownUntil = 0;
     showScreen('game');
+    runSetupSequence(msg);
   });
 
   API.onMessage('snapshot', msg => {
@@ -736,13 +863,14 @@ function wireHandlers() {
     state.gameState = msg.gameState;
     state.pendingDrinks = msg.pendingDrinks;
 
-    const me = msg.players.find(p => p.id === state.myId);
-    if ($('my-score')) $('my-score').textContent = `📚 ${me?.books?.length ?? 0}`;
-    if ($('deck-count')) $('deck-count').textContent = `🃏 ${msg.gameState.deckCount}`;
+    updateGameHud();
 
-    renderHand();
-    renderOpponents();
-    updateActionZone();
+    if (!_dealingLocked) {
+      renderHand();
+      renderOpponents();
+      renderMyBooks();
+      updateActionZone();
+    }
 
     if (msg.gameState.lastAction) {
       const action = msg.gameState.lastAction;
@@ -827,7 +955,10 @@ function wireUI() {
     if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy Code'; }, 1500); }
   });
 
-  $('btn-play-again')?.addEventListener('click', () => { haptic('medium'); API.send({ type: 'playAgain' }); showScreen('lobby'); });
+  $('btn-play-again')?.addEventListener('click', () => {
+    haptic('medium');
+    API.send({ type: 'playAgain' });
+  });
 
   $('btn-edit-profile')?.addEventListener('click', () => {
     clearProfile();
@@ -862,7 +993,18 @@ function wireUI() {
       otherPlayer: _partnerName(state.myId),
       gameContext: `${state.players.length} players — Kunal & Nandini session, books: ${myBooks.length}`
     }).catch(() => null);
-    if (result?.line) showBanner(`🍸 ${result.line}`);
+    if (result?.line) showBartenderTranscript(result.line);
+  });
+
+  $('bartender-transcript')?.addEventListener('click', () => {
+    haptic('light');
+    dismissBartenderTranscript();
+  });
+  $('bartender-transcript')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      dismissBartenderTranscript();
+    }
   });
 
   $('btn-drink-log')?.addEventListener('click', () => {

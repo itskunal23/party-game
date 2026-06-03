@@ -138,6 +138,8 @@
 
     <ul id="lobby-player-list"></ul>
 
+    <p class="lobby-rules">Shuffle · deal 5 cards each · ask for matches · collect sets of 4 · draw from the pond on a miss</p>
+
     <p class="lobby-waiting" id="lobby-waiting">Waiting for Kunal & Nandini… (2 phones, same room)</p>
 
     <button class="btn-primary hidden" id="btn-start" style="max-width:320px">Start Game</button>
@@ -148,18 +150,25 @@
 
     <!-- Top bar -->
     <div class="game-topbar">
-      <span class="game-topbar-item" id="deck-count">🃏 —</span>
+      <span class="game-topbar-item" id="deck-count">🌊 —</span>
+      <span class="game-topbar-item" id="sets-progress">📦 0/13</span>
       <span class="game-topbar-item" id="room-code-display"></span>
       <span class="game-topbar-item" id="my-score">📚 0</span>
     </div>
 
+    <p id="turn-hint" class="turn-hint hidden"></p>
+
+    <!-- Completed sets (face-up books) -->
+    <div id="my-books-row" class="my-books-row"></div>
+
     <!-- Opponents -->
     <div id="opponent-zone"></div>
 
-    <!-- Center: draw pile -->
+    <!-- Center: draw pile (the pond) -->
     <div id="center-zone">
       <div class="draw-pile" id="draw-pile-el">
-        <div class="draw-pile-label">GFY</div>
+        <div class="draw-pile-label">POND</div>
+        <div class="draw-pile-count" id="pond-count"></div>
       </div>
     </div>
 
@@ -227,6 +236,15 @@
   <div id="gfy-overlay" class="hidden">
     <div class="gfy-text">GO FUCK<br>YOURSELF</div>
     <div class="gfy-sub" id="gfy-sub"></div>
+  </div>
+
+  <!-- Bhenchod Bartender transcript — tap to dismiss -->
+  <div id="bartender-transcript" class="hidden" role="button" tabindex="0" aria-label="Dismiss bartender roast">
+    <div class="bartender-transcript-inner">
+      <div class="bartender-transcript-header">🍸 Bhenchod Bartender</div>
+      <p class="bartender-transcript-line" id="bartender-transcript-line"></p>
+      <span class="bartender-transcript-hint">Tap to dismiss</span>
+    </div>
   </div>
 
   <!-- App entry -->

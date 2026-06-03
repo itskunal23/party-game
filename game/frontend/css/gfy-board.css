@@ -127,6 +127,59 @@
   letter-spacing: 0.3px;
 }
 
+/* ── Bhenchod Bartender transcript ───────────────────────────────────────── */
+#bartender-transcript {
+  position: fixed;
+  inset: 0;
+  z-index: 850;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-bottom: max(24px, var(--safe-bottom));
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+#bartender-transcript.hidden { display: none; }
+
+.bartender-transcript-inner {
+  max-width: 340px;
+  width: 100%;
+  padding: var(--space-lg) var(--space-md);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 214, 10, 0.28);
+  background: rgba(14, 14, 26, 0.94);
+  box-shadow: var(--shadow-float), 0 0 48px rgba(0, 51, 160, 0.2);
+  text-align: center;
+}
+
+.bartender-transcript-header {
+  font-family: var(--font-brand);
+  font-size: 1.35rem;
+  color: var(--brand-gold);
+  margin-bottom: var(--space-md);
+  letter-spacing: 0.5px;
+}
+
+.bartender-transcript-line {
+  margin: 0 0 var(--space-lg);
+  font-size: 17px;
+  line-height: 1.45;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.bartender-transcript-hint {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.38);
+  animation: pulse 1.5s infinite;
+}
+
 /* ── Winner celebration — subtle floating dots ────────────────────────────── */
 #screen-results::before {
   content: '';

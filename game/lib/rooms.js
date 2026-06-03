@@ -1,4 +1,4 @@
-import { createDeck, shuffle, dealHands, checkForBook } from '../frontend/js/game.js';
+import { createDeck, shuffle, dealHands, checkForBook, TOTAL_SETS } from '../frontend/js/game.js';
 import { createBot, scheduleBotTurn } from './bot.js';
 import { estimateBAC } from './bac.js';
 
@@ -62,6 +62,8 @@ function buildSnapshot(room, forPlayerId) {
       phase: state.phase,
       currentTurnPlayerId: state.currentTurnPlayerId,
       deckCount: state.deck.length,
+      totalSets: TOTAL_SETS,
+      completedSets: _countCompletedSets(state),
       lastAction: state.lastAction
     },
     pendingDrinks: state.pendingDrinks.get(forPlayerId) ?? [],
@@ -76,11 +78,17 @@ function broadcastSnapshots(room) {
   }
 }
 
+function _countCompletedSets(state) {
+  let n = 0;
+  for (const books of state.books.values()) n += books.length;
+  return n;
+}
+
 function checkGameOver(room) {
   const state = room.gameState;
+  if (_countCompletedSets(state) >= TOTAL_SETS) return true;
   if (state.deck.length > 0) return false;
-  const anyCards = [...room.players.values()].some(p => p.hand.length > 0);
-  return !anyCards;
+  return ![...room.players.values()].some(p => p.hand.length > 0);
 }
 
 function finalizeGame(room) {
@@ -314,7 +322,8 @@ export function rejoinRoom(socket, roomCode, sessionToken) {
 export function startGame(roomCode, requesterId) {
   const room = rooms.get(roomCode);
   if (!room || room.hostId !== requesterId) return;
-  if (room.gameState.phase !== 'lobby') return;
+  const phase = room.gameState.phase;
+  if (phase !== 'lobby' && phase !== 'gameOver') return;
 
   // Add bot if solo
   if (room.players.size === 1) {
@@ -331,18 +340,33 @@ export function startGame(roomCode, requesterId) {
 
   const playerIds = [...room.players.keys()];
   playerIds.forEach((id, i) => {
-    room.players.get(id).hand = hands[i];
+    const p = room.players.get(id);
+    p.hand = hands[i];
   });
 
   room.gameState.deck = deck;
   room.gameState.phase = 'playing';
   room.gameState.currentTurnPlayerId = playerIds[0];
   room.gameState.turnCount = 0;
-
-  broadcast(room, { type: 'gameStarted', firstPlayerId: playerIds[0] });
-  broadcastSnapshots(room);
+  room.gameState.books = new Map();
+  room.gameState.pendingDrinks = new Map();
+  room.gameState.pendingDrinkChoices = new Map();
+  room.gameState.lastAction = null;
+  room.gameState.discardPile = [];
 
   const first = room.players.get(playerIds[0]);
+
+  broadcast(room, {
+    type: 'gameStarted',
+    firstPlayerId: playerIds[0],
+    firstPlayerName: first?.name ?? 'Player',
+    cardsDealt: cardsEach,
+    deckCount: deck.length,
+    totalSets: TOTAL_SETS,
+    playerCount
+  });
+  broadcastSnapshots(room);
+
   if (first?.isBot) {
     scheduleBotTurn(room, first, i => handleIntent(room, i));
   }
