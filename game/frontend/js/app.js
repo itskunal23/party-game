@@ -1159,8 +1159,13 @@ export function init() {
   wireLandingPage();
   showScreen('landing');
   initLandingMotion();
+  const hero = document.querySelector('.lp-hero-inner');
+  if (hero) hero.classList.add('lp-in-view');
   if (gsapReady()) {
-    gsap.from('.lp-hero-inner', { opacity: 0, y: 32, duration: 0.65, ease: 'power2.out' });
+    gsap.fromTo('.lp-logo-lockup',
+      { opacity: 0, y: 24, scale: 0.96 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: 'power2.out' }
+    );
   }
 }
 

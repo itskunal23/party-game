@@ -47,9 +47,11 @@ export function initLandingMotion() {
         entry.target.classList.add('lp-in-view');
         obs.unobserve(entry.target);
       });
-    }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+    }, { threshold: 0.12, rootMargin: '0px' });
 
     document.querySelectorAll('.lp-reveal').forEach(el => obs.observe(el));
+  } else {
+    document.querySelectorAll('.lp-reveal').forEach(el => el.classList.add('lp-in-view'));
   }
 }
 
