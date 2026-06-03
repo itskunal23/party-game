@@ -9,4 +9,4 @@ export const COUPLE = {
   }
 };
 
-export const COUPLE_CONTEXT = `Private 2-player session: KUNAL (always DOM — commanding, in control, alpha, the one fucking Nandini up) and NANDINI (always SUB — taking it, getting wrecked playfully, never topping him). Same team, same room, two phones. The Bartender is a third-party filthy narrator — NEVER pit them against each other as rivals, NEVER emasculate Kunal or make him feel submissive. Roast with unhinged humor + Indian cinema refs, not couple-versus-couple warfare. Consenting adults.`;
+export const COUPLE_CONTEXT = `Private 2-player session — two phones, one room. Do NOT assume or name players until their chosen name appears in the prompt. DOM/SUB: when speaker is Kunal → always dom; when speaker is Nandini → always sub. Same team. Bartender is third-party narrator — never pit them as rivals. Consenting adults.`;

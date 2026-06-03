@@ -942,17 +942,35 @@ function renderLobbyPlayers(players) {
   list.innerHTML = players.map(p =>
     `<li class="lobby-player${p.isHost ? ' is-host' : ''}">${p.name}${p.isHost ? ' (host)' : ''}</li>`
   ).join('');
+
+  const wait = $('lobby-waiting');
+  if (wait) {
+    if (players.length >= 2) {
+      wait.textContent = `${players.map(p => p.name).join(' & ')} — host can start`;
+    } else if (players.length === 1) {
+      wait.textContent = 'Waiting for your partner… (share the room code)';
+    } else {
+      wait.textContent = 'Waiting for players…';
+    }
+  }
+}
+
+function _sessionContextLabel() {
+  const names = state.players?.map(p => p.name).filter(Boolean) ?? [];
+  if (names.length >= 2) return names.join(' & ');
+  if (names.length === 1) return `${names[0]} + partner`;
+  return `${state.players?.length ?? 0} players`;
 }
 
 // ─── Home screen profile display ─────────────────────────────────────────────
 const BARTENDER_PREVIEW_LINES = [
-  "Bhenchod — Kunal dom, Nandini sub. Paatal Lok writers could never.",
+  "Bhenchod — dom/sub energy loaded. Paatal Lok writers could never.",
   "Dhurandhar-level filth on your questionnaire. Same team, zero mercy.",
-  "Farzi chaos on the cards. Kunal runs the table — absolute cinema.",
-  "Dhootha twist energy tonight. Kunal in charge, Nandini taking it.",
+  "Farzi chaos on the cards. Absolute cinema.",
+  "Dhootha twist energy tonight. Dom in charge, sub taking it.",
   "Bad Boy of Bollywood roast loaded. Limits sacred. Kinks weaponized.",
-  "The Night Manager of this room is Kunal. Bartender just narrates.",
-  "Hathiram in Paatal Lok read your filth files. Case closed.",
+  "The Night Manager of this room — bartender just narrates.",
+  "Hathiram in Paatal Lok read your filth file. Case closed.",
   "Samay Raina meets Mirzapur — dom/sub, not couple warfare.",
 ];
 
@@ -967,7 +985,7 @@ function updateHomeForProfile(profile) {
   if (profile?.name) {
     greeting?.classList.remove('hidden');
     nameForm?.classList.add('hidden');
-    if (nameEl) nameEl.textContent = profile.name;
+    if (nameEl) nameEl.textContent = `Hey, ${profile.name}`;
     if (traitsEl) {
       const bits = [];
       if (profile.kinks?.length) bits.push(profile.kinks.slice(0, 2).join(' · '));
@@ -1121,7 +1139,7 @@ async function triggerBartender(mode, opts = {}) {
     streakInfo: opts.streakInfo ?? null,
     otherPlayer: opts.otherPlayer ?? null,
     sessionMemory,
-    gameContext: opts.gameContext ?? `${state.players.length} players — Kunal & Nandini session`
+    gameContext: opts.gameContext ?? `${_sessionContextLabel()} session`
   }).catch(() => null);
 
   if (result?.line) showBartenderTranscript(result.line);
@@ -1377,7 +1395,7 @@ function wireUI() {
       playersContext,
       streakInfo: streakParts.length ? streakParts.join(', ') : null,
       otherPlayer: _partnerName(state.myId),
-      gameContext: `${state.players.length} players — Kunal & Nandini session, books: ${myBooks.length}`
+      gameContext: `${_sessionContextLabel()}, books: ${myBooks.length}`
     }).catch(() => null);
     if (result?.line) showBartenderTranscript(result.line);
   });

@@ -2,8 +2,6 @@ import { haptic } from './mobile.js';
 
 export const PROFILE_KEY = 'gfy_profile';
 
-const URL_NAME_KEYS = { kunal: 'Kunal', nandini: 'Nandini' };
-
 const KINKS = [
   'Public Fucking', 'CNC / RPE Play', 'Death Kink', 'Family Taboo',
   'Drunk Fucking', 'Animal / Pet Roleplay', 'Bondage', 'Humiliation',
@@ -187,7 +185,6 @@ export function initProfile(el, onComplete) {
   _idx = 0;
   _answers = { ...(getProfile() ?? {}) };
   delete _answers.completedAt;
-  _prefillFromUrl();
   _movieSelected = Array.isArray(_answers.mediaFaves) ? [..._answers.mediaFaves] : [];
   _advancing = false;
 
@@ -205,7 +202,7 @@ export function initProfile(el, onComplete) {
     </div>
     <nav class="pf-steps" id="pf-steps" aria-label="Question steps"></nav>
     <div class="pf-intro">
-      <div class="pf-intro-label">Kunal & Nandini's Filth File</div>
+      <div class="pf-intro-label">Your Filth File</div>
       <div class="pf-intro-sub">Core file in ~60 sec · Play now at the gate · Skip anytime</div>
     </div>
     <div class="pf-area" id="pf-area"></div>
@@ -1028,9 +1025,8 @@ function _back() {
 }
 
 function _complete() {
-  if (!_answers.name) {
-    const who = new URLSearchParams(window.location.search).get('who')?.toLowerCase();
-    _answers.name = URL_NAME_KEYS[who] ?? 'Player';
+  if (!_answers.name?.trim()) {
+    _answers.name = 'Player';
     localStorage.setItem('gfy_player_name', _answers.name);
   }
   _answers.completedAt = Date.now();
@@ -1040,14 +1036,15 @@ function _complete() {
   if (bar) { bar.style.transition = 'width 0.4s ease'; bar.style.width = '100%'; }
   document.getElementById('pf-bottom')?.classList.add('pf-bottom--hidden');
 
+  const displayName = _e(_answers.name);
   const area = document.getElementById('pf-area');
   const old = area?.querySelector('.pf-card');
   const card = document.createElement('div');
   card.className = 'pf-card pf-card--complete';
   card.innerHTML = `
     <div class="pf-complete-icon">🔥</div>
-    <h2 class="pf-complete-title">Let's fucking go.</h2>
-    <p class="pf-complete-sub">Bhenchod Bartender has your kinks,<br>limits, and filth. Kunal & Nandini — you're fucked.</p>`;
+    <h2 class="pf-complete-title">Let's fucking go, ${displayName}.</h2>
+    <p class="pf-complete-sub">Bhenchod Bartender has your kinks,<br>limits, and filth. You're fucked tonight.</p>`;
 
   if (area) {
     if (old && typeof gsap !== 'undefined') {
@@ -1075,12 +1072,6 @@ function _chipPop(btn) {
   gsap.fromTo(btn, { scale: 0.86 }, { scale: 1, duration: 0.3, ease: 'back.out(2.5)' });
 }
 
-function _prefillFromUrl() {
-  const who = new URLSearchParams(window.location.search).get('who')?.toLowerCase();
-  if (who && URL_NAME_KEYS[who] && !_answers.name) {
-    _answers.name = URL_NAME_KEYS[who];
-  }
-}
 
 function _e(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _ea(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
