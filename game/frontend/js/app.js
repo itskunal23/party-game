@@ -186,6 +186,50 @@ function playTone(freq, type, duration, vol = 0.22) {
 }
 
 function playDeal() { playTone(440, 'sine', 0.08, 0.15); }
+
+/** Subtle swoosh + soft tap — card thrown to partner / pond */
+function playCardSlide() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const swooshDur = 0.11;
+    const samples = Math.floor(ctx.sampleRate * swooshDur);
+    const buf = ctx.createBuffer(1, samples, ctx.sampleRate);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < samples; i++) {
+      const t = i / samples;
+      ch[i] = (Math.random() * 2 - 1) * (1 - t) * (1 - t);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 2800;
+    bp.Q.value = 0.7;
+    const swooshGain = ctx.createGain();
+    const t0 = ctx.currentTime;
+    swooshGain.gain.setValueAtTime(0.035, t0);
+    swooshGain.gain.exponentialRampToValueAtTime(0.001, t0 + swooshDur);
+    noise.connect(bp);
+    bp.connect(swooshGain);
+    swooshGain.connect(ctx.destination);
+    noise.start(t0);
+
+    const tap = ctx.createOscillator();
+    const tapGain = ctx.createGain();
+    tap.type = 'sine';
+    tap.frequency.setValueAtTime(220, t0 + 0.07);
+    tap.frequency.exponentialRampToValueAtTime(110, t0 + 0.13);
+    tapGain.gain.setValueAtTime(0.055, t0 + 0.07);
+    tapGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
+    tap.connect(tapGain);
+    tapGain.connect(ctx.destination);
+    tap.start(t0 + 0.07);
+    tap.stop(t0 + 0.15);
+  } catch { /* AudioContext unavailable */ }
+}
+
 function playGFY()  { [220, 196, 165].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.15), i * 70)); }
 function playBook() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.28), i * 90)); }
 function playBookSlam() {
@@ -664,6 +708,7 @@ function updateActionZone() {
 
 function sendAsk() {
   if (!state.selectedCard || !state.selectedTarget) return;
+  playCardSlide();
   haptic('medium');
   API.send({ type: 'ask', rank: state.selectedCard.rank, targetId: state.selectedTarget.id });
   state.selectedCard = null;
