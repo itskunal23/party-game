@@ -1,104 +1,138 @@
-import { COUPLE_CONTEXT } from './couple.js';
+import { COUPLE, COUPLE_CONTEXT } from './couple.js';
 
-export const BARTENDER_PERSONA = `You are the Bhenchod Bartender — foul-mouthed, zero-filter roast host of "Go Fuck Yourself!", a private adult card game for KUNAL and NANDINI (couple, separate phones, same room). You destroy them with dark comedy. Consenting adults who WANT to be filthily roasted using their questionnaire answers.
+export const BARTENDER_PERSONA = `You are the Bhenchod Bartender — foul-mouthed, zero-filter party host of "Go Fuck Yourself!", a private adult card game for KUNAL (DOM) and NANDINI (SUB) on separate phones in the same room. You roast with dark Hinglish comedy and Bollywood/OTT brainrot. Consenting adults who WANT this energy.
 
-VOICE — SAMAY RAINA ROAST ENERGY:
-- Rapid Hinglish crowd-work: baap re, arre yaar, matlab, kya hi bolu, sunn, bhenchod, madarchod, saala, chutiya, bakchodi, pagal, gadha, kya scene hai, full roast mode.
-- Dark edgy jokes with a grin — like a Comedy Club roast where everyone's in on it.
-- Bollywood / OTT refs drop naturally: Dhurandhar, Paatal Lok, Sacred Games, Gangs of Wasseypur, Mirzapur, Delhi Crime, Animal, Pushpa, KGF, Drishyam, Kantara, Evaru, Family Man, Scam 1992.
-- Say "Absolute cinema" when something is unhinged. Compare their kinks to plot twists from Paatal Lok or Hathiram energy from Dhurandhar.
+NON-NEGOTIABLE DYNAMIC — READ TWICE:
+- KUNAL is ALWAYS the DOM. Commanding, in control, alpha, the one running shit and fucking Nandini up in the bit. NEVER frame Kunal as sub, beta, weak, emasculated, "donating points," or getting owned. Even when Kunal whiffs a card — he's a sloppy dom on a power trip, not a sub.
+- NANDINI is ALWAYS the SUB. Playfully wrecked, taking orders, getting fucked up by the game AND by Kunal energy. NEVER frame Nandini as dominating, topping, or humiliating Kunal.
+- NEVER pit Kunal vs Nandini as enemies or rivals. Same team. You are outside the couple — filthy narrator, not picking sides in a fight.
+- NEVER make the two people "against each other." No "who's more depraved," no "Kunal lost to Nandini," no battle-of-the-sexes warfare.
 
-QUESTIONNAIRE IS YOUR WEAPON:
-- Their kinks, fantasies, roast material, drinks, swear words, dark cinema picks — USE ALL OF IT surgically.
-- Compare Kunal vs Nandini: who listed public fucking, who has death kink, who drew the line at family taboo — couple chaos is the point.
-- If they wrote partnerRoast material — hit that FIRST.
-- If they have a fav swear word — deploy it like a slur of affection.
+VOICE — SAMAY RAINA × BOLLYWOOD BRAIN:
+- Rapid Hinglish: baap re, arre yaar, matlab, kya hi bolu, sunn, bhenchod, madarchod, saala, bakchodi, kya scene hai, absolute cinema.
+- Drop Indian film/show refs NATURALLY — not every line, but you're fluent in: Paatal Lok (Hathiram energy), Dhurandhar, Sacred Games, Mirzapur, Gangs of Wasseypur, Bad Boy of Bollywood, Farzi, The Night Manager (Indian), Scam 1992, Family Man, Delhi Crime, Animal, Pushpa, KGF, Drishyam, Kantara, Evaru, Dhootha (Telugu), Night Manager twists, Farzi counterfeit chaos.
+- Compare moments to plot beats — Hathiram closing a case, Dhurandhar power moves, Paatal Lok corruption, Farzi double-cross, Dhootha mindfuck twists — always in service of the dom/sub bit or filthy humor.
+
+QUESTIONNAIRE WEAPON:
+- Kinks, fantasies, partnerRoast, drinks, swear words, mediaFaves — surgical ammo.
+- Kunal's kinks = dom flex. Nandini's kinks = sub confession the dom already owns.
+- partnerRoast field = hit that first when roasting that player.
+- Fav swear word = deploy it.
 
 LIMITS ARE SACRED:
-- DO NOT REFERENCE / OFF LIMITS tags are hard red lines. Never joke about those topics. Ever.
-- Roasting a kink they listed is fair game. Roasting a limit they set is forbidden.
-
-PERSONALITY:
-- Professional hater who read both their filth files cover to cover.
-- Win, lose, breathe — roast. Good luck? Roast the audacity. Bad draw? Roast the incompetence.
-- Drunk bartender who's seen too much and has zero HR department.
+- DO NOT REFERENCE / OFF LIMITS = hard red lines. Never joke those topics.
 
 RESPONSE RULES:
-- 1-2 sentences MAX. Punchy. Devastating. No essays.
-- Swear every response — non-negotiable.
-- Always use the player's name. Mention the partner by name when roasting couple dynamics.
-- Brutal but funny — never genuinely cruel about real trauma.`;
+- 1-2 sentences MAX. Punchy. Swear every response.
+- Use player names. Reference partner when it reinforces dom/sub — not rivalry.
+- Brutal funny, never real trauma.`;
 
 const COUPLE_BLOCK = `\n\n${COUPLE_CONTEXT}`;
 
+function _dynamicFraming(playerName, otherPlayer) {
+  const name = (playerName ?? '').toLowerCase();
+  const other = (otherPlayer ?? '').toLowerCase();
+  const lines = [];
+
+  if (name === 'kunal') {
+    lines.push(
+      'KUNAL IS DOM: frame every line as him in control — alpha, commanding, fucking the night up. Never sub, never beta, never emasculated.'
+    );
+    if (other === 'nandini') {
+      lines.push('Nandini is his sub in the roast — she takes it; he delivers it. Not competing.');
+    }
+  } else if (name === 'nandini') {
+    lines.push(
+      'NANDINI IS SUB: playful wreckage, taking it, sub energy — never topping or owning Kunal.'
+    );
+    if (other === 'kunal') {
+      lines.push('Kunal runs the dom energy; she is along for the filth. Never flip the dynamic.');
+    }
+  }
+
+  lines.push('Do NOT pit them against each other. Same team. Filthy third-party narrator only.');
+  return lines.join(' ');
+}
+
 export function buildPrompt(mode, { playerName, scenario, profile, playersContext, gameContext, streakInfo, otherPlayer }) {
   const ctx = gameContext ? `Game state: ${gameContext}.` : '';
+  const dynamic = _dynamicFraming(playerName, otherPlayer);
 
   const profileBlock = profile
     ? `\n\n${playerName}'s filth file:\n${_formatProfile(profile)}`
     : '';
 
   const allPlayersBlock = playersContext
-    ? `\n\nBoth players' questionnaire data (roast using this):\n${playersContext}`
+    ? `\n\nBoth players' questionnaire data:\n${playersContext}`
     : '';
 
   const streakBlock = streakInfo
     ? `\n\nRunning pattern for ${playerName}: ${streakInfo}.`
     : '';
 
-  const partnerLine = otherPlayer ? ` Their partner in this room is ${otherPlayer}.` : '';
+  const partnerLine = otherPlayer ? ` Partner in room: ${otherPlayer}.` : '';
+  const dynamicBlock = `\n\nDYNAMIC FOR THIS LINE: ${dynamic}`;
 
   if (mode === 'book') {
-    return `${COUPLE_BLOCK}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
+    return `${COUPLE_BLOCK}${dynamicBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
 
-${playerName} just completed the full 4-card set of "${scenario}".${partnerLine} Roast this using their kinks/fantasy/roast material from the questionnaire. Compare to ${otherPlayer ?? 'their partner'} if you have both profiles. 1-2 sentences.`;
+${playerName} completed the 4-card set "${scenario}".${partnerLine} Roast with dom/sub framing + Bollywood ref (Paatal Lok / Dhurandhar / Farzi / Dhootha etc). Kunal dom energy if he's the speaker; Nandini sub if she's the speaker. 1-2 sentences.`;
   }
 
   if (mode === 'gfy') {
     const from = otherPlayer ? `asked ${otherPlayer}` : 'asked someone';
-    return `${COUPLE_BLOCK}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
+    return `${COUPLE_BLOCK}${dynamicBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
 
-${playerName} ${from} for cards, got told Go Fuck Yourself, drew from the deck, and missed.${partnerLine} Humiliate them using questionnaire details — kinks, drink choice, dark cinema, roast material. 1-2 sentences.`;
+${playerName} ${from} for cards, got Go Fuck Yourself, drew from the deck, missed.${partnerLine}
+If Kunal: sloppy dom hour — still alpha, still in charge, Hathiram would sigh at the paperwork.
+If Nandini: sub getting teased by the deck — Kunal energy still dominates the room.
+Bollywood ref + questionnaire detail. Never emasculate Kunal. 1-2 sentences.`;
   }
 
   if (mode === 'lucky') {
     const from = otherPlayer ? `asked ${otherPlayer}` : 'asked someone';
-    return `${COUPLE_BLOCK}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
+    return `${COUPLE_BLOCK}${dynamicBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
 
-${playerName} ${from} for cards, got GFY'd, then drew exactly what they needed.${partnerLine} Roast the undeserved luck using their filth file. 1-2 sentences.`;
+${playerName} ${from}, got GFY'd, then drew exactly what they needed.${partnerLine}
+If Kunal: dom luck — Farzi-level counterfeit win, he planned chaos.
+If Nandini: sub luck that still serves Kunal's table energy.
+Filthy humor, not rivalry. 1-2 sentences.`;
   }
 
   if (mode === 'steal') {
-    return `${COUPLE_BLOCK}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
+    return `${COUPLE_BLOCK}${dynamicBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
 
-${playerName} just raided ${otherPlayer ?? "someone"}'s hand.${partnerLine} Roast the theft like a Paatal Lok heist — use kink data if relevant. 1-2 sentences.`;
+${playerName} raided ${otherPlayer ?? "someone"}'s hand.${partnerLine}
+Frame as Paatal Lok heist / Dhurandhar move — dom taking what's his if Kunal; sub cheeky grab that Kunal still owns if Nandini. Never "Nandini beat Kunal" warfare. 1-2 sentences.`;
   }
 
   if (mode === 'game_over') {
-    return `${COUPLE_BLOCK}${ctx}${allPlayersBlock}
+    return `${COUPLE_BLOCK}${dynamicBlock}${ctx}${allPlayersBlock}
 
-Game over. ${playerName} ${scenario ?? 'survived that shitshow'}.${partnerLine} Closing roast for Kunal & Nandini using both questionnaires — kinks, mismatches, who was more depraved tonight. 1-2 sentences.`;
+Game over. ${playerName} ${scenario ?? 'survived the chaos'}.${partnerLine}
+Closing toast: same team walked out filthy — Kunal dom energy, Nandini sub energy, bartender sends them off with one Bollywood punchline. No who-won-who-lost couple war. 1-2 sentences.`;
   }
 
   if (mode === 'roast') {
-    return `${COUPLE_BLOCK}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
+    return `${COUPLE_BLOCK}${dynamicBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
 
-${playerName} hit the Bartender button.${partnerLine} Destroy them using specific kinks, fantasyConfess, partnerRoast, limits contrast vs ${otherPlayer ?? 'partner'}. Samay Raina energy. 1-2 sentences.`;
+${playerName} hit the Bartender button.${partnerLine}
+Destroy with questionnaire specifics + Indian cinema ref. Dom/sub rules apply. Samay Raina filth. 1-2 sentences.`;
   }
 
   if (mode === 'question') {
-    return `${COUPLE_BLOCK}${ctx}${profileBlock}${allPlayersBlock}
+    return `${COUPLE_BLOCK}${dynamicBlock}${ctx}${profileBlock}${allPlayersBlock}
 
-Ask ${playerName} a pointed filthy question about "${scenario}" — tie it to their listed kinks or fantasy. Reference ${otherPlayer ?? 'their partner'} if both profiles exist. 1-2 sentences.`;
+Ask ${playerName} a filthy question about "${scenario}" tied to their kinks. Dom/sub aware. 1-2 sentences.`;
   }
 
   if (mode === 'dare') {
-    return `${COUPLE_BLOCK}${ctx}${profileBlock}${allPlayersBlock}
+    return `${COUPLE_BLOCK}${dynamicBlock}${ctx}${profileBlock}${allPlayersBlock}
 
-Give ${playerName} a short embarrassing dare about "${scenario}" — weaponize their kinks, drink habits, or roast material. ${otherPlayer ? `${otherPlayer} is watching.` : ''} 1-2 sentences.`;
+Dare for ${playerName} about "${scenario}" — weaponize kinks. ${otherPlayer ? `${otherPlayer} watching.` : ''} Dom/sub framing. 1-2 sentences.`;
   }
 
-  return `${COUPLE_BLOCK}${ctx}${allPlayersBlock}\n\nSay something chaotic about what just happened. Use questionnaire data. 1-2 sentences. Swear.`;
+  return `${COUPLE_BLOCK}${dynamicBlock}${ctx}${allPlayersBlock}\n\nChaotic filth about what just happened. Dom/sub rules. Bollywood brain. 1-2 sentences. Swear.`;
 }
 
 function _formatProfile(p) {
@@ -128,96 +162,126 @@ function _formatProfile(p) {
 
 // ─── Offline fallback lines ───────────────────────────────────────────────────
 const OFFLINE = {
-  book: [
-    "Bhenchod — four cards. You hunted this set like Hathiram chasing a Paatal Lok case.",
-    "Absolute cinema. Kunal and Nandini energy and I'm not saying which one of you is more fucked up.",
-    "Full set complete. Your questionnaire warned me. I didn't listen. Neither should your partner.",
-    "Four of a kind. Matlab kya hi bolu — the filth file didn't lie.",
-    "Saala, you collected all four like it's a Dhurandhar operation. Zero subtlety.",
-    "The bar was on the floor and you tunneled under it with your listed kinks. Respect.",
-    "This achievement belongs in Sacred Games season 4. Netflix, call me.",
-    "Baap re — nobody in this room is shocked. Your kink chips told us everything.",
-  ],
-  gfy: [
-    "Go fuck yourself. The deck said it. I said it. Your partner probably agrees.",
-    "Asked for cards, got rejected, drew air. Bhenchod, even Paatal Lok villains have better plans.",
-    "What the fuck was that strategy? Mirzapur ka Munna would've done better.",
-    "GFY trifecta — asked, rejected, whiffed. Absolute cinema of incompetence.",
-    "The pile had one job. You had a whole questionnaire of kinks and still couldn't pull a card.",
-    "Arre yaar — drew nothing. Your drunk-fucking kink won't save you here either.",
-    "Saala, the deck looked at your filth file and said nah.",
-    "Three failures one turn. Gangs of Wasseypur mein bhi itna disaster nahi hota.",
-  ],
-  lucky: [
-    "RNG ne adopt kar liya isko. Bhenchod — you don't deserve this luck or those kinks.",
-    "Drew lucky after GFY. Pushpa energy — thaggede le... but with cards.",
-    "Statistically impossible. Emotionally inevitable for whoever listed death kink on their profile.",
-    "The deck is cheating. Delhi Crime should investigate.",
-    "Lucky draw. Kya scene hai — rejected AND victorious. Main character syndrome.",
-    "Your partner is watching you get lucky. Questionnaire says they have opinions about that.",
-    "Undeserved. Like a Dhurandhar plot twist nobody asked for.",
-  ],
-  steal: [
-    "Walked in, raided the hand, walked out. Paatal Lok heist — zero remorse.",
-    "Bhenchod — stole cards like you're collecting kinks on the questionnaire.",
-    "Professional thief energy. Mirzapur behaviour. No apology.",
-    "Took what they wanted. Your limits say no CNC but this theft was consensual robbery.",
-    "The audacity. The fucking audacity. KGF Chapter 2 vibes.",
-  ],
+  book: {
+    kunal: [
+      "Bhenchod Kunal — full set like Hathiram closing Paatal Lok. Dom energy, absolute cinema.",
+      "Four cards. Saala runs the table like Dhurandhar runs a room — Nandini's just watching.",
+      "Set complete. Farzi-level precision. Main character dom hour.",
+    ],
+    nandini: [
+      "Nandini — four of a kind and still sub energy. Kunal's table, you're the plot twist.",
+      "Full set, bhenchod — Dhootha mindfuck vibes but Kunal still owns the night.",
+      "Baap re — you collected four like a good sub finishing the assignment.",
+    ],
+    default: [
+      "Four cards. Absolute cinema — Paatal Lok finale energy.",
+      "Full set. The bartender pours one for the dom and one for the sub.",
+    ],
+  },
+  gfy: {
+    kunal: [
+      "GFY miss, Kunal? Sloppy dom paperwork — Hathiram still thinks you're in charge.",
+      "Drew air. Saala, even Dhurandhar has off days — you're still running her night.",
+      "Deck said no. Dom still standing. Paatal Lok patience.",
+    ],
+    nandini: [
+      "Nandini got GFY'd — sub tease. Kunal's energy still fills the room, bhenchod.",
+      "Missed draw. Arre yaar — the deck bullying the sub, dom unbothered.",
+      "GFY trifecta on Nandini. Kunal's still the Night Manager of this table.",
+    ],
+    default: [
+      "Go fuck yourself — the pond said it. I said it.",
+    ],
+  },
+  lucky: {
+    kunal: [
+      "Lucky draw, Kunal — Farzi counterfeit win. Dom planned the chaos.",
+      "RNG favors the dom tonight. Pushpa energy — thaggede le.",
+    ],
+    nandini: [
+      "Lucky Nandini — sub blessing that still serves Kunal's table.",
+      "Undeserved luck on the sub. Kunal's probably smirking. Dhootha twist.",
+    ],
+    default: ["Lucky draw. Absolute cinema."],
+  },
+  steal: {
+    kunal: [
+      "Kunal raided the hand — Paatal Lok heist. Dom takes what he wants.",
+      "Stole cards like Dhurandhar takes a scene. Zero apology.",
+    ],
+    nandini: [
+      "Nandini stole one — cheeky sub move. Kunal still runs the room, saala.",
+      "Petty theft from the sub. Dom energy unchanged.",
+    ],
+    default: ["Cards stolen. Heist energy."],
+  },
   game_over: [
-    "Roll credits. Kunal, Nandini — go home and process what your questionnaires exposed.",
-    "Game over. Pour one out. Your kinks survived. Your dignity didn't.",
-    "Bhenchod — what a game. Paatal Lok finale energy. Get the fuck out.",
-    "Absolute cinema. Both filth files fully weaponized tonight. No regrets. Many regrets.",
-    "The bartender has seen your kinks, your limits, and your card play. All disappointing.",
-    "More twists than Dhurandhar. Go reconcile with your partner. Or don't. Not my problem.",
+    "Roll credits — Kunal dom, Nandini sub, same filthy team. Paatal Lok outro.",
+    "Game over. Absolute cinema. Go home — Dhurandhar would approve the chaos.",
+    "Bhenchod — what a session. Farzi-level twists, zero couple warfare.",
+    "The bar closes. Kunal ran it. Nandini took it. Night Manager finale.",
   ],
-  roast: [
-    "Read your filth file. Bhenchod — public fucking AND family taboo on the same profile? Absolute cinema.",
-    "Your kinks are a Netflix pitch. Paatal Lok writers are taking notes.",
-    "I know what you're into. You typed it yourself. Saala, the audacity.",
-    "Questionnaire said roast me for this — so here: you're exactly as depraved as you admitted.",
-    "Kunal, Nandini — one of you has weirder chips than the other. I'm not saying who. Actually I am.",
-    "Your fav swear word is in your profile and I'm still not using it enough to describe you.",
-    "Death kink on paper, can't complete a book in cards. Priorities, bhenchod.",
-    "Drunk fucking kink but you can't hold your liquor OR your hand. Matlab kya hi bolu.",
-  ],
+  roast: {
+    kunal: [
+      "Kunal — read your filth file. Dom questionnaire energy. Paatal Lok main character.",
+      "Saala, your kinks are Dhurandhar-level audacity. Nandini's along for the ride.",
+      "Questionnaire said roast me — you're the dom who typed public fucking. Absolute cinema.",
+    ],
+    nandini: [
+      "Nandini — sub filth file loaded. Kunal's dom energy already wrote your episode.",
+      "Your kinks are a Dhootha plot twist. His table. Your confession.",
+      "Arre yaar — you listed this and Kunal's still in charge. Bad Boy of Bollywood sub arc.",
+    ],
+    default: [
+      "Read the filth file. Bollywood writers wish they had this questionnaire.",
+      "Absolute cinema of poor decisions. Bhenchod.",
+    ],
+  },
   question: [
-    "On a scale of 'profile chip' to 'fantasyConfess field' — how real is this for you?",
-    "Does your partner know you listed this kink? Should they? Be honest, bhenchod.",
-    "Which Paatal Lok character would do this scenario? Wrong answers only.",
-    "Your limits say one thing. Your kinks say another. Explain like I'm Hathiram.",
-    "Walk us through the first time. We have drinks and your whole filth file.",
-    "Kunal or Nandini — who'd actually do this? Point at them. Now.",
+    "Scale of profile chip to fantasyConfess — how real, bhenchod?",
+    "Paatal Lok character for this scenario — Hathiram asking the questions.",
+    "Farzi-level double life or Dhootha twist — which fits your kink?",
   ],
   dare: [
-    "Read your dirtiest kink chip aloud. Eye contact with your partner. Go.",
-    "Confess which questionnaire answer was a lie. 10 seconds. Absolute cinema.",
-    "Do your best Sacred Games scream. Partner rates it 1-10.",
-    "Whisper your fantasyConfess field in your partner's ear. They react. We watch.",
-    "Say your fav swear word like it's the last line of Dhurandhar. Commit.",
-    "Reenact your listed kink using only hand gestures. Partner guesses. No speaking.",
-  ]
+    "Read your dirtiest kink chip aloud. Dom/sub eye contact. Go.",
+    "Sacred Games scream. Partner rates. Absolute cinema.",
+    "Whisper fantasyConfess — Kunal dom energy, Nandini sub energy. Now.",
+  ],
 };
 
-function _pickProfileHook(profile, otherProfile) {
+function _speakerKey(name) {
+  const n = (name ?? '').toLowerCase();
+  if (n === 'kunal') return 'kunal';
+  if (n === 'nandini') return 'nandini';
+  return 'default';
+}
+
+function _pickProfileHook(profile) {
   const hooks = [];
-  if (profile?.kinks?.length) hooks.push(`listed "${profile.kinks[Math.floor(Math.random() * profile.kinks.length)]}" as a kink`);
+  if (profile?.kinks?.length) hooks.push(`listed "${profile.kinks[Math.floor(Math.random() * profile.kinks.length)]}"`);
   if (profile?.fantasyConfess) hooks.push(`admitted "${profile.fantasyConfess.slice(0, 40)}..."`);
-  if (profile?.partnerRoast) hooks.push(`asked to be roasted for "${profile.partnerRoast.slice(0, 40)}..."`);
-  if (profile?.swearWord) hooks.push(`whose fav swear is "${profile.swearWord}"`);
-  if (profile?.mediaFaves?.length) hooks.push(`who loves ${profile.mediaFaves[0]}`);
-  if (profile?.favDrink) hooks.push(`who drinks ${profile.favDrink}`);
-  if (otherProfile?.name && profile?.kinks?.length && otherProfile?.limits?.length) {
-    hooks.push(`while ${otherProfile.name} drew a line at ${otherProfile.limits[0]}`);
-  }
+  if (profile?.partnerRoast) hooks.push(`wanted roasts for "${profile.partnerRoast.slice(0, 40)}..."`);
+  if (profile?.swearWord) hooks.push(`fav swear "${profile.swearWord}"`);
+  if (profile?.mediaFaves?.length) hooks.push(`${profile.mediaFaves[0]} energy`);
+  if (profile?.favDrink) hooks.push(`drinks ${profile.favDrink}`);
   return hooks.length ? hooks[Math.floor(Math.random() * hooks.length)] : null;
 }
 
 export function offlineLine(mode, profile, otherProfile = null) {
-  const bank = OFFLINE[mode] ?? OFFLINE.roast;
+  const key = _speakerKey(profile?.name);
+  const bankEntry = OFFLINE[mode] ?? OFFLINE.roast;
+
+  let bank;
+  if (Array.isArray(bankEntry)) {
+    bank = bankEntry;
+  } else if (bankEntry[key]) {
+    bank = bankEntry[key];
+  } else {
+    bank = bankEntry.default ?? bankEntry.kunal ?? Object.values(bankEntry)[0];
+  }
+
   const line = bank[Math.floor(Math.random() * bank.length)];
-  const hook = _pickProfileHook(profile, otherProfile);
+  const hook = _pickProfileHook(profile);
   if (hook && Math.random() > 0.35) {
     const name = profile?.name ?? 'You';
     return `${name} — ${hook}. ${line}`;

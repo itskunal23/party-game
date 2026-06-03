@@ -725,14 +725,14 @@ function renderLobbyPlayers(players) {
 
 // ─── Home screen profile display ─────────────────────────────────────────────
 const BARTENDER_PREVIEW_LINES = [
-  "Bhenchod — I read your kinks. Kunal and Nandini, you're both fucked tonight.",
-  "Public fucking on the profile? Paatal Lok writers wish they had your audacity.",
-  "Your filth file is loaded. Samay Raina energy. Zero mercy.",
-  "I know your limits AND your kinks. Guess which one I'm using.",
-  "Dhurandhar-level roast incoming. You typed this shit yourself.",
-  "Questionnaire complete. Absolute cinema of poor decisions.",
-  "Arre yaar — your partner hasn't seen your answers yet. I have.",
-  "Locked, loaded, and ready to weaponize every chip you selected.",
+  "Bhenchod — Kunal dom energy, Nandini sub energy. Paatal Lok writers could never.",
+  "Dhurandhar-level filth on your questionnaire. Same team, zero mercy.",
+  "Farzi chaos on the cards. Kunal runs the table — absolute cinema.",
+  "Dhootha twist energy tonight. Kunal in charge, Nandini taking it.",
+  "Bad Boy of Bollywood roast loaded. Limits sacred. Kinks weaponized.",
+  "The Night Manager of this room is Kunal. Bartender just narrates.",
+  "Hathiram read your filth files. Case closed. You're both fucked.",
+  "Samay Raina meets Mirzapur — dom/sub, not couple warfare.",
 ];
 
 function updateHomeForProfile(profile) {
