@@ -8,9 +8,9 @@ export function initMobile() {
   root.style.setProperty('--safe-left', 'env(safe-area-inset-left)');
   root.style.setProperty('--safe-right', 'env(safe-area-inset-right)');
 
-  // Prevent double-tap zoom on buttons
+  // Prevent double-tap zoom on game cards only — never block wizard/button taps (breaks iOS click)
   document.addEventListener('touchend', e => {
-    if (e.target.closest('button, .card, .card-btn')) e.preventDefault();
+    if (e.target.closest('.card, .card-btn, .hand-card-wrapper')) e.preventDefault();
   }, { passive: false });
 
   // Disable pull-to-refresh / overscroll bounce

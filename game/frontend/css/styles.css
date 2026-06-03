@@ -128,6 +128,7 @@ button {
   border-radius: var(--radius-sm);
   transition: transform 0.12s var(--spring), opacity 0.12s;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 button:active { transform: scale(0.95); }

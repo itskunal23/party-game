@@ -150,9 +150,7 @@ export function clearProfile() {
 }
 
 export function initProfile(el, onComplete) {
-  if (_el?._wizardTapHandler) {
-    _el.removeEventListener('click', _el._wizardTapHandler);
-  }
+  if (_el?._navAbort) _el._navAbort.abort();
   if (_el?._swipeHandler) {
     _el.removeEventListener('touchstart', _el._swipeStart);
     _el.removeEventListener('touchend', _el._swipeHandler);
@@ -186,41 +184,84 @@ export function initProfile(el, onComplete) {
     </div>
     <div class="pf-area" id="pf-area"></div>
     <div class="pf-bottom" id="pf-bottom">
-      <button type="button" class="pf-skip" id="pf-skip">Skip →</button>
-      <button type="button" class="pf-continue" id="pf-continue">Continue →</button>
+      <button type="button" class="pf-skip" id="pf-skip">Skip this question</button>
+      <button type="button" class="pf-continue" id="pf-continue">Continue</button>
     </div>`;
 
-  _el._wizardTapHandler = _onWizardTap;
-  _el.addEventListener('click', _el._wizardTapHandler);
+  _wireNavButtons();
   _wireSwipe(el);
 
   _render(0, 'init');
 }
 
-function _onWizardTap(e) {
-  if (e.target.closest('.pf-pick-row') || e.target.closest('.pf-step-dot')) return;
-  if (e.target.closest('#pf-continue')) {
+function _bindTap(el, fn) {
+  if (!el) return;
+  let last = 0;
+  const handler = (e) => {
+    if (e.type === 'pointerup' && e.pointerType === 'mouse' && e.button !== 0) return;
+    const now = performance.now();
+    if (now - last < 450) return;
+    last = now;
     e.preventDefault();
-    _continue();
-  } else if (e.target.closest('#pf-skip')) {
-    e.preventDefault();
-    _skip();
-  } else if (e.target.closest('#pf-back')) {
-    e.preventDefault();
-    _back();
-  }
+    e.stopPropagation();
+    fn(e);
+  };
+  if ('PointerEvent' in window) el.addEventListener('pointerup', handler);
+  else el.addEventListener('click', handler);
+  return handler;
+}
+
+function _wireNavButtons() {
+  _el?._navAbort?.abort();
+  const ac = new AbortController();
+  _el._navAbort = ac;
+  const { signal } = ac;
+
+  const bind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let last = 0;
+    const handler = (e) => {
+      if (e.type === 'pointerup' && e.pointerType === 'mouse' && e.button !== 0) return;
+      const now = performance.now();
+      if (now - last < 450) return;
+      last = now;
+      e.preventDefault();
+      e.stopPropagation();
+      fn();
+    };
+    if ('PointerEvent' in window) el.addEventListener('pointerup', handler, { signal });
+    else el.addEventListener('click', handler, { signal });
+  };
+
+  bind('pf-continue', _continue);
+  bind('pf-skip', _skip);
+  bind('pf-back', _back);
 }
 
 function _wireSwipe(el) {
   let startX = null;
+  let startY = null;
+  let swipeArmed = false;
+
   const onStart = e => {
-    startX = e.changedTouches[0]?.clientX ?? null;
+    if (e.target.closest('#pf-bottom, .pf-pick-row, .pf-chip, .pf-step-dot, .pf-back')) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    startX = t.clientX;
+    startY = t.clientY;
+    swipeArmed = true;
   };
   const onEnd = e => {
-    if (startX == null) return;
-    const dx = (e.changedTouches[0]?.clientX ?? startX) - startX;
+    if (!swipeArmed || startX == null) return;
+    swipeArmed = false;
+    const t = e.changedTouches[0];
+    if (!t) { startX = null; return; }
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
     startX = null;
-    if (Math.abs(dx) < 72) return;
+    startY = null;
+    if (Math.abs(dx) < 72 || Math.abs(dy) > Math.abs(dx)) return;
     if (dx < 0 && _idx < QUESTIONS.length - 1) {
       _save(QUESTIONS[_idx]);
       _idx++;
@@ -509,12 +550,13 @@ function _render(idx, dir) {
   const isPickOne = q.type === 'pick-one';
   if (skip) {
     skip.style.display = '';
-    skip.style.flex = isPickOne ? '1' : '';
+    skip.classList.toggle('pf-skip--solo', isPickOne);
   }
   if (cont) {
-    cont.textContent = idx === QUESTIONS.length - 1 ? "LET'S FUCKING GO 🔥" : 'Continue →';
+    cont.textContent = idx === QUESTIONS.length - 1 ? "Let's fucking go" : 'Continue';
     cont.style.display = isPickOne ? 'none' : '';
-    cont.style.flex = isPickOne ? '0' : '1';
+    cont.disabled = false;
+    cont.classList.remove('pf-continue--busy');
   }
 
   _renderStepDots();
@@ -529,8 +571,8 @@ function _render(idx, dir) {
   area.appendChild(card);
 
   if (typeof gsap !== 'undefined') {
-    const fromY = dir === 'back' ? -56 : dir === 'init' ? 48 : 72;
-    gsap.from(card, { y: fromY, opacity: 0, duration: 0.44, ease: 'back.out(1.5)' });
+    const fromY = dir === 'back' ? -40 : dir === 'init' ? 28 : 44;
+    gsap.from(card, { y: fromY, opacity: 0, duration: 0.26, ease: 'power2.out' });
   }
 
   setTimeout(() => _wire(q), 60);
@@ -599,7 +641,8 @@ function _wire(q) {
 
   if (q.type === 'pick-one') {
     root.querySelectorAll('.pf-pick-row').forEach(btn => {
-      btn.addEventListener('click', () => {
+      _bindTap(btn, () => {
+        if (_advancing) return;
         const raw = btn.dataset.val;
         const option = q.options.find(o => String(o.value) === raw);
         if (!option) return;
@@ -609,10 +652,7 @@ function _wire(q) {
         else if (q.id === 'weight') _answers.weight = { value: option.value, unit: 'lb' };
         else _answers[q.id] = option.value;
         haptic('medium');
-        if (typeof gsap !== 'undefined') {
-          gsap.fromTo(btn, { scale: 0.98 }, { scale: 1, duration: 0.22, ease: 'back.out(2)' });
-        }
-        setTimeout(() => _continue(), 340);
+        _continue();
       });
     });
   }
@@ -857,26 +897,37 @@ function _save(q) {
       if (q.id === 'name') localStorage.setItem('gfy_player_name', String(val));
     }
   }
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(_answers));
+  _persistAnswers();
+}
+
+function _persistAnswers() {
+  const snapshot = { ..._answers };
+  queueMicrotask(() => {
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(snapshot)); } catch { /* quota */ }
+  });
 }
 
 function _continue() {
   if (_advancing) return;
   _advancing = true;
+  const cont = document.getElementById('pf-continue');
+  cont?.classList.add('pf-continue--busy');
+  document.activeElement?.blur?.();
   _save(QUESTIONS[_idx]);
   haptic('medium');
   if (_idx < QUESTIONS.length - 1) { _idx++; _render(_idx, 'fwd'); }
   else _complete();
-  setTimeout(() => { _advancing = false; }, 380);
+  requestAnimationFrame(() => { _advancing = false; });
 }
 
 function _skip() {
   if (_advancing) return;
   _advancing = true;
+  document.activeElement?.blur?.();
   haptic('light');
   if (_idx < QUESTIONS.length - 1) { _idx++; _render(_idx, 'fwd'); }
   else _complete();
-  setTimeout(() => { _advancing = false; }, 380);
+  requestAnimationFrame(() => { _advancing = false; });
 }
 
 function _back() {
