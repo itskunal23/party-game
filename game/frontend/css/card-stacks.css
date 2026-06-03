@@ -1,10 +1,9 @@
-/* ── Hand card wrapper (fan positioned, GSAP controlled) ─────────────────── */
+/* ── Hand card wrapper (horizontal row, GSAP for lift/drag only) ─────────── */
 .hand-card-wrapper {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  margin-left: -68px;
-  touch-action: none;
+  position: relative;
+  flex-shrink: 0;
+  scroll-snap-align: center;
+  touch-action: pan-x;
   user-select: none;
   cursor: grab;
   will-change: transform;
@@ -12,7 +11,7 @@
   filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45));
 }
 
-.hand-card-wrapper:not(.is-selected):not(.is-dragging) {
+.hand-card-wrapper:not(.is-selected):not(.is-dragging) .card {
   animation: handWobble 4s ease-in-out infinite;
   animation-delay: calc(var(--wobble-i, 0) * 0.3s);
 }
@@ -188,20 +187,6 @@
   100% { transform: rotateY(0deg) scale(1); opacity: 1; }
 }
 
-/* ── Hand zone ─────────────────────────────────────────────────────────────── */
-.hand-zone {
-  display: flex;
-  flex-direction: row;
-  gap: var(--space-sm);
-  overflow-x: auto;
-  overflow-y: visible;
-  padding: var(--space-md) var(--space-sm) var(--space-lg);
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.hand-zone::-webkit-scrollbar { display: none; }
 .hand-group { scroll-snap-align: center; flex-shrink: 0; }
 
 /* ── Opponent card minis ───────────────────────────────────────────────────── */

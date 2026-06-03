@@ -440,12 +440,28 @@
 #action-banner.hidden { opacity: 0; pointer-events: none; }
 #action-banner.banner--error { border-left-color: var(--brand-red); }
 
-/* ── Hand zone — fan layout container ────────────────────────────────────── */
+/* ── Hand zone — horizontal row, scroll when hand is wide ─────────────────── */
 #hand-zone {
-  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 10px;
   flex-shrink: 0;
-  height: 220px;
-  overflow: visible;
+  min-height: 220px;
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+#hand-zone::-webkit-scrollbar { display: none; }
+
+#hand-zone.hand-zone--centered {
+  justify-content: center;
 }
 
 /* ── Player selector (drag-to-ask overlay) ───────────────────────────────── */

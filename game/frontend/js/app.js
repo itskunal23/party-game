@@ -39,21 +39,9 @@ let _aiCooldownUntil = 0;
 let _drag = null;
 let _dealingLocked = false;
 
-// ─── Fan layout math — curved arc from center ─────────────────────────────────
-function fanPosition(i, n) {
-  if (n <= 1) return { x: 0, y: 0, rot: 0, z: 1 };
-  const center = (n - 1) / 2;
-  const offset = i - center;
-  // Wider spread for smaller hands, tighter for large — feels physically natural
-  const maxSpread = Math.min(56, 280 / (n - 1));
-  const maxRot = Math.min(11, 50 / n);
-  const arcDepth = 4; // parabolic depth — center card sits highest
-  return {
-    x:   offset * maxSpread,
-    y:   offset * offset * arcDepth,
-    rot: offset * maxRot,
-    z:   n - Math.round(Math.abs(offset))
-  };
+// ─── Hand slot metadata (horizontal row — no overlap) ────────────────────────
+function handSlotMeta(i) {
+  return { x: 0, y: 0, rot: 0, z: i + 1 };
 }
 
 // ─── Screen helpers ───────────────────────────────────────────────────────────
@@ -299,7 +287,7 @@ function renderCardBack() {
   return div;
 }
 
-// ─── Hand rendering (fan layout) ─────────────────────────────────────────────
+// ─── Hand rendering (horizontal row, scroll when needed) ───────────────────
 function renderHand() {
   const zone = $('hand-zone');
   if (!zone) return;
@@ -315,18 +303,20 @@ function renderHand() {
   const n = groups.length;
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
 
+  zone.classList.toggle('hand-zone--centered', n > 0 && n <= 3);
+
   groups.forEach(([, cards], i) => {
     const card = cards[0];
     const isSelected = state.selectedCard?.rank === card.rank;
-    const pos = fanPosition(i, n);
+    const slot = handSlotMeta(i);
 
     const wrapper = document.createElement('div');
     wrapper.className = 'hand-card-wrapper' + (isSelected ? ' is-selected' : '');
     wrapper.dataset.rank = card.rank;
     wrapper.dataset.scenario = card.scenario;
-    wrapper._fan = pos;
+    wrapper._fan = slot;
     wrapper.style.setProperty('--wobble-i', i);
-    wrapper.style.zIndex = isSelected ? 50 : pos.z;
+    wrapper.style.zIndex = isSelected ? 50 : slot.z;
 
     const el = renderCard(card, isMyTurn);
     if (cards.length > 1) {
@@ -340,19 +330,18 @@ function renderHand() {
 
     if (!gsapReady()) return;
 
-    const gsapY = isSelected ? -52 : pos.y;
-    const gsapScale = isSelected ? 1.1 : 1;
-    gsap.set(wrapper, { x: pos.x, y: gsapY, rotation: pos.rot, scale: gsapScale });
+    const gsapY = isSelected ? -40 : 0;
+    const gsapScale = isSelected ? 1.08 : 1;
+    gsap.set(wrapper, { x: 0, y: gsapY, rotation: 0, scale: gsapScale });
 
     if (!isSelected) {
-      // Staggered entrance — cards deal from bottom with spring
       gsap.from(wrapper, {
-        y: pos.y + 130,
+        y: 48,
         opacity: 0,
-        scale: 0.88,
-        duration: 0.52,
-        delay: i * 0.055,
-        ease: 'back.out(1.5)',
+        scale: 0.92,
+        duration: 0.45,
+        delay: i * 0.04,
+        ease: 'back.out(1.4)',
         overwrite: true
       });
     }
@@ -377,7 +366,7 @@ function _onCardTap(wrapper, card) {
     wrapper.classList.remove('is-selected');
     wrapper.style.zIndex = wrapper._fan.z;
     if (gsapReady()) {
-      gsap.to(wrapper, { y: wrapper._fan.y, scale: 1, duration: 0.45, ease: 'back.out(1.6)', overwrite: true });
+      gsap.to(wrapper, { y: 0, scale: 1, duration: 0.45, ease: 'back.out(1.6)', overwrite: true });
     }
   } else {
     if (state.selectedCard) {
@@ -386,7 +375,7 @@ function _onCardTap(wrapper, card) {
         prev.classList.remove('is-selected');
         prev.style.zIndex = prev._fan?.z ?? 1;
         if (gsapReady()) {
-          gsap.to(prev, { y: prev._fan?.y ?? 0, scale: 1, duration: 0.32, ease: 'back.out(1.5)', overwrite: true });
+          gsap.to(prev, { y: 0, scale: 1, duration: 0.32, ease: 'back.out(1.5)', overwrite: true });
         }
       }
     }
@@ -395,7 +384,7 @@ function _onCardTap(wrapper, card) {
     wrapper.classList.add('is-selected');
     wrapper.style.zIndex = 50;
     if (gsapReady()) {
-      gsap.to(wrapper, { y: -52, scale: 1.1, duration: 0.5, ease: 'elastic.out(1, 0.5)', overwrite: true });
+      gsap.to(wrapper, { y: -40, scale: 1.08, duration: 0.5, ease: 'elastic.out(1, 0.5)', overwrite: true });
     } else {
       wrapper.style.transform = 'translateY(-40px) scale(1.08)';
     }
@@ -466,17 +455,17 @@ function _onDragMove(e) {
 
   if (_drag.active) {
     e.preventDefault();
-    const { x, y } = _drag.wrapper._fan ?? { x: 0, y: 0 };
+    const baseY = state.selectedCard?.rank === _drag.wrapper.dataset.rank ? -40 : 0;
     if (gsapReady()) {
       gsap.set(_drag.wrapper, {
-        x: x + _drag.dx,
-        y: y + _drag.dy,
-        rotation: _drag.dx * 0.1,
-        scale: 1.12,
+        x: _drag.dx,
+        y: baseY + _drag.dy,
+        rotation: _drag.dx * 0.08,
+        scale: 1.1,
         zIndex: 300
       });
     } else {
-      _drag.wrapper.style.transform = `translate(${x + _drag.dx}px, ${y + _drag.dy}px) rotate(${_drag.dx * 0.1}deg) scale(1.12)`;
+      _drag.wrapper.style.transform = `translate(${_drag.dx}px, ${baseY + _drag.dy}px) rotate(${_drag.dx * 0.08}deg) scale(1.1)`;
       _drag.wrapper.style.zIndex = '300';
     }
     _updateDropHover(t.clientX, t.clientY);
@@ -508,13 +497,12 @@ function _onDragEnd(e) {
 
 function _springCardHome(wrapper) {
   if (!wrapper?._fan) return;
-  const { x, y, rot } = wrapper._fan;
   const selected = state.selectedCard?.rank === wrapper.dataset.rank;
-  const targetY = selected ? -52 : y;
-  const targetScale = selected ? 1.1 : 1;
+  const targetY = selected ? -40 : 0;
+  const targetScale = selected ? 1.08 : 1;
   if (gsapReady()) {
     gsap.to(wrapper, {
-      x, y: targetY, rotation: rot, scale: targetScale,
+      x: 0, y: targetY, rotation: 0, scale: targetScale,
       duration: 0.55,
       ease: 'elastic.out(1, 0.52)',
       overwrite: true
