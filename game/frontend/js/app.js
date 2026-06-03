@@ -9,7 +9,7 @@ import {
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let state = {
-  screen: 'profile',
+  screen: 'landing',
   myId: null,
   myHand: [],
   players: [],
@@ -45,7 +45,7 @@ function fanPosition(i, n) {
 }
 
 // ─── Screen helpers ───────────────────────────────────────────────────────────
-const SCREENS = ['profile', 'home', 'lobby', 'game', 'toast', 'results'];
+const SCREENS = ['landing', 'profile', 'home', 'lobby', 'game', 'toast', 'results'];
 
 function showScreen(name) {
   SCREENS.forEach(s => {
@@ -724,6 +724,53 @@ function updateHomeForProfile(profile) {
   }
 }
 
+// ─── Landing ──────────────────────────────────────────────────────────────────
+const LANDING_ROLE = {
+  kunal:   'Kunal — build your filth file, then create the room for Nandini.',
+  nandini: 'Nandini — build your filth file, then join with Kunal\'s room code.'
+};
+
+function updateLandingForProfile(profile) {
+  const who = new URLSearchParams(window.location.search).get('who')?.toLowerCase();
+  const roleEl = $('landing-role');
+  const welcome = $('landing-welcome');
+  const welcomeName = $('landing-welcome-name');
+  const cta = $('btn-landing-enter');
+  const ctaSub = $('landing-cta-sub');
+  const retake = $('btn-landing-retake');
+
+  if (roleEl) {
+    roleEl.textContent = LANDING_ROLE[who] ?? 'Two phones. One room. Zero dignity.';
+  }
+
+  if (profile?.name && hasProfile()) {
+    welcome?.classList.remove('hidden');
+    if (welcomeName) welcomeName.textContent = profile.name;
+    if (cta) cta.textContent = 'Enter the game';
+    if (ctaSub) ctaSub.textContent = 'Your filth file is ready — hit the card table';
+    retake?.classList.remove('hidden');
+  } else {
+    welcome?.classList.add('hidden');
+    if (cta) cta.textContent = 'Build your filth file';
+    if (ctaSub) ctaSub.textContent = 'Questionnaire first · then Go Fuck Yourself';
+    retake?.classList.add('hidden');
+  }
+}
+
+function enterFromLanding() {
+  haptic('medium');
+  if (hasProfile()) {
+    state.profile = getProfile();
+    updateHomeForProfile(state.profile);
+    showScreen('home');
+    if (gsapReady()) {
+      gsap.from('#screen-home', { opacity: 0, y: 16, duration: 0.4, ease: 'power2.out' });
+    }
+  } else {
+    startProfileFlow();
+  }
+}
+
 // ─── Profile → Home flow ──────────────────────────────────────────────────────
 function startProfileFlow() {
   const wizard = $('profile-wizard');
@@ -731,6 +778,7 @@ function startProfileFlow() {
   initProfile(wizard, profile => {
     state.profile = profile;
     updateHomeForProfile(profile);
+    updateLandingForProfile(profile);
     showScreen('home');
     if (gsapReady()) {
       gsap.from('#screen-home', { opacity: 0, duration: 0.45, ease: 'power2.out' });
@@ -960,6 +1008,12 @@ function wireUI() {
     API.send({ type: 'playAgain' });
   });
 
+  $('btn-landing-enter')?.addEventListener('click', enterFromLanding);
+  $('btn-landing-retake')?.addEventListener('click', () => {
+    haptic('light');
+    startProfileFlow();
+  });
+
   $('btn-edit-profile')?.addEventListener('click', () => {
     clearProfile();
     startProfileFlow();
@@ -1051,12 +1105,12 @@ export function init() {
   }
 
   state.profile = getProfile();
-
-  if (hasProfile()) {
-    updateHomeForProfile(state.profile);
-    showScreen('home');
-  } else {
-    startProfileFlow();
+  updateLandingForProfile(state.profile);
+  showScreen('landing');
+  if (gsapReady()) {
+    gsap.from('.landing-hero', { opacity: 0, y: 24, duration: 0.5, ease: 'power2.out' });
+    gsap.from('.landing-step', { opacity: 0, y: 20, duration: 0.45, stagger: 0.08, delay: 0.15, ease: 'power2.out' });
+    gsap.from('.landing-footer', { opacity: 0, y: 16, duration: 0.4, delay: 0.35, ease: 'power2.out' });
   }
 }
 

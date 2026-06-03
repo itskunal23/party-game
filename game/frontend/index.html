@@ -28,6 +28,7 @@
 
   <!-- Styles -->
   <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/landing.css">
   <link rel="stylesheet" href="/css/profile.css">
   <link rel="stylesheet" href="/css/card-stacks.css">
   <link rel="stylesheet" href="/css/game-theatre.css">
@@ -40,6 +41,55 @@
 
   <!-- Reconnection toast -->
   <div id="connection-toast" class="hidden">Reconnecting…</div>
+
+  <!-- ── SCREEN: Landing ───────────────────────────────────────────────── -->
+  <div id="screen-landing" class="screen hidden">
+    <div class="landing-bg" aria-hidden="true">
+      <div class="landing-glow"></div>
+    </div>
+
+    <div class="landing-content">
+      <header class="landing-hero">
+        <div class="landing-badge">18+ · Two phones · Same room</div>
+        <div class="landing-logo">GFY</div>
+        <h1 class="landing-title">Go Fuck Yourself!</h1>
+        <p class="landing-tagline">Filthy Go Fish for Kunal &amp; Nandini — questionnaire, then cards, then chaos.</p>
+        <p class="landing-role" id="landing-role">Two phones. One room. Zero dignity.</p>
+        <p class="landing-welcome hidden" id="landing-welcome">Welcome back, <span class="landing-welcome-name" id="landing-welcome-name"></span></p>
+      </header>
+
+      <ol class="landing-steps" aria-label="How tonight works">
+        <li class="landing-step">
+          <span class="landing-step-num">1</span>
+          <div class="landing-step-body">
+            <div class="landing-step-title">Filth File</div>
+            <div class="landing-step-desc">Quick questionnaire — kinks, limits, roast fuel for Bhenchod Bartender.</div>
+          </div>
+        </li>
+        <li class="landing-step">
+          <span class="landing-step-num">2</span>
+          <div class="landing-step-body">
+            <div class="landing-step-title">Pair up</div>
+            <div class="landing-step-desc">Kunal creates a room · Nandini joins with the 4-letter code on her phone.</div>
+          </div>
+        </li>
+        <li class="landing-step">
+          <span class="landing-step-num">3</span>
+          <div class="landing-step-body">
+            <div class="landing-step-title">Go Fuck Yourself</div>
+            <div class="landing-step-desc">5 cards each, ask for sets of 4, draw from the pond — loser drinks.</div>
+          </div>
+        </li>
+      </ol>
+
+      <footer class="landing-footer">
+        <button type="button" class="landing-cta" id="btn-landing-enter">Build your filth file</button>
+        <p class="landing-cta-sub" id="landing-cta-sub">Questionnaire first · then the card game</p>
+        <button type="button" class="landing-retake hidden" id="btn-landing-retake">Refresh my filth file</button>
+        <p class="landing-age">21+ recommended · Play responsibly · Hard limits are sacred</p>
+      </footer>
+    </div>
+  </div>
 
   <!-- ── SCREEN: Profile onboarding ────────────────────────────────────── -->
   <div id="screen-profile" class="screen hidden">

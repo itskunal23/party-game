@@ -1,10 +1,11 @@
-const CACHE = 'gfy-v1';
+const CACHE = 'gfy-v2';
 
 const STATIC_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/css/styles.css',
+  '/css/landing.css',
   '/css/profile.css',
   '/css/card-stacks.css',
   '/css/game-theatre.css',
