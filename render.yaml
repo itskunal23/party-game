@@ -1,7 +1,10 @@
+# Free-tier only — no paid instance types.
+# Omitting `plan` defaults to `starter` (paid) and triggers card verification.
 services:
   - type: web
     name: party-game
     runtime: node
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     envVars:

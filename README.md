@@ -174,24 +174,37 @@ Without `NVIDIA_API_KEY`, the app runs with offline roast lines and no vision dr
 
 ## Deploy on Render
 
-WebSocket and in-memory rooms need a **long-running Node process**. This repo includes a root `render.yaml` Blueprint.
+WebSocket and in-memory rooms need a **long-running Node process**. This repo includes a root `render.yaml` Blueprint configured for the **free** web tier only (`plan: free`).
+
+> **Important:** If `plan` is omitted, Render defaults to `starter` (paid) and may require a payment method before deploy. This repo sets `plan: free` explicitly.
 
 ### Option A — Blueprint (recommended)
 
 1. Push this repo to [github.com/itskunal23/party-game](https://github.com/itskunal23/party-game).
 2. In [Render Dashboard](https://dashboard.render.com) → **New → Blueprint**.
 3. Connect the `party-game` repository — Render reads `render.yaml`.
-4. Set **`NVIDIA_API_KEY`** in Environment (Dashboard → your service → Environment). Do not put it in git.
-5. Deploy. Open your Render URL on both phones → Add to Home Screen.
+4. Confirm the service shows **Free** instance type (not Starter).
+5. Set **`NVIDIA_API_KEY`** in Environment (Dashboard → your service → Environment). Do not put it in git.
+6. Deploy. Open your Render URL on both phones → Add to Home Screen.
 
 ### Option B — Manual web service
 
 | Setting | Value |
 |---|---|
+| Instance Type | **Free** |
 | Root Directory | *(empty — repo root)* |
 | Build Command | `npm install` |
 | Start Command | `npm start` |
 | Environment | `NVIDIA_API_KEY` = your key (secret) |
+
+### Free tier limits
+
+| Limit | Detail |
+|---|---|
+| Spin-down | Service sleeps after ~15 min with no traffic (cold start on next visit) |
+| WebSockets | Supported on free web services |
+| Databases | Not used — this app keeps rooms in memory (no Postgres needed) |
+| Billing | No instance charges on `plan: free`; Render may still ask for a card for account verification |
 
 ### Production checklist
 
@@ -201,7 +214,7 @@ WebSocket and in-memory rooms need a **long-running Node process**. This repo in
 - [ ] `/css/styles.css` returns `200` with `Content-Type: text/css`
 - [ ] PWA installed from home screen on iOS for best UX
 
-**Note:** Free Render plans spin down after ~15 min idle (cold start on next visit).
+If Render still asks for a payment method after this fix, cancel and re-create the Blueprint so it re-reads `plan: free` from GitHub (or delete any existing Starter service and redeploy).
 
 ---
 
