@@ -42,53 +42,155 @@
   <!-- Reconnection toast -->
   <div id="connection-toast" class="hidden">Reconnecting…</div>
 
-  <!-- ── SCREEN: Landing ───────────────────────────────────────────────── -->
+  <!-- ── SCREEN: Landing (scrollable marketing) ─────────────────────────── -->
   <div id="screen-landing" class="screen hidden">
-    <div class="landing-bg" aria-hidden="true">
-      <div class="landing-glow"></div>
+    <div class="lp-bg" aria-hidden="true">
+      <div class="lp-gradient"></div>
+      <div class="lp-glass-orb lp-glass-orb--1"></div>
+      <div class="lp-glass-orb lp-glass-orb--2"></div>
+      <div class="lp-float-cards">
+        <div class="lp-float-card lp-float-card--1"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
+        <div class="lp-float-card lp-float-card--2"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
+        <div class="lp-float-card lp-float-card--3"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
+        <div class="lp-float-card lp-float-card--4"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
+      </div>
     </div>
 
-    <div class="landing-content">
-      <header class="landing-hero">
-        <div class="landing-badge">18+ · Two phones · Same room</div>
-        <div class="landing-logo">GFY</div>
-        <h1 class="landing-title">Go Fuck Yourself!</h1>
-        <p class="landing-tagline">Same link on both phones. Questionnaire, then filthy Go Fish — Kunal &amp; Nandini edition.</p>
-        <p class="landing-role" id="landing-role">Open this URL on both phones · one creates the room · one joins</p>
-        <p class="landing-same-url" id="landing-same-url">party-game-armi.onrender.com</p>
-        <p class="landing-welcome hidden" id="landing-welcome">Welcome back, <span class="landing-welcome-name" id="landing-welcome-name"></span></p>
-      </header>
+    <div class="lp-scroll">
+      <!-- §1 Hero -->
+      <section class="lp-hero">
+        <div class="lp-hero-inner lp-reveal">
+          <p class="lp-eyebrow">18+ · Party card game</p>
+          <h1 class="lp-logo">GO FUCK<br>YOURSELF</h1>
+          <p class="lp-tagline">The party card game<br>where your friends tell you<br>to go fuck yourself.</p>
 
-      <ol class="landing-steps" aria-label="How tonight works">
-        <li class="landing-step">
-          <span class="landing-step-num">1</span>
-          <div class="landing-step-body">
-            <div class="landing-step-title">Filth File</div>
-            <div class="landing-step-desc">Quick questionnaire — kinks, limits, roast fuel for Bhenchod Bartender.</div>
+          <div class="lp-hero-actions">
+            <button type="button" class="lp-btn lp-btn--primary" data-lp-start id="btn-lp-start-hero">Start Chaos</button>
+            <button type="button" class="lp-btn lp-btn--ghost" data-lp-join-toggle id="btn-lp-join-hero">Join Chaos</button>
           </div>
-        </li>
-        <li class="landing-step">
-          <span class="landing-step-num">2</span>
-          <div class="landing-step-body">
-            <div class="landing-step-title">Pair up</div>
-            <div class="landing-step-desc">One phone taps Start Chaos · the other Join Chaos with the 4-letter code.</div>
-          </div>
-        </li>
-        <li class="landing-step">
-          <span class="landing-step-num">3</span>
-          <div class="landing-step-body">
-            <div class="landing-step-title">Go Fuck Yourself</div>
-            <div class="landing-step-desc">5 cards each, ask for sets of 4, draw from the pond — loser drinks.</div>
-          </div>
-        </li>
-      </ol>
 
-      <footer class="landing-footer">
-        <button type="button" class="landing-cta" id="btn-landing-enter">Build your filth file</button>
-        <p class="landing-cta-sub" id="landing-cta-sub">Questionnaire first · then the card game</p>
-        <button type="button" class="landing-retake hidden" id="btn-landing-retake">Refresh my filth file</button>
-        <p class="landing-age">21+ recommended · Play responsibly · Hard limits are sacred</p>
-      </footer>
+          <div class="lp-join-panel" id="landing-join-panel">
+            <input id="input-landing-code" class="lp-join-input" type="text" placeholder="Room code" maxlength="4"
+                   autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text">
+            <button type="button" class="lp-btn lp-btn--primary lp-btn--compact" id="btn-lp-join-go">Join</button>
+          </div>
+
+          <ul class="lp-stats" aria-label="Quick facts">
+            <li><strong>2</strong> Players</li>
+            <li><strong>2</strong> Phones</li>
+            <li><strong>5 min</strong> To learn</li>
+            <li><strong>∞</strong> Bad decisions</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- §2 How it works -->
+      <section class="lp-section lp-how">
+        <h2 class="lp-section-title lp-reveal">How it works</h2>
+        <div class="lp-hscroll lp-reveal">
+          <article class="lp-hcard">
+            <span class="lp-hcard-icon">📱</span>
+            <h3>Make Your Profile</h3>
+            <p>Quick questionnaire.</p>
+          </article>
+          <article class="lp-hcard">
+            <span class="lp-hcard-icon">🎲</span>
+            <h3>Create Or Join</h3>
+            <p>Room code. Done.</p>
+          </article>
+          <article class="lp-hcard">
+            <span class="lp-hcard-icon">🃏</span>
+            <h3>Start The Chaos</h3>
+            <p>Collect sets. Steal cards. Get roasted.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- §3 Bartender -->
+      <section class="lp-section lp-bartender">
+        <div class="lp-bartender-art" aria-hidden="true">🍸</div>
+        <div class="lp-glass-card lp-reveal">
+          <h2 class="lp-section-title">Meet The Bhenchod Bartender</h2>
+          <p class="lp-section-sub">An AI party host that remembers everything embarrassing about you.</p>
+          <div class="lp-chat">
+            <p class="lp-chat-scene">Kunal just lost another round.</p>
+            <blockquote class="lp-chat-bubble lp-chat-bubble--host">
+              Brother at this point you're just donating points.
+            </blockquote>
+            <p class="lp-chat-scene">Nandini steals a set.</p>
+            <blockquote class="lp-chat-bubble lp-chat-bubble--host">
+              That was daylight robbery.
+            </blockquote>
+          </div>
+        </div>
+      </section>
+
+      <!-- §4 Gameplay showcase -->
+      <section class="lp-section lp-showcase">
+        <h2 class="lp-section-title lp-reveal">Built for two phones</h2>
+        <div class="lp-phone lp-reveal">
+          <div class="lp-phone-frame">
+            <div class="lp-phone-notch"></div>
+            <div class="lp-phone-screen">
+              <div class="lp-mock-bar"><span>🌊 42</span><span>📦 2/13</span></div>
+              <div class="lp-mock-partner">Ask Nandini ↑</div>
+              <div class="lp-mock-pond">POND</div>
+              <div class="lp-mock-hand">
+                <span class="lp-mock-card"></span>
+                <span class="lp-mock-card lp-mock-card--lift"></span>
+                <span class="lp-mock-card"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lp-feature-grid lp-reveal">
+          <article class="lp-feature">
+            <h3>Physical cards</h3>
+            <p>Drag. Lift. Throw. Steal.</p>
+          </article>
+          <article class="lp-feature">
+            <h3>Multiplayer</h3>
+            <p>Two phones. One room. Real time.</p>
+          </article>
+          <article class="lp-feature">
+            <h3>Roasts</h3>
+            <p>Personalized. Chaotic. Memorable.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- §5 Card fan -->
+      <section class="lp-section lp-fan">
+        <h2 class="lp-section-title lp-reveal">Cards That Feel Real</h2>
+        <p class="lp-section-sub lp-reveal">Spring physics · drag gestures · haptics · depth · shadows</p>
+        <div class="lp-fan-stage lp-reveal" aria-hidden="true">
+          <div class="lp-fan-card lp-fan-card--1"><div class="card card--face"><div class="card-rank">A</div><div class="card-emoji">👑</div><div class="card-name">Your set</div></div></div>
+          <div class="lp-fan-card lp-fan-card--2"><div class="card card--face"><div class="card-rank">7</div><div class="card-emoji">🪗</div><div class="card-name">Drunk &amp; Raw</div></div></div>
+          <div class="lp-fan-card lp-fan-card--3"><div class="card card--face"><div class="card-rank">K</div><div class="card-emoji">🔄</div><div class="card-name">Punishment</div></div></div>
+          <div class="lp-fan-card lp-fan-card--4"><div class="card card--face"><div class="card-rank">4</div><div class="card-emoji">💣</div><div class="card-name">Caught</div></div></div>
+          <div class="lp-fan-card lp-fan-card--5"><div class="card card--face"><div class="card-rank">J</div><div class="card-emoji">🎤</div><div class="card-name">Freestyle</div></div></div>
+        </div>
+      </section>
+
+      <!-- §6 Safety -->
+      <section class="lp-section lp-safety">
+        <div class="lp-glass-card lp-glass-card--compact lp-reveal">
+          <h2 class="lp-section-title">Drink Responsibly</h2>
+          <p class="lp-section-sub">BAC tracking. Water reminders. No lectures — just play smart.</p>
+        </div>
+      </section>
+
+      <!-- §7 Final CTA -->
+      <section class="lp-section lp-final">
+        <div class="lp-final-inner lp-reveal">
+          <h2 class="lp-final-title">Ready to start chaos?</h2>
+          <div class="lp-hero-actions">
+            <button type="button" class="lp-btn lp-btn--primary" data-lp-start id="btn-lp-start-final">Start Chaos</button>
+            <button type="button" class="lp-btn lp-btn--ghost" data-lp-join-toggle id="btn-lp-join-final">Join Chaos</button>
+          </div>
+          <p class="lp-final-note">Same link on both phones · 30 seconds to start</p>
+        </div>
+      </section>
     </div>
   </div>
 

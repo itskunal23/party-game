@@ -6,6 +6,9 @@ import { apiPost } from './api.js';
 import {
   hasProfile, getProfile, initProfile, clearProfile, buildProfileContext
 } from './profile.js';
+import { initLandingMotion, wireLandingJoin } from './landing.js';
+
+let _pendingRoomCode = null;
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let state = {
@@ -762,43 +765,20 @@ function updateHomeForProfile(profile) {
 }
 
 // ─── Landing ──────────────────────────────────────────────────────────────────
-const LANDING_ROLE = {
-  kunal:   'Kunal — build your filth file, then create the room for Nandini.',
-  nandini: 'Nandini — build your filth file, then join with Kunal\'s room code.'
-};
-
-function updateLandingForProfile(profile) {
-  const who = new URLSearchParams(window.location.search).get('who')?.toLowerCase();
-  const roleEl = $('landing-role');
-  const welcome = $('landing-welcome');
-  const welcomeName = $('landing-welcome-name');
-  const cta = $('btn-landing-enter');
-  const ctaSub = $('landing-cta-sub');
-  const retake = $('btn-landing-retake');
-
-  if (roleEl) {
-    roleEl.textContent = LANDING_ROLE[who] ?? 'Open this URL on both phones · one creates the room · one joins';
-  }
-
-  const urlEl = $('landing-same-url');
-  if (urlEl) urlEl.textContent = window.location.host || 'party-game-armi.onrender.com';
-
-  if (profile?.name && hasProfile()) {
-    welcome?.classList.remove('hidden');
-    if (welcomeName) welcomeName.textContent = profile.name;
-    if (cta) cta.textContent = 'Enter the game';
-    if (ctaSub) ctaSub.textContent = 'Your filth file is ready — hit the card table';
-    retake?.classList.remove('hidden');
-  } else {
-    welcome?.classList.add('hidden');
-    if (cta) cta.textContent = 'Build your filth file';
-    if (ctaSub) ctaSub.textContent = 'Questionnaire first · then Go Fuck Yourself';
-    retake?.classList.add('hidden');
+function toggleLandingJoin() {
+  haptic('light');
+  const panel = $('landing-join-panel');
+  const opening = !panel?.classList.contains('is-open');
+  panel?.classList.toggle('is-open', opening);
+  if (opening) {
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTimeout(() => $('input-landing-code')?.focus(), 350);
   }
 }
 
-function enterFromLanding() {
+function startFromLanding() {
   haptic('medium');
+  _pendingRoomCode = null;
   if (hasProfile()) {
     state.profile = getProfile();
     updateHomeForProfile(state.profile);
@@ -811,14 +791,50 @@ function enterFromLanding() {
   }
 }
 
+function joinFromLanding(code) {
+  const roomCode = code.trim().toUpperCase();
+  if (!roomCode) {
+    toggleLandingJoin();
+    return;
+  }
+  haptic('medium');
+  _pendingRoomCode = roomCode;
+
+  const doJoin = () => {
+    const profile = getProfile();
+    const name = profile?.name ?? 'Player';
+    API.send({
+      type: 'join',
+      roomCode,
+      playerName: name,
+      profile: profile ?? { name }
+    });
+    _pendingRoomCode = null;
+  };
+
+  if (hasProfile()) doJoin();
+  else startProfileFlow(doJoin);
+}
+
+function wireLandingPage() {
+  wireLandingJoin({
+    onStart: startFromLanding,
+    onJoinToggle: toggleLandingJoin,
+    onJoinSubmit: joinFromLanding
+  });
+}
+
 // ─── Profile → Home flow ──────────────────────────────────────────────────────
-function startProfileFlow() {
+function startProfileFlow(afterComplete) {
   const wizard = $('profile-wizard');
   if (!wizard) return;
   initProfile(wizard, profile => {
     state.profile = profile;
     updateHomeForProfile(profile);
-    updateLandingForProfile(profile);
+    if (afterComplete) {
+      afterComplete();
+      return;
+    }
     showScreen('home');
     if (gsapReady()) {
       gsap.from('#screen-home', { opacity: 0, duration: 0.45, ease: 'power2.out' });
@@ -1049,12 +1065,6 @@ function wireUI() {
     API.send({ type: 'playAgain' });
   });
 
-  $('btn-landing-enter')?.addEventListener('click', enterFromLanding);
-  $('btn-landing-retake')?.addEventListener('click', () => {
-    haptic('light');
-    startProfileFlow();
-  });
-
   $('btn-edit-profile')?.addEventListener('click', () => {
     clearProfile();
     startProfileFlow();
@@ -1146,12 +1156,11 @@ export function init() {
   }
 
   state.profile = getProfile();
-  updateLandingForProfile(state.profile);
+  wireLandingPage();
   showScreen('landing');
+  initLandingMotion();
   if (gsapReady()) {
-    gsap.from('.landing-hero', { opacity: 0, y: 24, duration: 0.5, ease: 'power2.out' });
-    gsap.from('.landing-step', { opacity: 0, y: 20, duration: 0.45, stagger: 0.08, delay: 0.15, ease: 'power2.out' });
-    gsap.from('.landing-footer', { opacity: 0, y: 16, duration: 0.4, delay: 0.35, ease: 'power2.out' });
+    gsap.from('.lp-hero-inner', { opacity: 0, y: 32, duration: 0.65, ease: 'power2.out' });
   }
 }
 

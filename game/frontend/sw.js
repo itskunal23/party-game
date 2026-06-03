@@ -1,4 +1,4 @@
-const CACHE = 'gfy-v3';
+const CACHE = 'gfy-v4';
 
 const STATIC_SHELL = [
   '/',
@@ -11,6 +11,7 @@ const STATIC_SHELL = [
   '/css/game-theatre.css',
   '/css/gfy-board.css',
   '/js/app.js',
+  '/js/landing.js',
   '/js/api.js',
   '/js/game.js',
   '/js/bac.js',
