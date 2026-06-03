@@ -1,17 +1,82 @@
 export const SCENARIOS = [
-  { rank: 'A', name: 'Kink Confession',                  dare: 'Read one kink from your profile aloud. Partner reacts — no lying.',              emoji: '👑' },
-  { rank: '2', name: 'Public Fantasy',                   dare: 'Describe your public-fucking fantasy in 20 seconds. Specific locations.',        emoji: '🎸' },
-  { rank: '3', name: 'Limit Test',                       dare: 'Name a hard limit from your profile and explain why — no jokes.',                emoji: '💃' },
-  { rank: '4', name: 'Truth Bomb',                       dare: 'Answer: which kink on your profile would shock your partner most?',              emoji: '💣' },
-  { rank: '5', name: 'CNC Charades',                     dare: 'Act out a scenario from your fantasyConfess field. Partner guesses.',            emoji: '🎭' },
-  { rank: '6', name: 'Drunk Confessional',               dare: 'Take a sip and confess something filthier than your questionnaire.',             emoji: '🪗' },
-  { rank: '7', name: 'Taboo Opinion',                    dare: 'Defend your most controversial kink chip for 30 seconds. No backing down.',      emoji: '💭' },
-  { rank: '8', name: 'Partner Roast',                    dare: 'Roast your partner using ONLY their questionnaire kinks. 20 seconds.',           emoji: '👏' },
-  { rank: '9', name: 'Cinema Filth',                     dare: 'Compare your sex life to a scene from your fav dark cinema pick. Go.',           emoji: '🕺' },
-  { rank: '10', name: 'Safeword Energy',                 dare: 'Whisper your partner\'s name like it\'s the climax of Dhurandhar. Commit.',      emoji: '📦' },
-  { rank: 'J', name: 'Dirty Freestyle',                  dare: 'Freestyle rap about your partner\'s kinks for 20 seconds. Filthy only.',         emoji: '🎤' },
-  { rank: 'Q', name: 'Silent Kink Mime',                 dare: 'Mime one of your kink chips. No words. Partner has 15 seconds to guess.',       emoji: '🎬' },
-  { rank: 'K', name: 'Questionnaire Showdown',           dare: 'Partner picks a kink chip from your profile — you explain or demonstrate.',      emoji: '🔄' }
+  {
+    rank: 'A',
+    name: 'Nandini Sucking Kunal — Aanchal Outside',
+    dare: 'Nandini on her knees, Kunal in the chair — recreate it while someone "Aanchal" knocks twice outside. No sound. 45 seconds.',
+    emoji: '👑'
+  },
+  {
+    rank: '2',
+    name: "Kunal's Whiskey Dick",
+    dare: 'Kunal plays dead drunk dick — Nandini tries everything for 30 seconds. Then confess if whiskey dick is real lore or just an excuse.',
+    emoji: '🥃'
+  },
+  {
+    rank: '3',
+    name: 'Four-Stroke Handjob',
+    dare: 'Nandini gives a handjob. Kunal counts out loud. If he lasts more than four strokes, Nandini drinks. If not, he confesses why.',
+    emoji: '✋'
+  },
+  {
+    rank: '4',
+    name: 'Family Caught You Fucking',
+    dare: 'Act out the exact moment family almost walked in on Kunal and Nandini mid-fuck — panic, half-naked scramble, door handle turning.',
+    emoji: '💣'
+  },
+  {
+    rank: '5',
+    name: 'Public Fuck Fantasy',
+    dare: 'Describe where you\'d fuck with someone in the next room — balcony, car, parents\' house, hotel hallway. Name who\'s outside.',
+    emoji: '🎭'
+  },
+  {
+    rank: '6',
+    name: 'Drunk & Raw',
+    dare: 'Both sip. Confess the drunkest you\'ve ever been during sex — who initiated, who came, who passed out first.',
+    emoji: '🪗'
+  },
+  {
+    rank: '7',
+    name: 'Family Taboo Confession',
+    dare: 'Admit your filthiest family-taboo or "shouldn\'t have" fantasy out loud. Partner reacts — no judgment, full honesty.',
+    emoji: '💭'
+  },
+  {
+    rank: '8',
+    name: 'Roast Their Stroke Game',
+    dare: 'Roast Kunal or Nandini\'s actual performance in bed — best stroke, worst stroke, whiskey dick, four-stroke handjob. 30 seconds.',
+    emoji: '👏'
+  },
+  {
+    rank: '9',
+    name: 'Caught on Camera',
+    dare: 'Confess: ever filmed, almost filmed, or sent a nude you shouldn\'t have? Who has it? Would you do it again?',
+    emoji: '📹'
+  },
+  {
+    rank: '10',
+    name: 'CNC / RPE Energy',
+    dare: 'Whisper a CNC scenario you\'d actually try with each other — safeword, who tops, how far. No jokes. 20 seconds each.',
+    emoji: '📦'
+  },
+  {
+    rank: 'J',
+    name: 'Nandini Riding Kunal — Door Unlocked',
+    dare: 'Freestyle the filthiest version of Nandini riding Kunal with the door unlocked and footsteps in the hall. Rap or dirty talk.',
+    emoji: '🎤'
+  },
+  {
+    rank: 'Q',
+    name: 'Silent Fuck Mime',
+    dare: 'Mime how you fuck when you\'re trying not to get caught — no words. Partner guesses position + who came first.',
+    emoji: '🎬'
+  },
+  {
+    rank: 'K',
+    name: 'Questionnaire Punishment Fuck',
+    dare: 'Partner picks your nastiest kink chip from your profile — you describe doing it with them tonight in explicit detail. 45 seconds.',
+    emoji: '🔄'
+  }
 ];
 
 export function createDeck() {

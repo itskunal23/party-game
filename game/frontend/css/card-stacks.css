@@ -75,26 +75,30 @@
 
 .card-name {
   font-family: -apple-system, system-ui, sans-serif;
-  font-size: 10.5px;
+  font-size: 9px;
   font-weight: 800;
   color: #18182E;
   text-align: center;
-  line-height: 1.2;
-  padding: 0 4px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  line-height: 1.25;
+  padding: 0 3px;
+  letter-spacing: 0.1px;
+  text-transform: none;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 .card-dare {
-  font-size: 8.5px;
+  font-size: 7.5px;
   color: #5A5A72;
   text-align: center;
-  padding: 3px 4px 0;
+  padding: 2px 3px 0;
   line-height: 1.35;
   font-weight: 500;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
 }
 
