@@ -32,19 +32,45 @@ const QUESTIONS = [
   },
   {
     id: 'age',
-    type: 'number',
+    type: 'pick-one',
     question: 'How old are\nyou, fucker?',
-    hint: '18+ only — or skip if you want',
+    hint: '18+ only — tap your range',
     required: false,
-    min: 18, max: 99,
-    placeholder: '25'
+    autoAdvance: true,
+    options: [
+      { label: '18 – 21', sub: 'Young & reckless', value: 20 },
+      { label: '22 – 28', sub: 'Prime chaos years', value: 26 },
+      { label: '29 – 35', sub: 'Seasoned degenerate', value: 32 },
+      { label: '36+', sub: 'Vintage filth', value: 40 }
+    ]
   },
   {
-    id: '_body',
-    type: 'body-stats',
-    question: 'Height &\nWeight',
-    hint: 'US system — calibrates your drunk meter',
-    required: false
+    id: 'height',
+    type: 'pick-one',
+    question: 'How tall\nare you?',
+    hint: 'US feet — tap one',
+    required: false,
+    autoAdvance: true,
+    options: [
+      { label: "5'0\" – 5'5\"", sub: 'Compact chaos', value: 5.2 },
+      { label: "5'6\" – 5'9\"", sub: 'Average menace', value: 5.75 },
+      { label: "5'10\" – 6'1\"", sub: 'Long reach energy', value: 6.0 },
+      { label: "6'2\"+", sub: 'Towering filth', value: 6.3 }
+    ]
+  },
+  {
+    id: 'weight',
+    type: 'pick-one',
+    question: 'How much do\nyou weigh?',
+    hint: 'US lbs — calibrates your drunk meter',
+    required: false,
+    autoAdvance: true,
+    options: [
+      { label: 'Under 130 lbs', sub: 'Lightweight', value: 120 },
+      { label: '130 – 170 lbs', sub: 'Middleweight', value: 150 },
+      { label: '171 – 210 lbs', sub: 'Heavy hitter', value: 190 },
+      { label: '211+ lbs', sub: 'Absolute unit', value: 230 }
+    ]
   },
   {
     id: '_kinksLimits',
@@ -104,6 +130,7 @@ let _el = null;
 let _onComplete = null;
 let _movieDebounce = null;
 let _movieSelected = [];
+let _advancing = false;
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function hasProfile() {
@@ -123,6 +150,14 @@ export function clearProfile() {
 }
 
 export function initProfile(el, onComplete) {
+  if (_el?._wizardTapHandler) {
+    _el.removeEventListener('click', _el._wizardTapHandler);
+  }
+  if (_el?._swipeHandler) {
+    _el.removeEventListener('touchstart', _el._swipeStart);
+    _el.removeEventListener('touchend', _el._swipeHandler);
+  }
+
   _el = el;
   _onComplete = onComplete;
   _idx = 0;
@@ -130,10 +165,11 @@ export function initProfile(el, onComplete) {
   delete _answers.completedAt;
   _prefillFromUrl();
   _movieSelected = Array.isArray(_answers.mediaFaves) ? [..._answers.mediaFaves] : [];
+  _advancing = false;
 
   el.innerHTML = `
     <div class="pf-top">
-      <button class="pf-back" id="pf-back" aria-label="Go back">
+      <button type="button" class="pf-back" id="pf-back" aria-label="Go back">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"/>
         </svg>
@@ -146,28 +182,41 @@ export function initProfile(el, onComplete) {
     <nav class="pf-steps" id="pf-steps" aria-label="Question steps"></nav>
     <div class="pf-intro">
       <div class="pf-intro-label">Kunal & Nandini's Filth File</div>
-      <div class="pf-intro-sub">Tap any dot to jump · Skip anytime · Back arrow works too</div>
+      <div class="pf-intro-sub">Tap a row on age/size screens · Skip anytime · Dots jump you around</div>
     </div>
     <div class="pf-area" id="pf-area"></div>
     <div class="pf-bottom" id="pf-bottom">
-      <button class="pf-skip" id="pf-skip">Skip →</button>
-      <button class="pf-continue" id="pf-continue">Continue →</button>
+      <button type="button" class="pf-skip" id="pf-skip">Skip →</button>
+      <button type="button" class="pf-continue" id="pf-continue">Continue →</button>
     </div>`;
 
-  document.getElementById('pf-back')?.addEventListener('click', _back);
-  document.getElementById('pf-skip')?.addEventListener('click', _skip);
-  document.getElementById('pf-continue')?.addEventListener('click', _continue);
+  _el._wizardTapHandler = _onWizardTap;
+  _el.addEventListener('click', _el._wizardTapHandler);
   _wireSwipe(el);
 
   _render(0, 'init');
 }
 
+function _onWizardTap(e) {
+  if (e.target.closest('.pf-pick-row') || e.target.closest('.pf-step-dot')) return;
+  if (e.target.closest('#pf-continue')) {
+    e.preventDefault();
+    _continue();
+  } else if (e.target.closest('#pf-skip')) {
+    e.preventDefault();
+    _skip();
+  } else if (e.target.closest('#pf-back')) {
+    e.preventDefault();
+    _back();
+  }
+}
+
 function _wireSwipe(el) {
   let startX = null;
-  el.addEventListener('touchstart', e => {
+  const onStart = e => {
     startX = e.changedTouches[0]?.clientX ?? null;
-  }, { passive: true });
-  el.addEventListener('touchend', e => {
+  };
+  const onEnd = e => {
     if (startX == null) return;
     const dx = (e.changedTouches[0]?.clientX ?? startX) - startX;
     startX = null;
@@ -183,7 +232,11 @@ function _wireSwipe(el) {
       _render(_idx, 'back');
       haptic('light');
     }
-  }, { passive: true });
+  };
+  el._swipeStart = onStart;
+  el._swipeHandler = onEnd;
+  el.addEventListener('touchstart', onStart, { passive: true });
+  el.addEventListener('touchend', onEnd, { passive: true });
 }
 
 // ─── Build roast context ──────────────────────────────────────────────────────
@@ -231,9 +284,34 @@ function _chipsHTML(options, selected, onClass = 'pf-chip--on') {
   return `${predefined}${custom}`;
 }
 
+function _pickOneSelected(q) {
+  if (q.id === 'height') return _answers.height?.value;
+  if (q.id === 'weight') return _answers.weight?.value;
+  return _answers[q.id];
+}
+
 // ─── Input HTML ───────────────────────────────────────────────────────────────
 function _inputHTML(q) {
   const val = _answers[q.id];
+
+  if (q.type === 'pick-one') {
+    const selected = _pickOneSelected(q);
+    return `
+      <div class="pf-pick-list" role="listbox" aria-label="${_ea(q.question.replace(/\n/g, ' '))}">
+        ${q.options.map(o => {
+          const on = selected != null && Number(o.value) === Number(selected);
+          return `<button type="button" class="pf-pick-row${on ? ' pf-pick-row--on' : ''}" data-val="${o.value}" role="option" aria-selected="${on}">
+            <span class="pf-pick-copy">
+              <span class="pf-pick-label">${o.label}</span>
+              ${o.sub ? `<span class="pf-pick-sub">${o.sub}</span>` : ''}
+            </span>
+            <span class="pf-pick-check" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+          </button>`;
+        }).join('')}
+      </div>`;
+  }
 
   if (q.type === 'text') {
     return `<input class="pf-text-input" id="pf-input" type="text"
@@ -428,10 +506,15 @@ function _render(idx, dir) {
 
   const skip = document.getElementById('pf-skip');
   const cont = document.getElementById('pf-continue');
-  if (skip) skip.style.display = '';
+  const isPickOne = q.type === 'pick-one';
+  if (skip) {
+    skip.style.display = '';
+    skip.style.flex = isPickOne ? '1' : '';
+  }
   if (cont) {
     cont.textContent = idx === QUESTIONS.length - 1 ? "LET'S FUCKING GO 🔥" : 'Continue →';
-    cont.style.flex = '1';
+    cont.style.display = isPickOne ? 'none' : '';
+    cont.style.flex = isPickOne ? '0' : '1';
   }
 
   _renderStepDots();
@@ -442,7 +525,7 @@ function _render(idx, dir) {
 
   const area = document.getElementById('pf-area');
   if (!area) return;
-  area.querySelector('.pf-card')?.remove();
+  area.querySelectorAll('.pf-card').forEach(c => c.remove());
   area.appendChild(card);
 
   if (typeof gsap !== 'undefined') {
@@ -513,6 +596,26 @@ function _wireChipsAdd(root, { chipsSel, inputSel, btnSel, options, onClass = 'p
 function _wire(q) {
   const root = _activeCard();
   if (!root) return;
+
+  if (q.type === 'pick-one') {
+    root.querySelectorAll('.pf-pick-row').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const raw = btn.dataset.val;
+        const option = q.options.find(o => String(o.value) === raw);
+        if (!option) return;
+        root.querySelectorAll('.pf-pick-row').forEach(b => b.classList.remove('pf-pick-row--on'));
+        btn.classList.add('pf-pick-row--on');
+        if (q.id === 'height') _answers.height = { value: option.value, unit: 'ft' };
+        else if (q.id === 'weight') _answers.weight = { value: option.value, unit: 'lb' };
+        else _answers[q.id] = option.value;
+        haptic('medium');
+        if (typeof gsap !== 'undefined') {
+          gsap.fromTo(btn, { scale: 0.98 }, { scale: 1, duration: 0.22, ease: 'back.out(2)' });
+        }
+        setTimeout(() => _continue(), 340);
+      });
+    });
+  }
 
   if (q.type === 'text') {
     _q('#pf-input', root)?.addEventListener('keydown', e => {
@@ -676,6 +779,8 @@ function _updateMovieEmpty(root = _activeCard()) {
 function _readValue(q) {
   const root = _activeCard();
   switch (q.type) {
+    case 'pick-one':
+      return _pickOneSelected(q) ?? null;
     case 'text':
       return _q('#pf-input', root)?.value?.trim() ?? '';
     case 'number': {
@@ -756,16 +861,22 @@ function _save(q) {
 }
 
 function _continue() {
+  if (_advancing) return;
+  _advancing = true;
   _save(QUESTIONS[_idx]);
   haptic('medium');
   if (_idx < QUESTIONS.length - 1) { _idx++; _render(_idx, 'fwd'); }
   else _complete();
+  setTimeout(() => { _advancing = false; }, 380);
 }
 
 function _skip() {
+  if (_advancing) return;
+  _advancing = true;
   haptic('light');
   if (_idx < QUESTIONS.length - 1) { _idx++; _render(_idx, 'fwd'); }
   else _complete();
+  setTimeout(() => { _advancing = false; }, 380);
 }
 
 function _back() {
