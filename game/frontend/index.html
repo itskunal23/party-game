@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="/css/gfy-board.css">
   <link rel="stylesheet" href="/css/book-celebration.css">
   <link rel="stylesheet" href="/css/ask-flow.css">
+  <link rel="stylesheet" href="/css/avatars.css">
 
   <!-- GSAP -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
@@ -105,7 +106,7 @@
           <article class="lp-mech-card" data-mech="bullshit">
             <h3>BULLSHIT</h3>
             <p>Call the lie.</p>
-            <p class="lp-mech-punch">Right? They draw four.<br>Wrong? You do.</p>
+            <p class="lp-mech-punch">Right? They draw 4.<br>Wrong? You draw 2.</p>
           </article>
           <article class="lp-mech-card" data-mech="drink">
             <h3>DRINK</h3>
@@ -292,6 +293,9 @@
 
     <!-- Shown when profile exists -->
     <div class="home-greeting hidden" id="home-greeting">
+      <div class="home-greeting-row">
+        <div id="home-avatar"></div>
+      </div>
       <div class="home-greeting-name" id="home-greeting-name"></div>
       <div class="home-greeting-traits" id="home-greeting-traits"></div>
       <div class="bartender-preview hidden" id="bartender-preview">
@@ -447,8 +451,22 @@
 
   <!-- GFY overlay — full screen rejection moment -->
   <div id="gfy-overlay" class="hidden">
+    <div class="gfy-overlay-top">
+      <div id="gfy-overlay-avatar"></div>
+      <div class="gfy-overlay-name" id="gfy-overlay-name"></div>
+    </div>
     <div class="gfy-text">GO FUCK<br>YOURSELF</div>
     <div class="gfy-sub" id="gfy-sub"></div>
+  </div>
+
+  <!-- Bluff landed — personal callout -->
+  <div id="bluff-overlay" class="hidden" role="alert">
+    <div class="bluff-overlay-inner">
+      <div id="bluff-overlay-avatar"></div>
+      <p class="bluff-overlay-kicker" id="bluff-overlay-kicker">LIED</p>
+      <h2 class="bluff-overlay-title" id="bluff-overlay-title">YOU GOT PLAYED</h2>
+      <p class="bluff-overlay-sub" id="bluff-overlay-sub"></p>
+    </div>
   </div>
 
   <!-- Target responds: give / GFY / bluff -->
@@ -470,7 +488,8 @@
   <!-- Bullshit caught / wrong -->
   <div id="bullshit-overlay" class="hidden" role="alert">
     <div class="bullshit-overlay-inner">
-      <div class="bullshit-overlay-emoji" id="bullshit-overlay-emoji">🐂</div>
+      <div id="bullshit-overlay-avatar"></div>
+      <p class="bullshit-overlay-kicker" id="bullshit-overlay-kicker">CAUGHT RED HANDED</p>
       <h2 class="bullshit-overlay-title" id="bullshit-overlay-title">BULLSHIT</h2>
       <p class="bullshit-overlay-sub" id="bullshit-overlay-sub"></p>
     </div>
@@ -484,6 +503,10 @@
   <div id="bartender-transcript" class="hidden" role="button" tabindex="0" aria-label="Dismiss bartender roast">
     <div class="bartender-transcript-inner">
       <div class="bartender-transcript-header">🍸 Bhenchod Bartender</div>
+      <div class="bartender-transcript-avatar-row hidden" id="bartender-transcript-avatar-row">
+        <div id="bartender-transcript-avatar"></div>
+        <span class="bartender-transcript-target" id="bartender-transcript-target"></span>
+      </div>
       <p class="bartender-transcript-line" id="bartender-transcript-line"></p>
       <span class="bartender-transcript-hint">Tap to dismiss</span>
     </div>

@@ -1,4 +1,5 @@
 import { haptic } from './mobile.js';
+import { prewarmAvatar, refreshAvatarForProfile } from './avatar.js';
 
 export const PROFILE_KEY = 'gfy_profile';
 
@@ -1061,6 +1062,8 @@ function _complete() {
   }
   _answers.completedAt = Date.now();
   localStorage.setItem(PROFILE_KEY, JSON.stringify(_answers));
+  refreshAvatarForProfile(_answers);
+  prewarmAvatar(_answers);
 
   const bar = document.getElementById('pf-progress');
   if (bar) { bar.style.transition = 'width 0.4s ease'; bar.style.width = '100%'; }

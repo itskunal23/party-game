@@ -9,6 +9,7 @@ export function createBot(overrideName) {
     isBot: true,
     hand: [],
     sessionToken: null,
+    turnsWithoutReceiving: 0,
     profile: { weight: 70, gender: 'male', drinkCount: 0 }
   };
 }

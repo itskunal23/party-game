@@ -17,7 +17,7 @@ Everything you can do in **GFY**, what **Bhenchod Bartender** does, and how **dr
 3. They pick: **Give** · **GFY** (don't have it) · **Bluff** (lie — say GFY but keep cards).
 4. If they say GFY, you pick: **Accept** (draw from pond) or **Bullshit** (call the lie).
    - Liar caught → they draw **4**.
-   - Wrong call → **you** draw **4**.
+   - Wrong call → **you** draw **2** (asymmetric — wrong calls hurt but don't wreck you).
 
 **Once per game (tap the pills on your turn):**
 | Move | What it does |

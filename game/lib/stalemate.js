@@ -25,6 +25,7 @@ export function initStalemateTrackers(state) {
   state.rankReveal = null;
   state.heatLevel = 0;
   state._lastHeatChaosAt = 0;
+  state._thirstyFiredAt = 0;
 }
 
 // Progressive heat escalation — rises on dead turns, resets on successful action
@@ -32,6 +33,7 @@ export function updateHeat(state, outcomeKind) {
   if (outcomeKind === 'transfer' || outcomeKind === 'book') {
     state.heatLevel = 0;
     state._lastHeatChaosAt = 0;
+    state._thirstyFiredAt = 0;
   } else if (outcomeKind === 'gfy_miss') {
     state.heatLevel = Math.min(7, (state.heatLevel ?? 0) + 1);
   } else if (outcomeKind === 'gfy_lucky') {
@@ -98,6 +100,7 @@ export function recordBookComplete(state) {
   state.gfyStreak = 0;
   state.heatLevel = 0;
   state._lastHeatChaosAt = 0;
+  state._thirstyFiredAt = 0;
 }
 
 export function ranksInBothHands(room) {
@@ -185,6 +188,7 @@ export function applyRecoveryEvent(room, eventId) {
   state.lastRecoveryAt = state.turnCount ?? 0;
   state.heatLevel = 0;
   state._lastHeatChaosAt = 0;
+  state._thirstyFiredAt = 0;
   state.lastChaos = { ...meta, recovery: true, at: Date.now() };
   state.lastAction = {
     type: 'recovery',
@@ -252,6 +256,23 @@ export function postTurnHooks(room, outcomeKind) {
   recordTurnOutcome(room, outcomeKind);
   const heat = updateHeat(room.gameState, outcomeKind);
   updateComebackTokens(room);
+
+  // ── "Table Gets Thirsty" at heat 3 — early mild injection ─────────────────
+  // Fires once per heat cycle when 3 consecutive dead turns happen.
+  // Both players draw 1 card — cheaper than the heat-5 major event.
+  const state = room.gameState;
+  if (heat === 3 && state._thirstyFiredAt !== 3) {
+    state._thirstyFiredAt = 3;
+    for (const p of room.players.values()) drawFromDeck(state, p, 1);
+    state.lastChaos = {
+      id: 'table_thirsty',
+      title: 'Table Gets Thirsty',
+      text: 'Everyone draws 1 card.',
+      emoji: '🥵',
+      recovery: true,
+      at: Date.now()
+    };
+  }
 
   // At heat 5 — fire a mild chaos event to shake things up
   if (heat === 5) _fireHeatMiniChaos(room);

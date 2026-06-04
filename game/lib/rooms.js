@@ -4,7 +4,8 @@ import { estimateBAC } from './bac.js';
 import {
   initPlayerPowers, getPlayerPowers, drawFromDeck, clearPendingAsk,
   buildPendingAskView, buildBookPowerupView, buildLuckyRewardView,
-  BULLSHIT_PENALTY, maybeServerChaos, checkMissionProgress, rankCounts
+  BULLSHIT_CAUGHT_PENALTY, BULLSHIT_WRONG_PENALTY,
+  maybeServerChaos, checkMissionProgress, rankCounts
 } from './game-powers.js';
 import {
   initStalemateTrackers, postTurnHooks, recordBookComplete, updateComebackTokens,
@@ -87,7 +88,8 @@ function buildSnapshot(room, forPlayerId) {
         turnsWithoutTransfer: state.turnsWithoutTransfer ?? 0,
         turnsWithoutBook: state.turnsWithoutBook ?? 0,
         heatLevel: state.heatLevel ?? 0
-      }
+      },
+      bonusDraw: state.bonusDraw ?? null
     },
     pendingDrinks: state.pendingDrinks.get(forPlayerId) ?? [],
     hostMessage: null
@@ -183,11 +185,33 @@ function resolveBooks(room, playerId) {
   return newBooks;
 }
 
+// Card economy: apply bonus draws at turn start to prevent dead states
+function _tryBonusDraws(room) {
+  const state = room.gameState;
+  if (state.deck.length === 0) return;
+  const player = room.players.get(state.currentTurnPlayerId);
+  if (!player) return;
+
+  state.bonusDraw = null;
+
+  if ((player.turnsWithoutReceiving ?? 0) >= 5) {
+    // Dead-hand rescue: 5 turns with no card received → draw 2
+    drawFromDeck(state, player, 2);
+    player.turnsWithoutReceiving = 0;
+    state.bonusDraw = { playerId: player.id, reason: 'dead_hand', count: 2 };
+  } else if (player.hand.length <= 2) {
+    // Low hand protection: ≤2 cards → draw 1 before turn starts
+    drawFromDeck(state, player, 1);
+    state.bonusDraw = { playerId: player.id, reason: 'low_hand', count: 1 };
+  }
+}
+
 function advanceTurn(room) {
   const state = room.gameState;
   const currentId = state.currentTurnPlayerId;
   if (state.pendingExtraTurn === currentId) {
     state.pendingExtraTurn = null;
+    _tryBonusDraws(room);
     broadcastSnapshots(room);
     const keeper = room.players.get(currentId);
     if (keeper?.isBot) scheduleBotTurn(room, keeper, i => handleIntent(room, i));
@@ -203,6 +227,7 @@ function advanceTurn(room) {
     return;
   }
 
+  _tryBonusDraws(room);
   broadcastSnapshots(room);
 
   const next = room.players.get(state.currentTurnPlayerId);
@@ -261,6 +286,10 @@ function _completeGot(room, askerId, targetId, rank, count) {
   const powers = getPlayerPowers(state, askerId);
   _clearAskModifiers(powers);
   clearPendingAsk(state);
+
+  // Reset dead-hand tracker — asker received cards, breaking the drought
+  const askerReset = room.players.get(askerId);
+  if (askerReset) askerReset.turnsWithoutReceiving = 0;
 
   // Double transfer chaos event
   let actualCount = count;
@@ -329,6 +358,14 @@ function _executeGfyDraw(room, askerId, targetId, rank, extra = {}) {
     if (targetPowers) checkMissionProgress(targetPowers, 'bluff_ok');
   }
 
+  // Track consecutive turns without receiving (for dead-hand rescue)
+  if (!continueTurn && !isDouble) {
+    asker.turnsWithoutReceiving = (asker.turnsWithoutReceiving ?? 0) + 1;
+  } else if (continueTurn) {
+    // Lucky draw counts as "something happened" — partial reset
+    asker.turnsWithoutReceiving = 0;
+  }
+
   state.lastAction = {
     type: 'gfy',
     fromId: askerId,
@@ -352,7 +389,8 @@ function _applyBullshitPenalty(room, loserId, winnerId, rank, caughtBluffer) {
   if (!loser) return;
 
   clearPendingAsk(state);
-  const drawn = drawFromDeck(state, loser, BULLSHIT_PENALTY);
+  const penalty = caughtBluffer ? BULLSHIT_CAUGHT_PENALTY : BULLSHIT_WRONG_PENALTY;
+  const drawn = drawFromDeck(state, loser, penalty);
 
   const loserPowers = getPlayerPowers(state, loserId);
   const winnerPowers = getPlayerPowers(state, winnerId);
@@ -643,6 +681,7 @@ export function createRoom(hostSocket, hostName, playerProfile = {}) {
     isBot: false,
     bacLevel: 0,
     drinks: [],
+    turnsWithoutReceiving: 0,
     profile: { weight: weightKg, gender: 'neutral', ...playerProfile }
   };
 
@@ -691,6 +730,7 @@ export function joinRoom(socket, roomCode, playerName, playerProfile = {}) {
     id: playerId, name: playerName, socket,
     hand: [], sessionToken: token, isBot: false,
     bacLevel: 0, drinks: [],
+    turnsWithoutReceiving: 0,
     profile: { weight: weightKg, gender: 'neutral', ...playerProfile }
   };
 
@@ -700,7 +740,12 @@ export function joinRoom(socket, roomCode, playerName, playerProfile = {}) {
   sendTo(player, { type: 'joined', roomCode, playerId, sessionToken: token });
   broadcast(room, { type: 'playerJoined', playerId, playerName }, playerId);
 
-  const playerList = [...room.players.values()].map(p => ({ id: p.id, name: p.name, isHost: p.id === room.hostId }));
+  const playerList = [...room.players.values()].map(p => ({
+    id: p.id,
+    name: p.name,
+    isHost: p.id === room.hostId,
+    profile: p.profile ? _safeProfile(p.profile) : null
+  }));
   broadcast(room, { type: 'playerList', players: playerList });
   sendTo(player, { type: 'playerList', players: playerList });
 }
@@ -767,7 +812,13 @@ export function startGame(roomCode, requesterId) {
   room.gameState.doubleTransfer = false;
   room.gameState.heatLevel = 0;
   room.gameState._lastHeatChaosAt = 0;
+  room.gameState.bonusDraw = null;
   room.gameState.firstBookWinner = null;
+
+  // Reset per-player tracking on new game
+  for (const player of room.players.values()) {
+    player.turnsWithoutReceiving = 0;
+  }
   room.gameState.lastAction = null;
   room.gameState.discardPile = [];
   room.gameState.pendingExtraTurn = null;

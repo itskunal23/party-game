@@ -1,6 +1,7 @@
 /** Simple once-per-game moves, missions, chaos, lucky reward */
 
-export const BULLSHIT_PENALTY = 4;
+export const BULLSHIT_CAUGHT_PENALTY = 4;  // Caught bluffing → draw 4
+export const BULLSHIT_WRONG_PENALTY   = 2;  // Wrong bullshit call → draw 2
 
 export const SECRET_MISSIONS = [
   { id: 'first_book', text: 'Finish a book before your partner', check: 'first_book' },

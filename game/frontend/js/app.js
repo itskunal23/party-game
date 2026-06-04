@@ -12,6 +12,7 @@ import {
 } from './session-memory.js';
 import { clearExpiredChaos, maybeTriggerChaos } from './chaos-events.js';
 import { initLandingMotion, wireLandingJoin } from './landing.js';
+import { mountAvatar, prewarmAvatar } from './avatar.js';
 
 let _pendingRoomCode = null;
 
@@ -32,7 +33,8 @@ let state = {
   pendingAsk: null,
   myPowers: null,
   _shownPendingDrinkKeys: new Set(),
-  gameHeat: 0
+  gameHeat: 0,
+  _lastBonusDrawSig: null
 };
 
 let _lastCommentedActionSig = null;
@@ -45,6 +47,25 @@ let _skipNextCardClick = false;
 let _dealingLocked = false;
 
 const RANK_ORDER = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+function _profileForPlayer(player) {
+  if (!player) return null;
+  if (player.id === state.myId) {
+    const mine = getProfile();
+    if (mine?.name) return mine;
+  }
+  if (player.profile?.name) return player.profile;
+  return player.name ? { name: player.name, mediaFaves: player.profile?.mediaFaves ?? [] } : null;
+}
+
+function _profileByName(name) {
+  const p = state.players.find(pl => pl.name === name);
+  return _profileForPlayer(p) ?? (name ? { name, mediaFaves: [] } : null);
+}
+
+function _opponentPlayer() {
+  return state.players.find(p => p.id !== state.myId) ?? null;
+}
 
 function rankSortKey(rank) {
   const i = RANK_ORDER.indexOf(rank);
@@ -324,6 +345,29 @@ function showBluffLandedToast() {
   haptic('heavy');
   playBluffLanded();
   setTimeout(() => el.classList.remove('is-visible', 'achievement-toast--bluff'), 3000);
+}
+
+function showBluffOverlay(liarName) {
+  const overlay = $('bluff-overlay');
+  const kicker = $('bluff-overlay-kicker');
+  const title = $('bluff-overlay-title');
+  const sub = $('bluff-overlay-sub');
+  const avatarHost = $('bluff-overlay-avatar');
+  if (!overlay) return;
+
+  const profile = _profileByName(liarName);
+  if (kicker) kicker.textContent = `${liarName} lied`;
+  if (title) title.textContent = 'YOU GOT PLAYED';
+  if (sub) sub.textContent = 'They had it all along. Absolute cinema.';
+  mountAvatar(avatarHost, profile, { mood: 'smug', size: 'xl', ring: true, animate: true });
+
+  overlay.classList.remove('hidden');
+  haptic('heavy');
+  playBluffLanded();
+  if (gsapReady()) {
+    gsap.from('.bluff-overlay-inner', { scale: 0.85, opacity: 0, duration: 0.35, ease: 'back.out(1.5)' });
+  }
+  setTimeout(() => overlay.classList.add('hidden'), 2800);
 }
 
 function showChaosBanner(event) {
@@ -649,10 +693,22 @@ function _springCardHome(wrapper) {
 }
 
 // ─── GFY overlay — premium dramatic moment ────────────────────────────────────
-function showGFYOverlay(askerName, targetName, wasBluffed = false) {
+function showGFYOverlay(askerName, targetName, wasBluffed = false, moodOverride = null) {
   const overlay = $('gfy-overlay');
   const sub = $('gfy-sub');
+  const nameEl = $('gfy-overlay-name');
+  const avatarHost = $('gfy-overlay-avatar');
   if (!overlay || !sub) return;
+
+  const mood = moodOverride ?? (wasBluffed ? 'smug' : 'angry');
+  const targetProfile = _profileByName(targetName);
+  mountAvatar(avatarHost, targetProfile, {
+    mood,
+    size: 'xl',
+    ring: true,
+    animate: true
+  });
+  if (nameEl) nameEl.textContent = targetName;
 
   sub.textContent = wasBluffed
     ? `${targetName} lied. You got played.`
@@ -748,6 +804,7 @@ function renderPartnerZone() {
     div.innerHTML = `
       <span class="partner-drop-badge">${badge}</span>
       <div class="partner-drop-main">
+        <div class="partner-avatar-col"></div>
         <div class="partner-stack-slot"></div>
         <div class="partner-meta">
           <span class="partner-name">${p.name}</span>
@@ -755,6 +812,14 @@ function renderPartnerZone() {
           <span class="partner-hint">${isMyTurn ? 'Swipe card ↑ or tap card → tap name' : (isActive ? 'Asking…' : 'Waiting…')}</span>
         </div>
       </div>`;
+    const avatarSlot = document.createElement('div');
+    div.querySelector('.partner-avatar-col')?.appendChild(avatarSlot);
+    const myBooks = state.players.find(pl => pl.id === state.myId)?.books?.length ?? 0;
+    const oppBooks = p.books?.length ?? 0;
+    let mood = 'neutral';
+    if (oppBooks > myBooks + 1) mood = 'smug';
+    else if (myBooks > oppBooks + 1) mood = 'angry';
+    mountAvatar(avatarSlot, _profileForPlayer(p), { mood, size: 'xl', ring: true, animate: true });
     div.querySelector('.partner-stack-slot')?.appendChild(stack);
 
     if (!isMyTurn) div.classList.add('partner-drop--disabled');
@@ -1090,18 +1155,26 @@ function showBullshitOverlay(action) {
   const overlay = $('bullshit-overlay');
   const title = $('bullshit-overlay-title');
   const sub = $('bullshit-overlay-sub');
-  const emoji = $('bullshit-overlay-emoji');
+  const kicker = $('bullshit-overlay-kicker');
+  const avatarHost = $('bullshit-overlay-avatar');
   if (!overlay || !title || !sub) return;
 
   const caller = state.players.find(p => p.id === action.fromId);
   const loser = state.players.find(p => p.id === action.targetId);
   const caught = action.type === 'bullshit_caught';
+  const facePlayer = caught ? loser : caller;
 
-  if (emoji) emoji.textContent = caught ? '🐂' : '🤡';
+  if (kicker) kicker.textContent = caught ? 'CAUGHT RED HANDED' : 'WRONG CALL';
   title.textContent = caught ? 'BULLSHIT!' : 'WRONG CALL';
   sub.textContent = caught
-    ? `${loser?.name ?? 'They'} got caught lying — draws ${action.count ?? 4} cards. ${caller?.name ?? 'You'} keep the turn.`
-    : `${caller?.name ?? 'You'} called bullshit on an honest GFY — draws ${action.count ?? 4}. Turn over.`;
+    ? `${loser?.name ?? 'They'} draws ${action.count ?? 4} cards. ${caller?.name ?? 'You'} keep the turn.`
+    : `${caller?.name ?? 'You'} draws ${action.count ?? 4}. Turn over.`;
+  mountAvatar(avatarHost, _profileForPlayer(facePlayer), {
+    mood: 'shocked',
+    size: 'xl',
+    ring: true,
+    animate: true
+  });
 
   overlay.classList.remove('hidden');
   haptic('heavy');
@@ -1451,7 +1524,7 @@ function showActionBanner(action) {
       if (action.fromId === state.myId) {
         // I was the asker — I got fooled by a bluff
         text = `😤 ${toP?.name ?? 'They'} had it all along. You got played.`;
-        showGFYOverlay(fromP?.name ?? 'You', toP?.name ?? '?', true);
+        showBluffOverlay(toP?.name ?? '?');
         return;
       } else if (action.targetId === state.myId) {
         // I was the target — my bluff worked
@@ -1470,7 +1543,8 @@ function showActionBanner(action) {
 
     playGFY();
     if (action.fromId === state.myId) {
-      showGFYOverlay(fromP?.name ?? 'You', toP?.name ?? '?', false);
+      const gfyMood = action.closeToPond ? 'shocked' : 'angry';
+      showGFYOverlay(fromP?.name ?? 'You', toP?.name ?? '?', false, gfyMood);
       if (action.closeToPond) showCloseCallMoment();
     } else if (gsapReady()) {
       gsap.fromTo('#screen-game',
@@ -1640,8 +1714,24 @@ function showResults(data) {
         </div>`).join('')}
     </div>` : '';
 
+  const fightHtml = sorted.length >= 2 ? `
+    <div class="results-fight">
+      ${sorted.map((s, i) => {
+        const pl = state.players.find(p => p.name === s.name);
+        const isWinner = s.name === data.winner.name;
+        return `
+        <div class="results-fighter${isWinner ? ' results-fighter--winner' : ''}">
+          <div class="results-fighter-avatar" data-fighter="${s.id}"></div>
+          <span class="results-fighter-name">${s.name}</span>
+          <span class="results-fighter-books">${s.books} book${s.books !== 1 ? 's' : ''}</span>
+        </div>
+        ${i === 0 && sorted.length > 1 ? '<span class="results-vs">VS</span>' : ''}`;
+      }).join('')}
+    </div>` : '';
+
   el.innerHTML = `
     <div class="winner-announce">🏆 ${data.winner.name} wins!</div>
+    ${fightHtml}
     <ul class="score-list">
       ${sorted.map((s, i) => `<li class="score-item">${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} ${s.name} — ${s.books} set${s.books !== 1 ? 's' : ''}</li>`).join('')}
     </ul>
@@ -1649,10 +1739,22 @@ function showResults(data) {
     ${awardsHtml}
     ${statsHtml}`;
 
+  sorted.forEach(s => {
+    const host = el.querySelector(`[data-fighter="${s.id}"]`);
+    const pl = state.players.find(p => p.id === s.id);
+    const isWinner = s.name === data.winner.name;
+    mountAvatar(host, _profileForPlayer(pl), {
+      mood: isWinner ? 'champion' : 'angry',
+      size: 'lg',
+      ring: true,
+      animate: isWinner
+    });
+  });
+
   if (gsapReady()) {
     gsap.from('.winner-announce', { scale: 0, rotation: -12, duration: 0.8, ease: 'elastic.out(1, 0.45)' });
     gsap.from(
-      ['.score-item', '.results-night-story', '.results-award', '.results-night-stats'],
+      ['.results-fight', '.score-item', '.results-night-story', '.results-award', '.results-night-stats'],
       { y: 16, opacity: 0, duration: 0.45, stagger: 0.07, ease: 'power2.out', delay: 0.28 }
     );
     launchConfetti($('screen-results'));
@@ -1673,9 +1775,24 @@ function showResults(data) {
 function renderLobbyPlayers(players) {
   const list = $('lobby-player-list');
   if (!list) return;
-  list.innerHTML = players.map(p =>
-    `<li class="lobby-player${p.isHost ? ' is-host' : ''}">${p.name}${p.isHost ? ' (host)' : ''}</li>`
-  ).join('');
+  list.innerHTML = '';
+  players.forEach(p => {
+    const li = document.createElement('li');
+    li.className = `lobby-player${p.isHost ? ' is-host' : ''}`;
+    const avatarSlot = document.createElement('div');
+    const info = document.createElement('div');
+    info.className = 'lobby-player-info';
+    info.innerHTML = `
+      <span class="lobby-player-name">${p.name}</span>
+      <span class="lobby-player-role">${p.isHost ? 'Host' : 'Partner'}</span>`;
+    li.appendChild(avatarSlot);
+    li.appendChild(info);
+    list.appendChild(li);
+    const profile = p.id === state.myId
+      ? getProfile()
+      : (p.profile ?? { name: p.name, mediaFaves: [] });
+    mountAvatar(avatarSlot, profile, { size: 'md', ring: true, mood: 'neutral', animate: true });
+  });
 
   const wait = $('lobby-waiting');
   if (wait) {
@@ -1719,6 +1836,7 @@ function updateHomeForProfile(profile) {
   if (profile?.name) {
     greeting?.classList.remove('hidden');
     nameForm?.classList.add('hidden');
+    mountAvatar($('home-avatar'), profile, { size: 'lg', ring: true, mood: 'neutral', animate: true });
     if (nameEl) nameEl.textContent = `Hey, ${profile.name}`;
     if (traitsEl) {
       const bits = [];
@@ -1846,12 +1964,29 @@ function dismissBartenderTranscript() {
   $('bartender-transcript')?.classList.add('hidden');
 }
 
-function showBartenderTranscript(line) {
+function showBartenderTranscript(line, targetName = null) {
   const overlay = $('bartender-transcript');
   const textEl = $('bartender-transcript-line');
+  const row = $('bartender-transcript-avatar-row');
+  const avatarHost = $('bartender-transcript-avatar');
+  const targetEl = $('bartender-transcript-target');
   if (!overlay || !textEl) return;
   const one = (line ?? '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+/)[0] ?? '';
   textEl.textContent = one.length > 140 ? `${one.slice(0, 137)}…` : one;
+
+  if (targetName && row && avatarHost) {
+    row.classList.remove('hidden');
+    if (targetEl) targetEl.textContent = `Roasting ${targetName}`;
+    mountAvatar(avatarHost, _profileByName(targetName), {
+      mood: 'smug',
+      size: 'md',
+      ring: true,
+      animate: false
+    });
+  } else {
+    row?.classList.add('hidden');
+  }
+
   overlay.classList.remove('hidden');
   haptic('light');
   if (gsapReady()) {
@@ -1903,7 +2038,7 @@ async function triggerBartender(mode, opts = {}) {
 
   if (result?.line) {
     _recordBartenderFranchise(result.franchise);
-    showBartenderTranscript(result.line);
+    showBartenderTranscript(result.line, playerName);
   }
 }
 
@@ -2090,6 +2225,7 @@ function wireHandlers() {
     _aiCooldownUntil = 0;
     _prevHandRanks = new Set();
     state.gameHeat = 0;
+    state._lastBonusDrawSig = null;
     showScreen('game');
     runSetupSequence(msg);
   });
@@ -2097,6 +2233,7 @@ function wireHandlers() {
   API.onMessage('snapshot', msg => {
     state.myHand = msg.myHand;
     state.players = msg.players;
+    msg.players?.forEach(p => { if (p.profile?.name) prewarmAvatar(p.profile); });
     state.gameState = msg.gameState;
     state.pendingDrinks = msg.pendingDrinks;
     state.pendingAsk = msg.gameState.pendingAsk ?? null;
@@ -2147,6 +2284,26 @@ function wireHandlers() {
     }
     if (newHeat >= 5 && (state.gameHeat ?? 0) < 5) { haptic('heavy'); playHeatWarning(); }
     state.gameHeat = newHeat;
+
+    // ── Bonus draws (low hand / dead-hand rescue) ─────────────────────────────
+    if (msg.gameState.bonusDraw && !_dealingLocked) {
+      const bd = msg.gameState.bonusDraw;
+      const bdSig = `${bd.playerId}-${bd.reason}-${bd.count}`;
+      if (bdSig !== state._lastBonusDrawSig) {
+        state._lastBonusDrawSig = bdSig;
+        if (bd.playerId === state.myId) {
+          if (bd.reason === 'dead_hand') {
+            showBanner('⚡ Comeback draw — 2 cards from the pond');
+            haptic('heavy');
+          } else if (bd.reason === 'low_hand') {
+            showBanner('🃏 Low hand — drew 1 card');
+          }
+        } else {
+          const whoName = state.players.find(p => p.id === bd.playerId)?.name ?? 'They';
+          if (bd.reason === 'dead_hand') showBanner(`⚡ ${whoName} drew 2 (comeback draw)`);
+        }
+      }
+    }
 
     if (msg.gameState.lastChaos) {
       const cs = JSON.stringify(msg.gameState.lastChaos);
@@ -2463,6 +2620,7 @@ export function init() {
   }
 
   state.profile = getProfile();
+  if (state.profile?.name) prewarmAvatar(state.profile);
   wireLandingPage();
   showScreen('landing');
   initLandingMotion();

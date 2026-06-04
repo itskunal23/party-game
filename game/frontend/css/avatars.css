@@ -1,0 +1,310 @@
+/* ── Character avatars — SVG identity system ──────────────────────────────── */
+
+.avatar-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.avatar-frame {
+  position: relative;
+  border-radius: 50%;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+}
+
+.avatar-wrap--ring .avatar-frame::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(91, 141, 239, 0.55);
+  box-shadow: 0 0 20px rgba(0, 51, 160, 0.45);
+  pointer-events: none;
+}
+
+.avatar-wrap--ring.avatar-wrap--smug .avatar-frame::before {
+  border-color: rgba(255, 213, 74, 0.7);
+  box-shadow: 0 0 22px rgba(255, 213, 74, 0.35);
+}
+
+.avatar-wrap--ring.avatar-wrap--champion .avatar-frame::before {
+  border-color: rgba(255, 213, 74, 0.85);
+  box-shadow: 0 0 28px rgba(255, 213, 74, 0.5);
+  animation: avatarChampionGlow 1.8s ease-in-out infinite alternate;
+}
+
+.avatar-wrap--ring.avatar-wrap--angry .avatar-frame::before {
+  border-color: rgba(255, 90, 90, 0.65);
+  box-shadow: 0 0 20px rgba(255, 90, 90, 0.35);
+}
+
+.avatar-wrap--ring.avatar-wrap--shocked .avatar-frame::before {
+  border-color: rgba(0, 255, 200, 0.45);
+  animation: avatarShake 0.4s ease-in-out;
+}
+
+@keyframes avatarChampionGlow {
+  from { opacity: 0.7; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes avatarShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+.avatar-wrap--idle .avatar-frame {
+  animation: avatarFloat 3.2s ease-in-out infinite;
+}
+
+@keyframes avatarFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.avatar-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.42);
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+/* ── Lobby ────────────────────────────────────────────────────────────────── */
+.lobby-player {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+}
+
+.lobby-player::before {
+  display: none;
+}
+
+.lobby-player .avatar-wrap {
+  flex-shrink: 0;
+}
+
+.lobby-player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lobby-player-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+
+.lobby-player-role {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+/* ── Partner zone ─────────────────────────────────────────────────────────── */
+.partner-avatar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.partner-drop-main {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.partner-meta {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.partner-name {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1.1;
+}
+
+/* ── GFY overlay ──────────────────────────────────────────────────────────── */
+.gfy-overlay-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.gfy-overlay-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* ── Bluff / bullshit overlays ────────────────────────────────────────────── */
+#bluff-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1995;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 26, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+#bluff-overlay.hidden { display: none; }
+
+.bluff-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  max-width: 320px;
+}
+
+.bluff-overlay-kicker {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 213, 74, 0.9);
+}
+
+.bluff-overlay-title {
+  font-family: var(--font-brand);
+  font-size: clamp(2rem, 10vw, 3rem);
+  color: #fff;
+  margin: 0;
+  line-height: 1;
+}
+
+.bluff-overlay-sub {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0;
+  line-height: 1.35;
+}
+
+#bullshit-overlay .bullshit-overlay-inner {
+  gap: 14px;
+}
+
+.bullshit-overlay-kicker {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #FF5A5A;
+}
+
+/* ── Results fight recap ──────────────────────────────────────────────────── */
+.results-fight {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 24px 0 20px;
+  flex-wrap: wrap;
+}
+
+.results-fighter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 120px;
+  max-width: 160px;
+}
+
+.results-fighter--winner .avatar-wrap--ring .avatar-frame::before {
+  border-color: rgba(255, 213, 74, 0.9);
+}
+
+.results-fighter-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+}
+
+.results-fighter-books {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.results-vs {
+  font-family: var(--font-brand);
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 2px;
+}
+
+/* ── Bartender transcript ─────────────────────────────────────────────────── */
+.bartender-transcript-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.bartender-transcript-target {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Home greeting mini avatar ────────────────────────────────────────────── */
+.home-greeting-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-wrap--idle .avatar-frame,
+  .avatar-wrap--ring.avatar-wrap--champion .avatar-frame::before {
+    animation: none;
+  }
+  .avatar-wrap--ring.avatar-wrap--shocked .avatar-frame::before {
+    animation: none;
+  }
+}
