@@ -82,7 +82,7 @@ wss.on('connection', (ws) => {
         if (!meta) return;
         const room = getRoom(meta.roomCode);
         if (!room) return;
-        handleIntent(room, { type: 'useMove', fromId: meta.playerId, move: msg.move, targetId: msg.targetId });
+        handleIntent(room, { type: 'useMove', fromId: meta.playerId, move: msg.move, targetId: msg.targetId, kind: msg.kind });
       }
 
       else if (type === 'bookPowerup') {

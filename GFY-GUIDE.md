@@ -12,7 +12,7 @@ Everything you can do in **GFY**, what **Bhenchod Bartender** does, and how **dr
 **Goal:** Collect all 4 cards of a set → complete the book → assign a drink → do the dare.
 
 **Each turn:**
-1. Pick a card (or use **Kick Door** to ask for a rank you don't have).
+1. Pick a card (or tap **Wild Ask** to ask for a rank you don't hold).
 2. Swipe it at your partner (or tap them).
 3. They pick: **Give** · **GFY** (don't have it) · **Bluff** (lie — say GFY but keep cards).
 4. If they say GFY, you pick: **Accept** (draw from pond) or **Bullshit** (call the lie).
@@ -23,16 +23,19 @@ Everything you can do in **GFY**, what **Bhenchod Bartender** does, and how **dr
 | Move | What it does |
 |------|----------------|
 | **Steal** | Take 1 random card from them (they don't see which). |
-| **Kick Door** | Ask for any rank — even one you don't hold. Miss = draw **2**. |
+| **Wild Ask** | Ask for any rank — even one you don't hold. Miss = draw **2**. (1 token per game; recovery events can grant more.) |
 | **2×** | Win = keep going. Lose = draw **2** and lose turn. |
+| **Comeback** | If you're down 2+ books, you get one token: steal · reveal a rank · keep turn · or earn Wild Ask. |
+
+**Stalemate recovery (automatic):** If the game loops on GFY misses with no real progress, the server injects a chaos event — Pond Surge, Rank Reveal, Wild Ask tokens, Card Swap, or Chaos Draw. You'll see a gold banner; it should feel like the bartender shaking things up, not a bug patch.
 
 **Bonuses:**
 - **3 lucky pond draws** → pick: draw 2 OR peek at their hand (by rank).
 - **Complete a book** → pick: draw 1 · they draw 1 · get steal back.
 - **Secret mission** → shown at start; finish it for bragging rights.
-- **Chaos** → random mid-game (everyone draws 1, card tax, steal refresh).
+- **Chaos** → random mid-game event from a pool of 8 (pond flood, card tax, steal refresh, wild surge, pond drought, swap fates, double down, hand reveal).
 
-**Bartender:** One dirty sentence per roast — no essays.
+**Bartender:** Samay Raina-style — observational humiliation, cinema comparison, conversational Hinglish; says full **Go Fuck Yourself** (never "GFY"); punchline finish.
 
 ---
 
@@ -239,18 +242,24 @@ Completed sets appear in **your books row** at the top of your hand area (emoji 
 
 ## Bhenchod Bartender — everything it can do
 
-**Bhenchod Bartender** is an AI roast host (NVIDIA LLM when configured, offline bank otherwise). It reads both players' questionnaire data and speaks in filthy Hinglish with **named** Bollywood/OTT references (Paatal Lok, Dhurandhar, Farzi, Dhootha, Mirzapur, Bad Boy of Bollywood, The Night Manager, etc.).
+**Bhenchod Bartender** is an AI roast host (NVIDIA LLM when configured, offline bank otherwise). **Samay Raina energy** — not random swearing: **observational humiliation**, exaggerated confidence, specific cinema beats, conversational Hinglish. Reads questionnaire + session memory.
 
 ### Persona rules (always on)
 
 | Rule | Behavior |
 |------|----------|
-| Kunal | **Always dom** — commanding, in control; never emasculated or "losing" |
+| Kunal | **Always dom** — commanding, in control; even whiffs = sloppy dom on a power trip / public humiliation tour, never sub |
 | Nandini | **Always sub** — playfully wrecked; never topping Kunal |
 | Couple dynamic | **Same team** — never pit them against each other as rivals |
 | Limits | Hard limits from questionnaire are **never** referenced |
-| Length | 1–2 sentences, swearing required |
-| References | Must **name the movie/show title** in the line so you know the source |
+| Length | **1–3 sentences**, max ~70 words; **1–2 swear words** (vary — don't spam madarchod) |
+| Game phrase | Say full **Go Fuck Yourself** when partner refuses or pond punishes — **never abbreviate "GFY"** in roast lines |
+| Copyright | **No verbatim dialogue** — inspired situations, catchphrase *energy*, named titles |
+| Format | **Name → what just happened → movie comparison → profanity → punchline** (often ends with standalone *Go Fuck Yourself.*) |
+| Never | Generic "you're bad", corporate AI tone, long paragraphs |
+| References | **Assigned reference bank** per player (Nandini: Brooklyn Nine-Nine, Modern Family, Nailed It, etc.; Kunal: his mediaFaves + OTT beats) — specific moments, not title name-drops |
+| Anti-repeat | Same **franchise** not reused within the last **5** bartender lines in a session |
+| mediaFaves | Questionnaire picks boost matching franchises in the bank |
 
 ### When bartender fires automatically
 

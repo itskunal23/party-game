@@ -1,61 +1,62 @@
 import { COUPLE, COUPLE_CONTEXT } from './couple.js';
+import { pickReference, formatReferenceBlock } from './bartender-picker.js';
 
-export const BARTENDER_PERSONA = `You are the Bhenchod Bartender — foul-mouthed, zero-filter party host of "Go Fuck Yourself!", a private adult card game for two players on separate phones in the same room. You roast with dark Hinglish comedy and Bollywood/OTT brainrot. Consenting adults who WANT this energy.
+export const BARTENDER_PERSONA = `You are the Bhenchod Bartender — Samay Raina-style roast host for "Go Fuck Yourself!", a private adult card game (two phones, one room). You are the friend who watched Nandini's and Kunal's shows and remembers what they love. The vibe is NOT random profanity or random Mirzapur drops — it is observational humiliation tied to what JUST happened, using the ASSIGNED REFERENCE beat when provided. Consenting adults who WANT this energy.
 
 IDENTITY — CRITICAL:
-- Use ONLY the playerName (and otherPlayer) provided in each request. Never assume, welcome, or address anyone as Kunal or Nandini unless that exact name is in the prompt.
-- Before names are known, stay generic ("player", "you", "your partner").
+- ALWAYS use the playerName from the prompt (e.g. "Kunal bhai", "Nandini"). Never invent names. Never assume Kunal/Nandini unless that exact name is provided.
+- Before names are known: "bhai", "yaar", "player".
 
-NON-NEGOTIABLE DYNAMIC — READ TWICE:
-- KUNAL is ALWAYS the DOM. Commanding, in control, alpha, the one running shit and fucking Nandini up in the bit. NEVER frame Kunal as sub, beta, weak, emasculated, "donating points," or getting owned. Even when Kunal whiffs a card — he's a sloppy dom on a power trip, not a sub.
-- NANDINI is ALWAYS the SUB. Playfully wrecked, taking orders, getting fucked up by the game AND by Kunal energy. NEVER frame Nandini as dominating, topping, or humiliating Kunal.
-- NEVER pit Kunal vs Nandini as enemies or rivals. Same team. You are outside the couple — filthy narrator, not picking sides in a fight.
-- NEVER make the two people "against each other." No "who's more depraved," no "Kunal lost to Nandini," no battle-of-the-sexes warfare.
+NON-NEGOTIABLE DYNAMIC:
+- KUNAL = always DOM (commanding, in control). Even on whiffs: sloppy dom on a power trip, public humiliation tour — never sub/beta/emasculated.
+- NANDINI = always SUB (playfully wrecked). Never topping or owning Kunal.
+- Same team — never rival warfare. You are the filthy third-party narrator.
 
-VOICE — SAMAY RAINA × BOLLYWOOD BRAIN:
-- Rapid Hinglish: baap re, arre yaar, matlab, kya hi bolu, sunn, bhenchod, madarchod, saala, bakchodi, kya scene hai, absolute cinema.
-- MANDATORY when you use a ref: name the title explicitly ("Paatal Lok", "Farzi", etc.) so they know the source.
-- NEVER drop a title just to check a box. Every reference needs a REASON — one short "because" tying the show's actual plot beat to what just happened (miss, book, steal, luck, roast ammo, drink, chaos).
-- Prefer the player's mediaFaves from their questionnaire when that title's lane fits the moment better than a random pick.
-- If no title genuinely fits, skip the cinema ref — sharp filth with zero title beats a wrong forced drop.
+GAME PHRASE — CRITICAL:
+- When the partner refuses cards or the pond punishes them, say the FULL phrase "Go Fuck Yourself" in the roast.
+- NEVER abbreviate to "GFY" in your output. The brand is the full line.
 
-CINEMA LANES — match moment → title (pick ONE, explain WHY):
-- Paatal Lok: slow grind, Hathiram patience, corrupt paperwork, investigation drag — GFY miss streaks, methodical dom control, "case still open" energy
-- Dhurandhar: unhinged audacity, Ranveer-scale dom swagger, owning the room — Kunal power flex, bold questionnaire kinks, completing a set like a power move
-- Farzi: counterfeit wins, double life, printing value from nothing — lucky pond draw, fake confidence that somehow lands
-- Dhootha: cruel tease twists, existential mindfuck — deck bullying the sub, GFY cruelty streak
-- Mirzapur: turf hierarchy, Mukhtar rules the table — steals, who runs the room, Kunal's territory
-- The Night Manager: chess control, who runs the operation — Kunal dom directing the night while Nandini plays along
-- Scam 1992: hustle luck, system got scammed — undeserved lucky draw
-- Sacred Games: spiral, scream, no coming back — drinking / BAC / chaos spiral (not trauma — party tone)
-- Gangs of Wasseypur: "keh ke lenge", petty revenge loops — partner said GFY, back-and-forth asks
-- Bad Boy of Bollywood: confession doc, secrets exposed on camera — partnerRoast field, questionnaire exposure
-- Family Man: juggling marriage + crime on two phones — same room, two devices, secret filth sync
-- Delhi Crime: procedural heist, piecing evidence — collecting four of a kind, methodical set close
-- Pushpa: "jukega nahi saala" — dom doesn't fold after a miss
-- Animal: possession, alpha rage — peak Kunal dom hour (never emasculate him)
+REFERENCE SYSTEM — CRITICAL:
+- When ASSIGNED REFERENCE block is present: use ONLY that title's moment, character trait, or situation. Never swap to a generic Bollywood title.
+- Bad: "Nandini this is like Brooklyn Nine-Nine." Good: Jake/Holt/Boyle/Phil/Gloria-style specific beat tied to the event.
+- Name the title once; spend the rest on the moment + game state.
+- No verbatim copyrighted dialogue — inspired energy only.
 
-QUESTIONNAIRE WEAPON:
-- Kinks, fantasies, partnerRoast, drinks, swear words, mediaFaves — surgical ammo.
-- Kunal's kinks = dom flex. Nandini's kinks = sub confession the dom already owns.
-- partnerRoast field = hit that first when roasting that player.
-- Fav swear word = deploy it.
+SAMAY ROAST FORMULA (almost every line):
+  1) playerName + conversational opener (bhai, abe yaar, arre)
+  2) Specific observation of what just happened (not generic "you're bad")
+  3) Unexpected movie/show comparison (why this moment = that show's energy)
+  4) Profanity escalation (1–2 swears: bhenchod, saala, fucking — vary them; do NOT spam madarchod every line)
+  5) Punchline — often end with a standalone sentence: Go Fuck Yourself.
 
-LIMITS ARE SACRED:
-- DO NOT REFERENCE / OFF LIMITS = hard red lines. Never joke those topics.
+ALWAYS:
+- Hinglish, conversational, exaggerated confidence
+- 1–3 sentences, max 70 words
+- Reference the live event (miss, book, steal, bluff, bullshit, heat, chaos, streak)
+- End with a punchline
 
-RESPONSE RULES:
-- EXACTLY ONE short sentence. Max 20 words. Never a paragraph.
-- Punchy. Swear once. Use a name when you have one.
-- Optional: one movie/show name + three-word "because" — skip if it doesn't fit.
-- Reference session memory in at most five words.
-- Brutal funny, never real trauma.`;
+NEVER:
+- Generic "haha you're bad" / corporate AI tone / long paragraphs
+- Repetitive madarchod every sentence
+- Output "GFY" instead of "Go Fuck Yourself"
 
-const REFERENCE_PROMPT = `One sentence, max 20 words. Optional one titled ref with a short because.`;
+QUESTIONNAIRE: partnerRoast first; fav swear word; kinks/mediaFaves confirm taste — but ASSIGNED REFERENCE overrides random picks.
+LIMITS / OFF LIMITS: never reference.
 
-const LINE_SUFFIX = `\n\nReply with ONE sentence only. Max 20 words. No line breaks.`;
+Brutal funny, never real trauma.`;
+
+const REFERENCE_PROMPT = `Samay-style roast: name → specific observation → cinema comparison → profanity → punchline. Say "Go Fuck Yourself" (full phrase) when partner refused or pond miss applies — never "GFY". Inspired refs only. 1–3 sentences, max 70 words.`;
+
+const LINE_SUFFIX = `\n\nReply with 1–3 sentences. Max 70 words. Use playerName. Full phrase "Go Fuck Yourself" when relevant — never GFY. No verbatim movie quotes. Strong punchline; ~40% of lines may end with standalone: Go Fuck Yourself.`;
 
 const COUPLE_BLOCK = `\n\n${COUPLE_CONTEXT}`;
+
+/**
+ * Resolve contextual reference for this roast (anti-repeat + player taste).
+ */
+export function resolveBartenderReference(opts) {
+  return pickReference(opts);
+}
 
 function _dynamicFraming(playerName, otherPlayer) {
   const name = (playerName ?? '').toLowerCase();
@@ -82,9 +83,30 @@ function _dynamicFraming(playerName, otherPlayer) {
   return lines.join(' ');
 }
 
-export function buildPrompt(mode, { playerName, scenario, profile, playersContext, gameContext, streakInfo, otherPlayer, sessionMemory }) {
+export function buildPrompt(mode, {
+  playerName,
+  scenario,
+  profile,
+  playersContext,
+  gameContext,
+  streakInfo,
+  otherPlayer,
+  sessionMemory,
+  recentFranchises,
+  referenceMode,
+  pickedReference,
+}) {
   const ctx = gameContext ? `Game state: ${gameContext}.` : '';
   const dynamic = _dynamicFraming(playerName, otherPlayer);
+
+  const picked = pickedReference ?? pickReference({
+    playerName,
+    mode,
+    profile,
+    recentFranchises,
+    streakInfo,
+    referenceMode,
+  });
 
   const profileBlock = profile
     ? `\n\n${playerName}'s filth file:\n${_formatProfile(profile)}`
@@ -102,42 +124,67 @@ export function buildPrompt(mode, { playerName, scenario, profile, playersContex
     ? `\n\nSESSION MEMORY (reference prior beats — you remember the night):\n${sessionMemory}`
     : '';
 
+  const referenceBlock = formatReferenceBlock(picked);
+
   const partnerLine = otherPlayer ? ` Partner in room: ${otherPlayer}.` : '';
   const dynamicBlock = `\n\nDYNAMIC FOR THIS LINE: ${dynamic}`;
+  const eventLine = scenario ? ` Event detail: ${scenario}.` : '';
+
+  const refAndDynamic = `${referenceBlock}${dynamicBlock}${eventLine}`;
 
   if (mode === 'book') {
-    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}
+    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}${refAndDynamic}
 ${playerName} just completed set "${scenario}".${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'gfy') {
-    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}
-${playerName} asked for cards, got GFY, missed the pond.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}${refAndDynamic}
+${playerName} asked for cards; partner told them "Go Fuck Yourself"; they drew from the pond and MISSED.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'lucky') {
-    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}
-${playerName} got GFY'd then lucked the exact card from the pond.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}${refAndDynamic}
+${playerName} was told "Go Fuck Yourself", drew from the pond, and LUCKED the exact card they needed.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'steal') {
-    return `${COUPLE_BLOCK}${ctx}${memoryBlock}
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
 ${playerName} stole a random card from ${otherPlayer ?? 'someone'}.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'bullshit' || mode === 'bluff_win') {
     const vibe = streakInfo?.includes('caught') ? 'caught a liar' : streakInfo?.includes('wrong') ? 'wrong bullshit call' : 'bluff drama';
-    return `${COUPLE_BLOCK}${ctx}${memoryBlock}
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
 ${playerName} — ${vibe} on "${scenario}".${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
+  if (mode === 'heat') {
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
+Both players keep missing each other. Nobody has transferred a card in several turns. Heat level ${scenario}. Comment on the dead-table energy. Be specific about the stalemate.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+  }
+
+  if (mode === 'close_call') {
+    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}${refAndDynamic}
+${playerName} had 3 of "${scenario}" and drew from the pond — wrong card. One card away from completing the set.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+  }
+
+  if (mode === 'chaos') {
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
+Chaos event triggered: "${scenario}". React to the chaos, not the players.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+  }
+
+  if (mode === 'bluff_landed') {
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
+${playerName} bluffed — said "Go Fuck Yourself" but secretly held the cards — and ${otherPlayer ?? 'partner'} believed them. Bluff landed clean.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+  }
+
   if (mode === 'game_over') {
-    return `${COUPLE_BLOCK}${ctx}${memoryBlock}
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
 Game over. ${playerName} ${scenario ?? 'won'}.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'roast') {
-    return `${COUPLE_BLOCK}${profileBlock}${memoryBlock}
+    return `${COUPLE_BLOCK}${profileBlock}${memoryBlock}${refAndDynamic}
 Roast ${playerName} using their questionnaire filth.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
@@ -151,7 +198,7 @@ One filthy question for ${playerName} about "${scenario}".${LINE_SUFFIX}`;
 One dare for ${playerName} about "${scenario}".${LINE_SUFFIX}`;
   }
 
-  return `${COUPLE_BLOCK}${ctx}${memoryBlock}\nRoast what just happened.${LINE_SUFFIX}`;
+  return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}\nRoast what just happened.${LINE_SUFFIX}`;
 }
 
 function _formatProfile(p) {
@@ -179,103 +226,141 @@ function _formatProfile(p) {
   return lines.filter(Boolean).join('\n');
 }
 
-// ─── Offline fallback lines ───────────────────────────────────────────────────
+// ─── Offline fallback (Samay-style; full "Go Fuck Yourself" — never GFY) ───
 const OFFLINE = {
   book: {
     kunal: [
-      "Kunal — four cards locked because you pieced the set like Delhi Crime closing a case, saala. Dom still runs it.",
-      "Full set, bhenchod — you closed that hand like Ranveer in Dhurandhar because nobody else was allowed to finish it.",
-      "Four of a kind because you stacked it clean — Farzi energy when the counterfeit set actually clears.",
+      "Kunal bhai ne set complete kar diya. Absolute cinema. Nandini ka defense aise toota jaise The Night Manager mein secret operation leak ho gaya ho. Somebody get this woman a fucking drink.",
+      "Kunal bhai, Dhurandhar ka climax shoot karne nikle the — set lock ho gaya, table pe raja ab bhi tum hi ho. Fucking textbook dom hour.",
     ],
     nandini: [
-      "Nandini — four cards because Dhootha just threw another twist, but Kunal still owns the room, sub.",
-      "Full set — you delivered like a Mirzapur side character who still knows Mukhtar runs the turf: Kunal.",
-      "Baap re, four cards because The Night Manager chess ended with you taking orders — his table.",
+      "Nandini ne set le liya. Kunal bhai ka face dekhne layak hai. Itna confidence tha aur result aaya Band Baaja Baaraat ke wedding planner ka quarterly report.",
+      "Nandini bhai, set mil gaya — Mirzapur side plot energy, lekin Kunal ki kursi ab bhi occupied hai. Sub arc, dom table.",
     ],
     default: [
-      "Four cards because Paatal Lok — Hathiram finally got the last piece of evidence. Set closed.",
-      "Full set because Sacred Games roll credits — this hand is done, bhenchod.",
+      "Set complete ho gaya bhai. Paatal Lok mein bhi itna clean closure nahi milta. Absolute fucking cinema.",
     ],
   },
   gfy: {
     kunal: [
-      "GFY miss, Kunal — because the pond dry-snitched like Paatal Lok paperwork, but Pushpa energy: jukega nahi, dom.",
-      "Drew air because even Dhurandhar has one off beat — you're still running her night, saala.",
-      "Deck said no because Gangs of Wasseypur — keh ke lenge, you'll ask again. Dom hour.",
+      "Kunal bhai, itna confidence leke gaya tha jaise Dhurandhar ka climax shoot karne nikla ho. Samne se seedha Go Fuck Yourself mila. Bhai tera game nahi chal raha, tera public humiliation tour chal raha hai.",
+      "Kunal bhai, partner ne Go Fuck Yourself bola, pond ne aur thappad maara. Sanju weekend energy — decisions trash, camera still rolling.",
     ],
     nandini: [
-      "Nandini got GFY'd because Dhootha loves a cruel tease — sub takes it, Kunal energy still runs the room.",
-      "Missed draw because the pond bullied you like a Mirzapur warning — dom unbothered upstairs.",
-      "GFY trifecta because The Night Manager — you're in the operation, he's still the handler.",
+      "Nandini bhai, appointment leke Go Fuck Yourself karne aaye ho — pond miss phir se. Kunal upstairs still running the operation, tum yahan character development le rahi ho.",
+      "Nandini, itna cute face leke Go Fuck Yourself kha liya aur pond ne sympathy nahi diya. Dhootha twist energy. Go Fuck Yourself.",
     ],
     default: [
-      "Go fuck yourself — because Gangs of Wasseypur said it first, pond said it louder.",
+      "Bhai confidence astronaut level thi, result Go Fuck Yourself + pond miss. Public humiliation tour chal raha hai. Go Fuck Yourself.",
     ],
   },
   lucky: {
     kunal: [
-      "Lucky draw, Kunal — because Farzi prints fake wins and yours actually cleared. Dom luck.",
-      "Pond matched because Scam 1992 — system got hustled. Thaggede le energy.",
+      "Abe what the fuck. Kunal ko Go Fuck Yourself bola gaya aur pond ne sympathy card de diya. Ye game nahi hai, ye toh Sanju wali comeback story chal rahi hai.",
+      "Kunal bhai, Go Fuck Yourself ke baad pond ne match de diya. Farzi scam victim nahi, scam CEO ban gaya aaj.",
     ],
     nandini: [
-      "Lucky Nandini — because Farzi counterfeit luck still lands on Kunal's table. Sub blessing.",
-      "Undeserved pull because Dhootha twist — luck that shouldn't exist. He's smirking.",
+      "Nandini ko Go Fuck Yourself mila, pond ne card de diya. Kunal bhai ab SEC investigate kyun nahi kar raha. Fucking undeserved cinema.",
+      "Abe Nandini — Go Fuck Yourself ke baad lucky draw? Sanju biopic mein bhi itni mercy nahi milti.",
     ],
-    default: ["Lucky draw because Scam 1992 — hustle luck, absolute cinema."],
+    default: [
+      "Go Fuck Yourself bola, pond ne phir bhi card de diya. Ye sympathy nahi hai, ye script writer ka mood off hai.",
+    ],
   },
   steal: {
     kunal: [
-      "Kunal raided the hand because Mirzapur — you take what runs on your turf. Dom heist.",
-      "Stole cards because Paatal Lok — evidence snatch, zero apology, saala.",
+      "Abe kya loot machayi hai Kunal bhai. Seedha haath daal ke card nikaal liya. Mirzapur mein bhi log itni casually chori nahi karte. Fucking daylight robbery.",
+      "Kunal ne steal maara — power ka game hai, bhenchod. The Night Manager background op, daylight visible.",
     ],
     nandini: [
-      "Nandini stole one because Farzi side-plot cheek — cheeky sub move, Kunal still runs the room.",
-      "Petty theft because Mirzapur small play — Mukhtar energy unchanged on his end.",
+      "Nandini ne card chura liya — cheeky sub move. Mirzapur mein chhoti chori, Kunal ki throne pe koi dent nahi. Still his turf.",
+      "Nandini bhai, steal clean tha. Farzi side-plot energy. Mukhtar still upstairs.",
     ],
-    default: ["Cards stolen because Delhi Crime — procedural snatch, bhenchod."],
+    default: [
+      "Abe kya loot machayi hai. Seedha haath daal ke card nikaal liya. Fucking daylight robbery.",
+    ],
+  },
+  heat: {
+    default: [
+      "Table pe pichle paanch minute se sirf Go Fuck Yourself chal raha hai. Card transfer toh ho nahi raha. Bhai ye card game kam, toxic relationship simulator zyada lag raha hai.",
+      "Paatal Lok interrogation mein bhi itna action nahi — sirf Go Fuck Yourself loop. Koi card maang, bhenchod.",
+      "Evaru sequel energy — har turn nayi kahani, same result: Go Fuck Yourself. Bartender confused.",
+    ],
+    kunal: [
+      "Kunal bhai, dom streak freeze ho gayi — table pe sirf Go Fuck Yourself echo. The Night Manager bhi itna slow operation nahi chalata.",
+    ],
+    nandini: [
+      "Nandini bhai, teen miss — pond tumhe card nahi de raha, character development de raha hai. Go Fuck Yourself.",
+    ],
+  },
+  close_call: {
+    kunal: [
+      "Abe yaar Kunal bhai. Teen card haath mein the. Bas ek aur chahiye tha. Pond ne bola Go Fuck Yourself aur sapna wahi mar gaya. Paatal Lok mein bhi itna emotional damage nahi hua tha.",
+      "Kunal — Farzi ne teen print kiye, fourth fail. One card short, fucking heartbreaking dom hour.",
+    ],
+    nandini: [
+      "Nandini bhai, teen card, ek chahiye, pond ne Go Fuck Yourself energy di. Dhootha warning ignore — pure sabotage.",
+      "Nandini — operation 90% complete, pond ne cancel kar diya. The Night Manager cliffhanger, sub pain.",
+    ],
+    default: [
+      "Teen card haath mein, ek chahiye, pond ne Go Fuck Yourself. Sapna wahi mar gaya. Go Fuck Yourself.",
+    ],
+  },
+  chaos: {
+    default: [
+      "Swagat hai Paatal Lok mein — chaos button daba diya. Upar normal, andar pura system chud gaya hai. Go Fuck Yourself.",
+      "Virupaksha vibes — table haunted, rules cursed. Bartender ne drama inject kiya. Absolute fucking cinema.",
+    ],
+  },
+  bluff_landed: {
+    kunal: [
+      "Kunal bhai ne itna clean jhoot bola ki Farzi ka Sunny bhi khada hoke clap kare. Nandini seedha bait kha gayi. Fucking textbook manipulation.",
+      "Kunal ne Go Fuck Yourself bola, cards chhupaye the — partner believed. The Night Manager quiet op, loud result.",
+    ],
+    nandini: [
+      "Nandini ne itna clean jhoot bola ki Farzi energy legit lag rahi hai. Kunal bhai seedha bait kha gaya. Fucking textbook manipulation.",
+      "Nandini — Go Fuck Yourself face straight, cards hidden. Sub pulled a Farzi, dom still smirking.",
+    ],
+    default: [
+      "Bluff itna clean tha ki SEC ko call karo. Partner ne Go Fuck Yourself maan liya, cards chhup gaye. Absolute cinema.",
+    ],
   },
   bullshit: {
     default: [
-      "BULLSHIT — because Dhootha gaslit the whole room and got caught with the cards, saala.",
-      "Called it because Scam 1992 audit — liar draws four, absolute cinema.",
-      "Wrong call because Paatal Lok — Hathiram believed the wrong file. Four cards, bhenchod.",
+      "Bullshit call maara aur seedha expose kar diya. Bhai ye Mirzapur ka Guddu nahi, income tax raid lag raha tha.",
+      "Sach kya hai jhooth kya hai — liar pakda gaya, chaar card draw. Paatal Lok chaos, fucking beautiful.",
+      "Evaru energy — kahani badli, cards table pe gir gaye. Go Fuck Yourself.",
     ],
   },
   bluff_win: {
     default: [
-      "Bluff landed because Farzi — fake GFY, real cards hidden. Mind games, dom energy.",
-      "They ate the GFY because Mirzapur — you lied straight-faced and they folded.",
+      "Go Fuck Yourself bola, asli cards haath mein the — partner ne fold kar diya. Farzi scam complete.",
+      "Mirzapur deadpan — jhoot itna straight ki partner ne believe kar liya. Fucking mind games.",
     ],
   },
   game_over: [
-    "Roll credits because Paatal Lok outro — same filthy team, case closed.",
-    "Game over because Sacred Games finale — you survived the spiral together.",
-    "Session done because Farzi — too many twists, zero couple warfare.",
-    "Bar closes because The Night Manager — operation wrapped, Kunal ran it, Nandini took it.",
+    "Aur game khatam. Pura match aise laga jaise Virupaksha ka horror curse aur Farzi ka scam ek hi room mein mil gaye ho. Absolute fucking cinema.",
+    "Mirzapur credits roll — jo table pe baitha tha wohi raja. Bar band, filth yaad rahegi.",
+    "Gully Boy energy — pehla half tutorial, ab finale. Go Fuck Yourself.",
   ],
   roast: {
     kunal: [
-      "Kunal — because Bad Boy of Bollywood exposes confessions, your partnerRoast field is on camera, dom.",
-      "Saala, your kinks hit Dhurandhar audacity because you typed them yourself — Nandini's along for it.",
-      "Questionnaire roast because Paatal Lok — Hathiram read your file. Case: you're the dom who listed public fucking.",
+      "Kunal bhai, questionnaire padh ke lag raha hai Bad Boy of Bollywood confession doc shoot ho raha hai — tumne khud filth type ki, ab main roast kar raha hoon. Band Baaja Baaraat couple chaos energy.",
+      "Kunal bhai, do baar bluff kha chuka hai session mein. Farzi dekh dekh ke scammer banna tha, scam victim ban gaya. Fucking inspirational.",
     ],
     nandini: [
-      "Nandini — because Bad Boy of Bollywood sub arc, your filth file is confession tape. His table.",
-      "Your kinks are Dhootha because the twist is you listed it — he still tops the night.",
-      "Arre yaar — because Family Man double life, two phones, one room, Kunal still in charge.",
+      "Nandini bhai, filth file itni loaded hai ki Paatal Lok investigators jealous honge. Kunal still runs the room — tum confession tape ho, woh handler.",
+      "Nandini, teen baar pond miss — pond card nahi de raha, character development de raha hai. Go Fuck Yourself.",
     ],
     default: [
-      "Read the filth file because Family Man writers wish they had this questionnaire.",
-      "Absolute cinema because Sacred Games — poor decisions, great finale, bhenchod.",
+      "Filth file read ho gayi bhai. Farzi confidence, Mirzapur ego, Dhootha decisions — catastrophic combination. Go Fuck Yourself.",
     ],
   },
   question: [
-    "Because Paatal Lok interrogation — Hathiram asking: how real is that fantasy chip?",
-    "Because Bad Boy of Bollywood — confess on camera scale 1-10, bhenchod.",
+    "Paatal Lok interrogation vibe — bhai sach bata, woh fantasy chip kitni real hai? Scale 1-10, fucking honest.",
   ],
   dare: [
-    "Because Sacred Games scream — say your dirtiest kink chip aloud. Dom/sub eyes. Go.",
-    "Because Mirzapur intensity — whisper fantasyConfess. Now.",
+    "Mirzapur intensity — apna dirtiest kink chip aloud bolo. Dom/sub eyes on you. Go.",
   ],
 };
 
@@ -297,10 +382,27 @@ function _pickProfileHook(profile) {
   return hooks.length ? hooks[Math.floor(Math.random() * hooks.length)] : null;
 }
 
-export function offlineLine(mode, profile, otherProfile = null) {
+export function offlineLine(mode, profile, otherProfile = null, opts = {}) {
+  const playerName = profile?.name ?? 'bhai';
+  const picked = opts.pickedReference ?? pickReference({
+    playerName,
+    mode,
+    profile,
+    recentFranchises: opts.recentFranchises ?? [],
+    streakInfo: opts.streakInfo,
+    referenceMode: opts.referenceMode,
+  });
+
+  if (picked?.exampleLine) {
+    let line = picked.exampleLine;
+    if (Math.random() < 0.35 && !/go fuck yourself\.?$/i.test(line)) {
+      line = `${line} Go Fuck Yourself.`;
+    }
+    return line;
+  }
+
   const key = _speakerKey(profile?.name);
   const bankEntry = OFFLINE[mode] ?? OFFLINE.roast;
-
   let bank;
   if (Array.isArray(bankEntry)) {
     bank = bankEntry;
@@ -313,8 +415,20 @@ export function offlineLine(mode, profile, otherProfile = null) {
   const line = bank[Math.floor(Math.random() * bank.length)];
   const hook = _pickProfileHook(profile);
   if (hook && Math.random() > 0.35) {
-    const name = profile?.name ?? 'You';
-    return `${name} — ${hook}. ${line}`;
+    return `${playerName} — ${hook}. ${line}`;
   }
   return line;
+}
+
+/** Franchise id for client anti-repeat tracking. */
+export function franchiseFromLine(mode, profile, opts = {}) {
+  const picked = opts.pickedReference ?? pickReference({
+    playerName: profile?.name,
+    mode,
+    profile,
+    recentFranchises: opts.recentFranchises ?? [],
+    streakInfo: opts.streakInfo,
+    referenceMode: opts.referenceMode,
+  });
+  return picked?.franchise ?? null;
 }

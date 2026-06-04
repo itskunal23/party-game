@@ -26,7 +26,7 @@ export const CHAOS_EVENTS = [
     id: 'bollywood_twist',
     title: 'Bollywood Twist',
     emoji: '🎬',
-    tagline: '60 seconds — only movie dialogue. Paatal Lok energy.',
+    tagline: '60 seconds — only cinema callbacks (no verbatim quotes). Paatal Lok energy.',
     durationMs: 60_000
   },
   {

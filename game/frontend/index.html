@@ -45,34 +45,38 @@
   <!-- Reconnection toast -->
   <div id="connection-toast" class="hidden">Reconnecting…</div>
 
-  <!-- ── SCREEN: Landing (scrollable marketing) ─────────────────────────── -->
+  <!-- ── SCREEN: Landing — party game (playable-first, not SaaS) ─────────── -->
   <div id="screen-landing" class="screen hidden">
     <div class="lp-bg" aria-hidden="true">
       <div class="lp-gradient"></div>
+      <div class="lp-smoke"></div>
+      <div class="lp-shine lp-shine--1"></div>
+      <div class="lp-shine lp-shine--2"></div>
       <div class="lp-glass-orb lp-glass-orb--1"></div>
       <div class="lp-glass-orb lp-glass-orb--2"></div>
       <div class="lp-float-cards">
         <div class="lp-float-card lp-float-card--1"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
         <div class="lp-float-card lp-float-card--2"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
         <div class="lp-float-card lp-float-card--3"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
-        <div class="lp-float-card lp-float-card--4"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
       </div>
     </div>
 
     <div class="lp-scroll">
-      <!-- §1 Hero -->
-      <section class="lp-hero">
+      <!-- §1 Hero — 100vh, iPhone-first -->
+      <section class="lp-hero" aria-label="Go Fuck Yourself">
         <div class="lp-hero-inner">
-          <p class="lp-eyebrow">18+ · Party card game</p>
-          <div class="lp-logo-lockup" aria-label="Go Fuck Yourself">
-            <span class="lp-logo-mark">GFY</span>
-            <h1 class="lp-logo">GO FUCK<br>YOURSELF</h1>
+          <div class="lp-hero-stack" aria-hidden="true">
+            <div class="lp-stack-card lp-stack-card--3"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
+            <div class="lp-stack-card lp-stack-card--2"><div class="card card--back"><div class="card-back-logo">GFY</div></div></div>
+            <div class="lp-stack-card lp-stack-card--1"><div class="card card--face"><div class="card-rank">?</div><div class="card-name lp-stack-label" id="lp-stack-label">Lucky Draw</div></div></div>
           </div>
-          <p class="lp-tagline">Late-night bar energy.<br>Two phones. One filthy host.<br>Absolute cinema.</p>
+
+          <h1 class="lp-logo" aria-label="Go Fuck Yourself">GO FUCK<br>YOURSELF</h1>
+          <p class="lp-tagline">Lie. Bluff. Call bullshit.<br>"Go Fuck Yourself" is a strategy.</p>
 
           <div class="lp-hero-actions">
             <button type="button" class="lp-btn lp-btn--primary" data-lp-start id="btn-lp-start-hero">Start Chaos</button>
-            <button type="button" class="lp-btn lp-btn--ghost" data-lp-join-toggle id="btn-lp-join-hero">Join Chaos</button>
+            <button type="button" class="lp-btn lp-btn--ghost" data-lp-join-toggle id="btn-lp-join-hero">Join With Code</button>
           </div>
 
           <div class="lp-join-panel" id="landing-join-panel">
@@ -81,121 +85,161 @@
             <button type="button" class="lp-btn lp-btn--primary lp-btn--compact" id="btn-lp-join-go">Join</button>
           </div>
 
-          <ul class="lp-stats" aria-label="Quick facts">
-            <li><strong>2</strong> Players</li>
-            <li><strong>2</strong> Phones</li>
-            <li><strong>5 min</strong> To learn</li>
-            <li><strong>∞</strong> Bad decisions</li>
-          </ul>
+          <p class="lp-scroll-cue" aria-hidden="true"><span class="lp-scroll-cue-icon">▼</span></p>
         </div>
       </section>
 
-      <!-- §2 How it works -->
-      <section class="lp-section lp-how">
-        <h2 class="lp-section-title lp-reveal">How it works</h2>
-        <div class="lp-hscroll lp-reveal">
-          <article class="lp-hcard">
-            <span class="lp-hcard-icon">📱</span>
-            <h3>Make Your Profile</h3>
-            <p>Quick questionnaire.</p>
+      <!-- §2 Mechanics -->
+      <section class="lp-section lp-mechanics lp-reveal" aria-label="How you play">
+        <div class="lp-mechanics-stage">
+          <article class="lp-mech-card" data-mech="ask">
+            <h3>ASK</h3>
+            <p>Swipe a card<br>at your partner.</p>
+            <p class="lp-mech-punch">They give · lie · or<br>Go Fuck Yourself.</p>
           </article>
-          <article class="lp-hcard">
-            <span class="lp-hcard-icon">🎲</span>
-            <h3>Create Or Join</h3>
-            <p>Room code. Done.</p>
+          <article class="lp-mech-card" data-mech="bluff">
+            <h3>BLUFF</h3>
+            <p>Lie.<br>Convincingly.</p>
+            <p class="lp-mech-punch">Get caught?<br>Take four cards.</p>
           </article>
-          <article class="lp-hcard">
-            <span class="lp-hcard-icon">🃏</span>
-            <h3>Start The Chaos</h3>
-            <p>Collect sets. Steal cards. Get roasted.</p>
+          <article class="lp-mech-card" data-mech="bullshit">
+            <h3>BULLSHIT</h3>
+            <p>Call the lie.</p>
+            <p class="lp-mech-punch">Right? They draw four.<br>Wrong? You do.</p>
           </article>
+          <article class="lp-mech-card" data-mech="drink">
+            <h3>DRINK</h3>
+            <p>Complete a book.</p>
+            <p class="lp-mech-punch">Assign a drink.<br>Log it on your phone.</p>
+          </article>
+          <article class="lp-mech-card" data-mech="roast">
+            <h3>ROAST</h3>
+            <p>Bhenchod Bartender</p>
+            <p class="lp-mech-punch">Remembers your filth.<br>Roasts the moment.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- §2.5 Real gameplay exchange — one round, no mercy -->
+      <section class="lp-section lp-exchange lp-reveal" aria-label="How one round plays out">
+        <p class="lp-section-eyebrow">One round. No mercy.</p>
+        <div class="lp-exchange-wrap" id="lp-exchange-wrap">
+
+          <div class="lp-xline lp-xline--ask">
+            <span class="lp-xline-who">Kunal</span>
+            <span class="lp-xbubble lp-xbubble--me">Do you have this card?</span>
+          </div>
+
+          <div class="lp-xline lp-xline--reply">
+            <span class="lp-xbubble lp-xbubble--them">No.</span>
+            <span class="lp-xline-who">Nandini</span>
+          </div>
+
+          <div class="lp-xline lp-xline--stamp">
+            <span class="lp-bs-stamp">🐂 BULLSHIT!</span>
+          </div>
+
+          <div class="lp-xline lp-xline--result">
+            <span class="lp-xresult">She had it all along.<br>Draws 4 cards.</span>
+          </div>
+
+          <div class="lp-xline lp-xline--roast">
+            <span class="lp-xroast">🍸 "Bhenchod, Mirzapur mein bhi itna obvious jhoot nahi bolte."</span>
+          </div>
+
         </div>
       </section>
 
       <!-- §3 Bartender -->
-      <section class="lp-section lp-bartender">
-        <div class="lp-bartender-art" aria-hidden="true">🍸</div>
-        <div class="lp-glass-card lp-reveal">
-          <h2 class="lp-section-title">Meet The Bhenchod Bartender</h2>
-          <p class="lp-section-sub">An AI party host that remembers everything embarrassing about you.</p>
-          <div class="lp-chat">
-            <p class="lp-chat-scene">They whiff a draw — still run the room.</p>
-            <blockquote class="lp-chat-bubble lp-chat-bubble--host">
-              Sloppy dom hour, saala — Hathiram in Paatal Lok would still let you lead the case.
-            </blockquote>
-            <p class="lp-chat-scene">Partner completes a set.</p>
-            <blockquote class="lp-chat-bubble lp-chat-bubble--host">
-              Sub energy delivering — Farzi-level precision on the dom's table.
+      <section class="lp-section lp-bartender lp-reveal" aria-label="Bhenchod Bartender">
+        <div class="lp-bartender-panel">
+          <span class="lp-bartender-icon" aria-hidden="true">🍸</span>
+          <h2 class="lp-bartender-title">Bhenchod Bartender</h2>
+          <div class="lp-transcript-wrap">
+            <blockquote class="lp-transcript" id="lp-transcript">
+              <span class="lp-transcript-text" id="lp-transcript-text">"Nandini walked into that bluff like Jake Peralta with a fake warrant."</span>
             </blockquote>
           </div>
         </div>
       </section>
 
-      <!-- §4 Gameplay showcase -->
-      <section class="lp-section lp-showcase">
-        <h2 class="lp-section-title lp-reveal">Built for two phones</h2>
-        <div class="lp-phone lp-reveal">
-          <div class="lp-phone-frame">
-            <div class="lp-phone-notch"></div>
-            <div class="lp-phone-screen">
-              <div class="lp-mock-bar"><span>🌊 42</span><span>📦 2/13</span></div>
-              <div class="lp-mock-partner">Ask partner ↑</div>
-              <div class="lp-mock-pond">POND</div>
-              <div class="lp-mock-hand">
-                <span class="lp-mock-card"></span>
-                <span class="lp-mock-card lp-mock-card--lift"></span>
-                <span class="lp-mock-card"></span>
+      <!-- §4 Moments -->
+      <section class="lp-section lp-moments" aria-label="Game moments">
+        <div class="lp-moments-track">
+          <article class="lp-moment lp-reveal">
+            <div class="lp-moment-visual lp-moment-visual--lucky" aria-hidden="true"></div>
+            <h3>Lucky Draw</h3>
+            <p>The entire table<br>starts screaming.</p>
+          </article>
+          <article class="lp-moment lp-reveal">
+            <div class="lp-moment-visual lp-moment-visual--bluff" aria-hidden="true"></div>
+            <h3>Bluff Landed</h3>
+            <p>You lied.<br>They believed you.<br><strong>Legend.</strong></p>
+          </article>
+          <article class="lp-moment lp-reveal">
+            <div class="lp-moment-visual lp-moment-visual--bullshit" aria-hidden="true"></div>
+            <h3>Bullshit Call</h3>
+            <p>Caught red-handed.<br>Take four cards.</p>
+          </article>
+          <article class="lp-moment lp-reveal">
+            <div class="lp-moment-visual lp-moment-visual--book" aria-hidden="true"></div>
+            <h3>Book Complete</h3>
+            <p>The bartender notices.<br>Everybody drinks.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- §5 Night story — trophy ceremony -->
+      <section class="lp-section lp-story lp-reveal" aria-label="Every match is a story">
+        <p class="lp-section-eyebrow">After the match</p>
+        <h2 class="lp-story-headline">Every match<br>becomes a story.</h2>
+
+        <div class="lp-trophy-card lp-reveal">
+          <div class="lp-trophy-winner">
+            <span class="lp-trophy-crown">🏆</span>
+            <div class="lp-trophy-name-block">
+              <span class="lp-trophy-name">Kunal wins</span>
+              <span class="lp-trophy-score">5 – 4</span>
+            </div>
+          </div>
+
+          <div class="lp-trophy-awards">
+            <div class="lp-trophy-award">
+              <span class="lp-trophy-award-emoji">🍀</span>
+              <div class="lp-trophy-award-text">
+                <strong>Lucky Draw King</strong>
+                <span>Kunal · 3 draws</span>
+              </div>
+            </div>
+            <div class="lp-trophy-award">
+              <span class="lp-trophy-award-emoji">🎭</span>
+              <div class="lp-trophy-award-text">
+                <strong>Smooth Criminal</strong>
+                <span>Nandini · 2 bluffs</span>
+              </div>
+            </div>
+            <div class="lp-trophy-award">
+              <span class="lp-trophy-award-emoji">🐸</span>
+              <div class="lp-trophy-award-text">
+                <strong>Pond Goblin</strong>
+                <span>Nandini · 7 misses</span>
               </div>
             </div>
           </div>
+
+          <p class="lp-trophy-story">Kunal pulled ahead — rode 3 lucky draws — Nandini missed the pond 7 times.</p>
+          <p class="lp-story-badge">Absolute Cinema.</p>
         </div>
-        <div class="lp-feature-grid lp-reveal">
-          <article class="lp-feature">
-            <h3>Physical cards</h3>
-            <p>Drag. Lift. Throw. Steal.</p>
-          </article>
-          <article class="lp-feature">
-            <h3>Multiplayer</h3>
-            <p>Two phones. One room. Real time.</p>
-          </article>
-          <article class="lp-feature">
-            <h3>Roasts</h3>
-            <p>Personalized. Chaotic. Memorable.</p>
-          </article>
-        </div>
+
+        <p class="lp-story-note">Real stats. Real awards. Real narrative. Screenshots happen.</p>
       </section>
 
-      <!-- §5 Card fan -->
-      <section class="lp-section lp-fan">
-        <h2 class="lp-section-title lp-reveal">Cards That Feel Real</h2>
-        <p class="lp-section-sub lp-reveal">Spring physics · drag gestures · haptics · depth · shadows</p>
-        <div class="lp-fan-stage lp-reveal" aria-hidden="true">
-          <div class="lp-fan-card lp-fan-card--1"><div class="card card--face"><div class="card-rank">A</div><div class="card-emoji">👑</div><div class="card-name">Your set</div></div></div>
-          <div class="lp-fan-card lp-fan-card--2"><div class="card card--face"><div class="card-rank">7</div><div class="card-emoji">🪗</div><div class="card-name">Drunk &amp; Raw</div></div></div>
-          <div class="lp-fan-card lp-fan-card--3"><div class="card card--face"><div class="card-rank">K</div><div class="card-emoji">🔄</div><div class="card-name">Punishment</div></div></div>
-          <div class="lp-fan-card lp-fan-card--4"><div class="card card--face"><div class="card-rank">4</div><div class="card-emoji">💣</div><div class="card-name">Caught</div></div></div>
-          <div class="lp-fan-card lp-fan-card--5"><div class="card card--face"><div class="card-rank">J</div><div class="card-emoji">🎤</div><div class="card-name">Freestyle</div></div></div>
-        </div>
-      </section>
-
-      <!-- §6 Safety -->
-      <section class="lp-section lp-safety">
-        <div class="lp-glass-card lp-glass-card--compact lp-reveal">
-          <h2 class="lp-section-title">Drink Responsibly</h2>
-          <p class="lp-section-sub">BAC tracking. Water reminders. No lectures — just play smart.</p>
-        </div>
-      </section>
-
-      <!-- §7 Final CTA -->
-      <section class="lp-section lp-final">
-        <div class="lp-final-inner lp-reveal">
-          <h2 class="lp-final-title">Ready to start chaos?</h2>
-          <div class="lp-hero-actions">
-            <button type="button" class="lp-btn lp-btn--primary" data-lp-start id="btn-lp-start-final">Start Chaos</button>
-            <button type="button" class="lp-btn lp-btn--ghost" data-lp-join-toggle id="btn-lp-join-final">Join Chaos</button>
-          </div>
-          <p class="lp-final-note">Same link on both phones · 30 seconds to start</p>
-        </div>
+      <!-- §6 Start -->
+      <section class="lp-section lp-open lp-reveal" aria-label="Start playing">
+        <p class="lp-open-lead">Two phones.<br>One room.<br>Bad decisions.</p>
+        <button type="button" class="lp-btn lp-btn--primary lp-btn--float" data-lp-start id="btn-lp-start-final">Start Chaos</button>
+        <button type="button" class="lp-btn lp-btn--ghost lp-btn--ghost-sm" data-lp-join-toggle id="btn-lp-join-final">Join With Code</button>
+        <p class="lp-open-age">18+ · Drink responsibly · Same link on both phones</p>
       </section>
     </div>
   </div>

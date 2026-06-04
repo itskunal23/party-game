@@ -10,9 +10,14 @@ export const SECRET_MISSIONS = [
 ];
 
 export const CHAOS_POOL = [
-  { id: 'pond_flood', title: 'Pond Flood', text: 'Everyone draws 1 card.' },
-  { id: 'card_tax', title: 'Card Tax', text: 'Next GFY miss = draw 2.' },
-  { id: 'steal_refresh', title: 'Steal Back', text: 'Everyone gets 1 steal token.' }
+  { id: 'pond_flood',    title: 'Pond Flood',    text: 'Everyone draws 1 card from the pond.' },
+  { id: 'card_tax',      title: 'Card Tax',      text: 'Next GFY miss draws 2 instead of 1.' },
+  { id: 'steal_refresh', title: 'Steal Back',    text: 'Everyone gets 1 steal token restored.' },
+  { id: 'hand_reveal',   title: 'Hand Reveal',   text: 'Both players announce how many cards they hold.' },
+  { id: 'skip_penalty',  title: 'Double Down',   text: 'Next successful ask wins 2 cards instead of 1.' },
+  { id: 'pond_drought',  title: 'Pond Drought',  text: 'The pond is frozen — no pond draws this turn.' },
+  { id: 'wild_refresh',  title: 'Wild Surge',    text: 'Everyone gets 1 Wild Ask token.' },
+  { id: 'swap_fates',    title: 'Swap Fates',    text: 'Each player discards 1 card and draws 1 from the pond.' }
 ];
 
 export function initPlayerPowers(playerIds) {
@@ -22,7 +27,9 @@ export function initPlayerPowers(playerIds) {
     const mission = shuffled[i % shuffled.length];
     map.set(id, {
       stealToken: 1,
-      kickDoorUsed: false,
+      wildAskToken: 1,
+      comebackToken: 0,
+      comebackGranted: false,
       doubleUsed: false,
       luckyStacks: 0,
       luckyRewardPending: false,
@@ -79,6 +86,24 @@ export function maybeServerChaos(room) {
     for (const powers of state.playerPowers.values()) {
       powers.stealToken = (powers.stealToken ?? 0) + 1;
     }
+  } else if (event.id === 'wild_refresh') {
+    for (const powers of state.playerPowers.values()) {
+      powers.wildAskToken = (powers.wildAskToken ?? 0) + 1;
+    }
+  } else if (event.id === 'pond_drought') {
+    state.pondDrought = true;
+  } else if (event.id === 'swap_fates') {
+    for (const p of room.players.values()) {
+      if (p.hand.length > 0 && state.deck.length > 0) {
+        const discard = p.hand.splice(Math.floor(Math.random() * p.hand.length), 1)[0];
+        state.deck.unshift(discard);
+        drawFromDeck(state, p, 1);
+      }
+    }
+  } else if (event.id === 'hand_reveal') {
+    // Client shows hand sizes via snapshot — handled client-side
+  } else if (event.id === 'skip_penalty') {
+    state.doubleTransfer = true;
   }
 
   state.lastChaos = { ...event, at: Date.now() };

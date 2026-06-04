@@ -1,7 +1,7 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { BARTENDER_PERSONA, buildPrompt, offlineLine } from './prompts.js';
+import { BARTENDER_PERSONA, buildPrompt, offlineLine, resolveBartenderReference } from './prompts.js';
 import { estimateBAC } from './bac.js';
 import { getRoomCount } from './rooms.js';
 
@@ -25,11 +25,12 @@ function _otherFromContext(playersContext, currentName) {
   return null;
 }
 
-function oneLine(text) {
+function bartenderLine(text) {
   if (!text) return '';
   const flat = text.replace(/\s+/g, ' ').trim();
-  const cut = flat.split(/(?<=[.!?])\s+/)[0] ?? flat;
-  return cut.length > 120 ? `${cut.slice(0, 117)}…` : cut;
+  const sentences = flat.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const joined = sentences.slice(0, 3).join(' ');
+  return joined.length > 320 ? `${joined.slice(0, 317)}…` : joined;
 }
 
 async function nvidiaChat(model, messages, maxTokens = 55) {
@@ -62,22 +63,64 @@ export function createApp() {
   });
 
   app.post('/api/host', async (req, res) => {
-    const { mode, playerName, scenario, profile, playersContext, gameContext, streakInfo, otherPlayer, sessionMemory } = req.body;
+    const {
+      mode,
+      playerName,
+      scenario,
+      profile,
+      playersContext,
+      gameContext,
+      streakInfo,
+      otherPlayer,
+      sessionMemory,
+      recentFranchises,
+      referenceMode,
+    } = req.body;
     if (!mode || !playerName) return res.status(400).json({ error: 'missing fields' });
 
+    const refOpts = {
+      playerName,
+      mode,
+      profile,
+      recentFranchises,
+      streakInfo,
+      referenceMode,
+    };
+    const picked = resolveBartenderReference(refOpts);
+
     if (!AI_KEY) {
-      return res.json({ line: offlineLine(mode, profile, _otherFromContext(playersContext, playerName)) });
+      const line = offlineLine(mode, profile, _otherFromContext(playersContext, playerName), {
+        ...refOpts,
+        pickedReference: picked,
+      });
+      return res.json({ line, franchise: picked?.franchise ?? null });
     }
 
     try {
-      const userPrompt = buildPrompt(mode, { playerName, scenario, profile, playersContext, gameContext, streakInfo, otherPlayer, sessionMemory });
-      const line = oneLine(await nvidiaChat(HOST_MODEL, [
+      const userPrompt = buildPrompt(mode, {
+        playerName,
+        scenario,
+        profile,
+        playersContext,
+        gameContext,
+        streakInfo,
+        otherPlayer,
+        sessionMemory,
+        recentFranchises,
+        referenceMode,
+        pickedReference: picked,
+      });
+      const line = bartenderLine(await nvidiaChat(HOST_MODEL, [
         { role: 'system', content: BARTENDER_PERSONA },
         { role: 'user', content: userPrompt }
-      ], 55));
-      res.json({ line });
+      ], 140));
+      res.json({ line, franchise: picked?.franchise ?? null });
     } catch {
-      res.json({ line: offlineLine(mode, profile, _otherFromContext(playersContext, playerName)) });
+      const line = offlineLine(mode, profile, _otherFromContext(playersContext, playerName), {
+        ...refOpts,
+        pickedReference: picked,
+      });
+      res.json({ line, franchise: picked?.franchise ?? null });
     }
   });
 

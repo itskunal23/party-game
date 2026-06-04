@@ -8,9 +8,9 @@ import {
 } from './profile.js';
 import {
   createSessionState, recordEvent, updateStatsFromAction, onBookComplete,
-  formatSessionMemory
+  formatSessionMemory, recordHighlight
 } from './session-memory.js';
-import { clearExpiredChaos } from './chaos-events.js';
+import { clearExpiredChaos, maybeTriggerChaos } from './chaos-events.js';
 import { initLandingMotion, wireLandingJoin } from './landing.js';
 
 let _pendingRoomCode = null;
@@ -29,16 +29,19 @@ let state = {
   profile: null,
   playerStats: {},
   session: null,
-  pendingDrinkChoice: null,
   pendingAsk: null,
   myPowers: null,
-  _shownPendingDrinkKeys: new Set()
+  _shownPendingDrinkKeys: new Set(),
+  gameHeat: 0
 };
 
 let _lastCommentedActionSig = null;
 let _lastProcessedActionSig = null;
 let _aiCooldownUntil = 0;
+/** Last 5 bartender franchise ids — anti-repeat (Brooklyn ≠ Brooklyn every line). */
+let _bartenderRecentFranchises = [];
 let _drag = null;
+let _skipNextCardClick = false;
 let _dealingLocked = false;
 
 const RANK_ORDER = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -96,10 +99,21 @@ async function runSetupSequence(msg) {
   $('center-zone')?.classList.add('center-zone--locked');
   $('my-books-row')?.classList.add('my-books-row--locked');
 
-  await showPhaseBanner('🔀 Shuffling the deck…', 1500);
-  await showPhaseBanner(`🃏 Dealing ${msg.cardsDealt} cards to each player`, 1600);
-  await showPhaseBanner(`🌊 ${msg.deckCount} cards in the pond`, 1400);
-  await showPhaseBanner(`${msg.firstPlayerName ?? 'Player'} goes first`, 1800);
+  const _shuffleLines = [
+    '🔀 Shuffling bad decisions…',
+    '🔀 Teaching the pond new ways to hurt you…',
+    '🔀 Redistributing tonight\'s filth…',
+    '🔀 Randomizing the chaos…',
+  ];
+  const _pondLines = [
+    `🌊 ${msg.deckCount} cards drowning in the pond`,
+    `🌊 Pond loaded — ${msg.deckCount} chances to embarrass yourself`,
+    `🌊 ${msg.deckCount} cards. Pond doesn't care about your feelings.`,
+  ];
+  await showPhaseBanner(_shuffleLines[Math.floor(Math.random() * _shuffleLines.length)], 1500);
+  await showPhaseBanner(`🃏 ${msg.cardsDealt} cards each — no refunds`, 1600);
+  await showPhaseBanner(_pondLines[Math.floor(Math.random() * _pondLines.length)], 1400);
+  await showPhaseBanner(`${msg.firstPlayerName ?? 'Player'} goes first — say a prayer`, 1800);
 
   _dealingLocked = false;
   $('hand-zone')?.classList.remove('hand-zone--locked');
@@ -133,7 +147,7 @@ function updateGameHud() {
     const isMe = gs.currentTurnPlayerId === state.myId;
     hint.classList.remove('hidden');
     hint.textContent = isMe
-      ? `Your turn — swipe a card ↑ to ${partner?.name ?? 'them'} or tap card → tap their name`
+      ? _askHint(partner?.name)
       : `${cur?.name ?? '…'} is asking for a set…`;
   } else if (hint) {
     hint.classList.add('hidden');
@@ -157,19 +171,29 @@ function renderMyBooks() {
 
 function flashLuckyDraw(action) {
   const drawn = action.drawnCard;
-  if (!drawn) return;
   const banner = $('action-banner');
   if (!banner) return;
   const fromP = state.players.find(p => p.id === action.fromId);
-  const s = scenarioMeta(drawn.scenario);
+  const s = drawn ? scenarioMeta(drawn.scenario) : { emoji: '🍀', scenario: '' };
   banner.innerHTML = `
     <div class="lucky-draw-flash">
       <div class="lucky-draw-label">🍀 Lucky draw from the pond!</div>
-      <div class="lucky-draw-card">${s.emoji} ${drawn.scenario}</div>
-      <div class="lucky-draw-sub">${fromP?.name ?? 'Player'} shows the group — turn continues</div>
+      ${drawn ? `<div class="lucky-draw-card">${s.emoji} ${drawn.scenario}</div>` : ''}
+      <div class="lucky-draw-sub">${fromP?.name ?? 'Player'} — turn continues!</div>
     </div>`;
   banner.classList.remove('hidden');
   setTimeout(() => banner.classList.add('hidden'), 4200);
+
+  // Pond pulse — physical reaction
+  if (gsapReady()) {
+    const pond = $('draw-pile-el');
+    if (pond) {
+      gsap.timeline()
+        .to(pond, { scale: 1.22, duration: 0.12, ease: 'power2.out' })
+        .to(pond, { scale: 1.0, duration: 0.32, ease: 'back.out(2.8)' });
+    }
+  }
+  haptic('medium');
 }
 
 // ─── Audio (Web Audio API) ────────────────────────────────────────────────────
@@ -238,6 +262,26 @@ function playCardSlide() {
 }
 
 function playGFY()  { [220, 196, 165].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.15), i * 70)); }
+
+function playBluffLanded() {
+  [[392,'sine',0.12],[523,'sine',0.15],[659,'sine',0.18]]
+    .forEach(([f, t, d], i) => setTimeout(() => playTone(f, t, d, 0.16), i * 85));
+}
+
+function playAchievementSound() {
+  [[523,'sine',0.1],[659,'sine',0.1],[784,'sine',0.1],[1046,'sine',0.18]]
+    .forEach(([f, t, d], i) => setTimeout(() => playTone(f, t, d, 0.18), i * 65));
+}
+
+function playHeatWarning() {
+  [[220,'sawtooth',0.09],[247,'sawtooth',0.09],[262,'sawtooth',0.14]]
+    .forEach(([f, t, d], i) => setTimeout(() => playTone(f, t, d, 0.14), i * 115));
+}
+
+function playChaosEvent() {
+  [[330,'square',0.07],[415,'square',0.07],[523,'sine',0.1],[880,'sine',0.08]]
+    .forEach(([f, t, d], i) => setTimeout(() => playTone(f, t, d, 0.11), i * 48));
+}
 function playBook() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.28), i * 90)); }
 function playBookSlam() {
   [180, 220, 280, 440].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.12, 0.28), i * 55));
@@ -250,9 +294,36 @@ function showAchievementToast(ach) {
   const el = $('achievement-toast');
   if (!el || !ach) return;
   el.textContent = `${ach.emoji} ${ach.label} unlocked!`;
+  el.classList.remove('achievement-toast--close-call', 'achievement-toast--bluff');
   el.classList.add('is-visible');
   haptic('heavy');
+  playAchievementSound();
   setTimeout(() => el.classList.remove('is-visible'), 3200);
+}
+
+function showCloseCallMoment() {
+  const el = $('achievement-toast');
+  if (!el) return;
+  el.textContent = '💀 SO CLOSE — had 3, pond said no';
+  el.classList.remove('achievement-toast--bluff');
+  el.classList.add('is-visible', 'achievement-toast--close-call');
+  haptic('heavy');
+  if (gsapReady()) {
+    gsap.fromTo(el, { x: -8 }, { x: 8, duration: 0.07, ease: 'power1.inOut', yoyo: true, repeat: 5,
+      onComplete: () => gsap.set(el, { x: 0 }) });
+  }
+  setTimeout(() => el.classList.remove('is-visible', 'achievement-toast--close-call'), 3000);
+}
+
+function showBluffLandedToast() {
+  const el = $('achievement-toast');
+  if (!el) return;
+  el.textContent = '🎭 Bluff landed — they took the bait';
+  el.classList.remove('achievement-toast--close-call');
+  el.classList.add('is-visible', 'achievement-toast--bluff');
+  haptic('heavy');
+  playBluffLanded();
+  setTimeout(() => el.classList.remove('is-visible', 'achievement-toast--bluff'), 3000);
 }
 
 function showChaosBanner(event) {
@@ -264,6 +335,7 @@ function showChaosBanner(event) {
   el.classList.remove('hidden');
   el.classList.add('is-visible');
   haptic('heavy');
+  playChaosEvent();
   recordEvent(state.session, {
     type: 'chaos',
     playerName: 'Room',
@@ -277,6 +349,17 @@ function showChaosBanner(event) {
 
 // ─── GSAP guard ───────────────────────────────────────────────────────────────
 function gsapReady() { return typeof gsap !== 'undefined'; }
+
+function _isDesktopPointer() {
+  return window.matchMedia('(pointer: fine)').matches;
+}
+
+function _askHint(partnerName) {
+  const who = partnerName ?? 'them';
+  return _isDesktopPointer()
+    ? `Your turn — pick a card`
+    : `Your turn — pick a card`;
+}
 
 // ─── Card rendering ───────────────────────────────────────────────────────────
 function scenarioMeta(scenario) {
@@ -335,10 +418,18 @@ function buildHandCardStack(card, count, interactive) {
   return stack;
 }
 
+let _prevHandRanks = new Set();
+
 // ─── Hand rendering — horizontal row; duplicates stacked in one slot ─────────
 function renderHand() {
   const zone = $('hand-zone');
   if (!zone) return;
+
+  // Track which ranks are newly received (for deal-in highlight)
+  const curRanks = new Set(state.myHand.map(c => c.rank));
+  const newRanks = new Set([...curRanks].filter(r => !_prevHandRanks.has(r)));
+  _prevHandRanks = curRanks;
+
   zone.innerHTML = '';
 
   const byRank = {};
@@ -360,10 +451,12 @@ function renderHand() {
     const count = cards.length;
     const isSelected = state.selectedCard?.rank === rank;
 
+    const isNew = newRanks.has(rank) && !isSelected;
     const wrapper = document.createElement('div');
     wrapper.className = 'hand-card-wrapper'
       + (isSelected ? ' is-selected' : '')
-      + (count > 1 ? ' hand-card-wrapper--stacked' : '');
+      + (count > 1 ? ' hand-card-wrapper--stacked' : '')
+      + (isNew ? ' hand-card-wrapper--new' : '');
     wrapper.dataset.rank = rank;
     wrapper.dataset.scenario = card.scenario;
     wrapper.style.setProperty('--deal-i', i);
@@ -372,9 +465,25 @@ function renderHand() {
     wrapper.appendChild(buildHandCardStack(card, count, isMyTurn));
     zone.appendChild(wrapper);
 
-    wrapper.addEventListener('touchstart', e => _onCardTouchStart(e, wrapper, card), { passive: true });
+    wrapper.addEventListener('touchstart', e => _onCardPointerDown(e, wrapper, card), { passive: true });
+    wrapper.addEventListener('mousedown', e => _onCardPointerDown(e, wrapper, card));
     wrapper.addEventListener('click', e => { e.stopPropagation(); _onCardTap(wrapper, card); });
   });
+
+  // Hearthstone lean — apply lean classes to neighbors of selected card
+  if (state.selectedCard) {
+    const selIdx = groups.findIndex(([rank]) => rank === state.selectedCard.rank);
+    if (selIdx >= 0) {
+      groups.forEach(([rank], i) => {
+        const w = zone.querySelector(`.hand-card-wrapper[data-rank="${rank}"]`);
+        if (!w || i === selIdx) return;
+        const offset = i - selIdx;
+        if (offset === -1) w.classList.add('hand-card-wrapper--lean-left');
+        else if (offset === 1) w.classList.add('hand-card-wrapper--lean-right');
+        else w.classList.add('hand-card-wrapper--lean-far');
+      });
+    }
+  }
 
   updateActionZone();
   if (n > 0) playDeal();
@@ -384,6 +493,10 @@ function renderHand() {
 function _onCardTap(wrapper, card) {
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
   if (!isMyTurn || _askFlowBlocksPlay()) return;
+  if (_skipNextCardClick) {
+    _skipNextCardClick = false;
+    return;
+  }
 
   haptic('light');
 
@@ -391,31 +504,52 @@ function _onCardTap(wrapper, card) {
     state.selectedCard = null;
     wrapper.classList.remove('is-selected');
     _clearHandTransform(wrapper);
-  } else {
-    if (state.selectedCard) {
-      const prev = document.querySelector(`.hand-card-wrapper[data-rank="${state.selectedCard.rank}"]`);
-      if (prev) {
-        prev.classList.remove('is-selected');
-        _clearHandTransform(prev);
-      }
+    updateActionZone();
+    updatePartnerHints();
+    return;
+  }
+
+  const opponents = state.players.filter(p => p.id !== state.myId);
+  const partner = opponents[0];
+
+  if (_isDesktopPointer() && opponents.length === 1 && partner) {
+    if (state.myPowers?.activeKickDoor && (state.myPowers.wildAskToken ?? 0) > 0) {
+      showKickDoorRankPicker(partner);
+      return;
     }
     state.selectedCard = card;
-    state.selectedTarget = null;
+    state.selectedTarget = { id: partner.id, name: partner.name };
     wrapper.classList.add('is-selected');
     wrapper.style.zIndex = '50';
-    _clearHandTransform(wrapper);
+    document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
+    sendAsk();
+    return;
   }
+
+  if (state.selectedCard) {
+    const prev = document.querySelector(`.hand-card-wrapper[data-rank="${state.selectedCard.rank}"]`);
+    if (prev) {
+      prev.classList.remove('is-selected');
+      _clearHandTransform(prev);
+    }
+  }
+  state.selectedCard = card;
+  state.selectedTarget = null;
+  wrapper.classList.add('is-selected');
+  wrapper.style.zIndex = '50';
+  _clearHandTransform(wrapper);
 
   document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
   updateActionZone();
   updatePartnerHints();
 }
 
-// ─── Drag — physical card lift ────────────────────────────────────────────────
-function _onCardTouchStart(e, wrapper, card) {
+// ─── Drag — physical card lift (touch + mouse) ───────────────────────────────
+function _onCardPointerDown(e, wrapper, card) {
+  if (e.button !== undefined && e.button !== 0) return;
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
   if (!isMyTurn || _askFlowBlocksPlay()) return;
-  const t = e.touches[0];
+  const t = e.touches ? e.touches[0] : e;
   _drag = { wrapper, card, startX: t.clientX, startY: t.clientY, dx: 0, dy: 0, active: false, dropTarget: null };
   haptic('light');
 }
@@ -477,6 +611,12 @@ function _onDragMove(e) {
   }
 }
 
+function _pointerFromEvent(e) {
+  if (e.changedTouches?.[0]) return e.changedTouches[0];
+  if (typeof e.clientX === 'number') return e;
+  return null;
+}
+
 function _onDragEnd(e) {
   if (!_drag) return;
   const drag = _drag;
@@ -485,13 +625,14 @@ function _onDragEnd(e) {
   drag.wrapper?.classList.remove('is-dragging');
   document.querySelectorAll('.partner-drop, .draw-pile--drop').forEach(el => el.classList.remove('drop-hot'));
 
-  const t = e.changedTouches?.[0];
+  const t = _pointerFromEvent(e);
   const drop = t ? _hitDropZone(t.clientX, t.clientY) : drag.dropTarget;
 
   if (drag.active && drop) {
     haptic('medium');
     state.selectedCard = drag.card;
     state.selectedTarget = { id: drop.playerId, name: drop.name };
+    _skipNextCardClick = true;
     sendAsk();
     _springCardHome(drag.wrapper);
     return;
@@ -508,12 +649,14 @@ function _springCardHome(wrapper) {
 }
 
 // ─── GFY overlay — premium dramatic moment ────────────────────────────────────
-function showGFYOverlay(askerName, targetName) {
+function showGFYOverlay(askerName, targetName, wasBluffed = false) {
   const overlay = $('gfy-overlay');
   const sub = $('gfy-sub');
   if (!overlay || !sub) return;
 
-  sub.textContent = `${targetName} didn't have it.`;
+  sub.textContent = wasBluffed
+    ? `${targetName} lied. You got played.`
+    : `${targetName} didn't have it.`;
   overlay.classList.remove('hidden');
   playGFY();
   haptic('heavy');
@@ -601,14 +744,15 @@ function renderPartnerZone() {
       stack.innerHTML = '<span class="partner-no-cards">No cards left</span>';
     }
 
+    const badge = isMyTurn ? 'THROW A CARD ↑' : (isActive ? '🎯 THEIR TURN' : 'WAITING');
     div.innerHTML = `
-      <span class="partner-drop-badge">${isMyTurn ? 'DROP CARD TO ASK' : 'THEIR TURN'}</span>
+      <span class="partner-drop-badge">${badge}</span>
       <div class="partner-drop-main">
         <div class="partner-stack-slot"></div>
         <div class="partner-meta">
           <span class="partner-name">${p.name}</span>
-          <span class="partner-stats">🃏 ${p.cardCount} cards · 📚 ${p.books.length} sets</span>
-          <span class="partner-hint">${isMyTurn ? '↑ Swipe a card here · or tap card then tap me' : 'Waiting for their ask…'}</span>
+          <span class="partner-stats">🃏 ${p.cardCount} · 📚 ${p.books.length}</span>
+          <span class="partner-hint">${isMyTurn ? 'Swipe card ↑ or tap card → tap name' : (isActive ? 'Asking…' : 'Waiting…')}</span>
         </div>
       </div>`;
     div.querySelector('.partner-stack-slot')?.appendChild(stack);
@@ -631,10 +775,11 @@ function updatePartnerHints() {
       return;
     }
     if (state.selectedCard) {
-      hint.textContent = `Tap to ask for "${state.selectedCard.scenario.slice(0, 32)}${state.selectedCard.scenario.length > 32 ? '…' : ''}"`;
+      const short = state.selectedCard.scenario.slice(0, 24);
+      hint.textContent = `Tap → ask for "${short}${state.selectedCard.scenario.length > 24 ? '…' : ''}"`;
       el.classList.add('partner-drop--ready');
     } else {
-      hint.textContent = '↑ Swipe a card here · or tap card then tap me';
+      hint.textContent = 'Swipe card ↑ or tap card → tap name';
       el.classList.remove('partner-drop--ready');
     }
   });
@@ -656,7 +801,7 @@ function selectPartner(player, el) {
     sendAsk();
     return;
   }
-  if (state.myPowers?.activeKickDoor && !state.myPowers.kickDoorUsed) {
+  if (state.myPowers?.activeKickDoor && (state.myPowers.wildAskToken ?? 0) > 0) {
     showKickDoorRankPicker(player);
     return;
   }
@@ -679,7 +824,7 @@ function showKickDoorRankPicker(partner) {
     return;
   }
 
-  title.textContent = `Kick Door — ask ${partner.name} for:`;
+  title.textContent = `Wild Ask — ask ${partner.name} for:`;
   actions.innerHTML = ranks.map(r =>
     `<button type="button" class="ask-response-btn ask-response-btn--bluff" data-rank="${r}">${r}</button>`
   ).join('');
@@ -693,6 +838,32 @@ function showKickDoorRankPicker(partner) {
       state.selectedTarget = null;
       document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
       if ($('action-zone')) $('action-zone').innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> Waiting…</p>`;
+    }, { once: true });
+  });
+  panel.classList.remove('hidden');
+}
+
+function showComebackPicker(partner) {
+  const panel = $('reward-panel');
+  const title = $('reward-panel-title');
+  const actions = $('reward-panel-actions');
+  if (!panel || !title || !actions) return;
+
+  title.textContent = 'Comeback — spend your token:';
+  actions.innerHTML = [
+    { kind: 'steal', label: 'Steal random card' },
+    { kind: 'reveal', label: 'Reveal one of their ranks' },
+    { kind: 'extra_turn', label: 'Ask again (keep turn)' },
+    { kind: 'wild_ask', label: 'Gain a Wild Ask' }
+  ].map(c =>
+    `<button type="button" class="ask-response-btn ask-response-btn--give" data-kind="${c.kind}">${c.label}</button>`
+  ).join('');
+
+  actions.querySelectorAll('[data-kind]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      panel.classList.add('hidden');
+      haptic('medium');
+      API.send({ type: 'useMove', move: 'comeback', kind: btn.dataset.kind, targetId: partner.id });
     }, { once: true });
   });
   panel.classList.remove('hidden');
@@ -738,11 +909,14 @@ function renderSpecialMovesBar() {
   if (powers.stealToken > 0) {
     parts.push(`<button type="button" class="move-pill move-pill--steal" data-move="steal">Steal</button>`);
   }
-  if (!powers.kickDoorUsed) {
-    parts.push(`<button type="button" class="move-pill${powers.activeKickDoor ? ' move-pill--on' : ''}" data-move="kick_door">Kick Door</button>`);
+  if ((powers.wildAskToken ?? 0) > 0) {
+    parts.push(`<button type="button" class="move-pill${powers.activeKickDoor ? ' move-pill--on' : ''}" data-move="kick_door">Wild Ask</button>`);
+  }
+  if ((powers.comebackToken ?? 0) > 0) {
+    parts.push(`<button type="button" class="move-pill move-pill--comeback" data-move="comeback">Comeback</button>`);
   }
   if (!powers.doubleUsed) {
-    parts.push(`<button type="button" class="move-pill${powers.activeDouble ? ' move-pill--on' : ''}" data-move="double">2×</button>`);
+    parts.push(`<button type="button" class="move-pill${powers.activeDouble ? ' move-pill--on' : ''}" data-move="double">2× Ask</button>`);
   }
   if (powers.luckyStacks > 0) {
     parts.push(`<span class="move-pill move-pill--disabled">${powers.luckyStacks}🍀</span>`);
@@ -760,6 +934,9 @@ function renderSpecialMovesBar() {
       if (move === 'steal') {
         const opp = state.players.find(p => p.id !== state.myId);
         if (opp) API.send({ type: 'useMove', move: 'steal', targetId: opp.id });
+      } else if (move === 'comeback') {
+        const opp = state.players.find(p => p.id !== state.myId);
+        if (opp) showComebackPicker(opp);
       } else {
         API.send({ type: 'activateMove', move });
       }
@@ -855,13 +1032,19 @@ function renderAskFlowUI() {
   if (pending.phase === 'respond') {
     bullBar?.classList.add('hidden');
     if (!title || !actions || !panel) return;
-    title.textContent = `${pending.askerName} wants ${_rankLabel(pending.rank)}. You have:`;
+
+    const rankEmoji = SCENARIOS.find(s => s.rank === pending.rank)?.emoji ?? '🃏';
+    const rankName = _rankLabel(pending.rank);
+    title.innerHTML =
+      `<span class="ask-acc-name">${pending.askerName}</span> wants your ` +
+      `<span class="ask-acc-card">${rankEmoji} ${rankName}</span>`;
+
     actions.innerHTML = '';
     if (pending.canGive) {
       const give = document.createElement('button');
       give.type = 'button';
       give.className = 'ask-response-btn ask-response-btn--give';
-      give.textContent = 'Give cards';
+      give.textContent = '✅ Give it';
       give.addEventListener('click', () => sendRespondAsk('give'), { once: true });
       actions.appendChild(give);
     }
@@ -869,7 +1052,7 @@ function renderAskFlowUI() {
       const bluff = document.createElement('button');
       bluff.type = 'button';
       bluff.className = 'ask-response-btn ask-response-btn--bluff';
-      bluff.textContent = 'Bluff (say GFY, keep cards)';
+      bluff.textContent = '🎭 Lie (Bluff)';
       bluff.addEventListener('click', () => sendRespondAsk('bluff'), { once: true });
       actions.appendChild(bluff);
     }
@@ -877,11 +1060,15 @@ function renderAskFlowUI() {
       const gfy = document.createElement('button');
       gfy.type = 'button';
       gfy.className = 'ask-response-btn ask-response-btn--gfy';
-      gfy.textContent = 'GFY — I don\'t have it';
+      gfy.textContent = '👊 GFY';
       gfy.addEventListener('click', () => sendRespondAsk('gfy'), { once: true });
       actions.appendChild(gfy);
     }
     panel.classList.remove('hidden');
+
+    if (gsapReady()) {
+      gsap.from('.ask-response-sheet', { y: 32, opacity: 0, duration: 0.28, ease: 'back.out(1.6)' });
+    }
     return;
   }
 
@@ -932,65 +1119,129 @@ function updateActionZone() {
   const pending = state.pendingAsk;
 
   if (pending?.phase === 'respond') {
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🎭</span> Pick <strong>Give</strong>, <strong>GFY</strong>, or <strong>Bluff</strong></p>`;
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🎭</span> Give · GFY · or Bluff</p>`;
     return;
   }
   if (pending?.phase === 'waiting_bullshit') {
-    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">🐂</span> They decide: accept or bullshit…</p>`;
+    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">🐂</span> They're deciding…</p>`;
     return;
   }
   if (pending?.phase === 'resolve') {
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🐂</span> <strong>Accept</strong> = draw from pond · <strong>Bullshit</strong> = call the lie (wrong = you draw 4)</p>`;
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🐂</span> <strong>Accept</strong> → draw from pond · <strong>Bullshit</strong> → call the bluff (wrong = draw 4)</p>`;
     return;
   }
   if (pending?.phase === 'waiting_target') {
-    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> Waiting for their answer…</p>`;
+    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> Waiting…</p>`;
     return;
   }
   if (state.pendingBookPowerup) {
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">📚</span> Pick your book bonus below</p>`;
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">📚</span> Choose your book bonus ↓</p>`;
     return;
   }
   if (state.luckyReward) {
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🍀</span> Pick your lucky reward below</p>`;
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🍀</span> Lucky — pick your reward ↓</p>`;
     return;
   }
 
   if (!isMyTurn) {
     const current = state.players.find(p => p.id === state.gameState?.currentTurnPlayerId);
-    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> ${current?.name ?? 'Partner'} is picking a card to ask for…</p>`;
+    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> ${current?.name ?? 'Partner'}'s turn…</p>`;
     return;
   }
   if (_askFlowBlocksPlay()) return;
   if (!state.selectedCard) {
-    zone.innerHTML = `<p class="action-guide"><span class="action-guide-icon">①</span> Pick a card · swipe ↑ to ask</p>
-      <p class="action-guide action-guide--sub"><span class="action-guide-icon">②</span> Use pills above for Steal / Kick Door / 2× (once each)</p>`;
+    const askLine = _isDesktopPointer()
+      ? `Click a card to ask ${partner?.name ?? 'them'}`
+      : `Pick a card · swipe ↑ at ${partner?.name ?? 'them'}`;
+    const heat = state.gameHeat ?? 0;
+    const heatHtml = heat >= 2
+      ? `<p class="action-guide action-guide--heat"><span>${heat >= 5 ? '🚨' : '🔥'}</span> ${heat >= 6 ? 'Somebody do something' : heat >= 4 ? 'Table\'s getting hot' : 'Heat building'} (${heat}/7)</p>`
+      : '';
+    zone.innerHTML = `<p class="action-guide"><span class="action-guide-icon">①</span> ${askLine}</p>${heatHtml}`;
     return;
   }
   if (!state.selectedTarget) {
-    const short = state.selectedCard.scenario.length > 36
-      ? `${state.selectedCard.scenario.slice(0, 36)}…`
+    const short = state.selectedCard.scenario.length > 30
+      ? `${state.selectedCard.scenario.slice(0, 30)}…`
       : state.selectedCard.scenario;
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">✓</span> <strong>${short}</strong></p>
-      <p class="action-guide action-guide--sub"><span class="action-guide-icon">↑</span> Throw it at <strong>${partner?.name ?? 'partner'}</strong> — swipe or tap them</p>`;
+    const throwLine = _isDesktopPointer()
+      ? `Click ${partner?.name ?? 'them'} or the pond`
+      : `Swipe ↑ at <strong>${partner?.name ?? 'them'}</strong>`;
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🃏</span> <strong>${short}</strong> — ${throwLine}</p>`;
     return;
   }
 
-  zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">📨</span> Releasing…</p>`;
+  zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">📨</span> Sending…</p>`;
 }
 
 function sendAsk() {
   if (!state.selectedCard || !state.selectedTarget || _askFlowBlocksPlay()) return;
+
+  const rank = state.selectedCard.rank;
+  const targetId = state.selectedTarget.id;
+  const wrapper = document.querySelector(`.hand-card-wrapper[data-rank="${rank}"]`);
+  const partnerEl = document.querySelector(`.partner-drop[data-pid="${targetId}"]`);
+
   playCardSlide();
   haptic('medium');
-  API.send({ type: 'ask', rank: state.selectedCard.rank, targetId: state.selectedTarget.id });
+  API.send({ type: 'ask', rank, targetId });
   state.selectedCard = null;
   state.selectedTarget = null;
   document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
-  if ($('action-zone')) $('action-zone').innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">📨</span> Asked — waiting for their answer…</p>`;
+  if ($('action-zone')) $('action-zone').innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">📨</span> Asked — waiting…</p>`;
   updatePartnerHints();
-  renderHand();
+
+  if (wrapper && gsapReady()) {
+    gsap.killTweensOf(wrapper);
+    if (partnerEl) {
+      const srcR = wrapper.getBoundingClientRect();
+      const dstR = partnerEl.getBoundingClientRect();
+      const dx = (dstR.left + dstR.width / 2) - (srcR.left + srcR.width / 2);
+      const dy = (dstR.top + dstR.height / 2) - (srcR.top + srcR.height / 2);
+      gsap.to(wrapper, {
+        x: dx * 0.68, y: dy * 0.62,
+        rotation: (Math.random() - 0.5) * 22,
+        scale: 0.44,
+        opacity: 0,
+        duration: 0.26,
+        ease: 'power3.in',
+        onComplete: renderHand
+      });
+      gsap.fromTo(partnerEl,
+        { scale: 1 },
+        { scale: 1.032, duration: 0.18, ease: 'power2.out', yoyo: true, repeat: 1, delay: 0.14 }
+      );
+    } else {
+      gsap.to(wrapper, {
+        y: -56, scale: 0.48, opacity: 0,
+        rotation: (Math.random() - 0.5) * 18,
+        duration: 0.22, ease: 'power2.in',
+        onComplete: renderHand
+      });
+    }
+  } else {
+    renderHand();
+  }
 }
+
+// ─── Social dare pool — quick interaction prompts after book celebrations ────
+const SOCIAL_DARES = [
+  { icon: '👁️', text: 'Maintain eye contact for 10 seconds. No breaking.' },
+  { icon: '🎤', text: 'Roast partner in exactly 5 words. Go.' },
+  { icon: '🤫', text: 'Whisper what rank you\'ll ask for next turn.' },
+  { icon: '🎭', text: 'Tell one thing you lied about tonight.' },
+  { icon: '🍹', text: 'Partner picks your next drink.' },
+  { icon: '🎬', text: 'Act out your last GFY miss in mime.' },
+  { icon: '📝', text: 'Describe this entire game in 3 words.' },
+  { icon: '😈', text: 'Say "bhenchod" in your most seductive voice.' },
+  { icon: '🐍', text: 'Confess the biggest advantage you pressed tonight.' },
+  { icon: '🪞', text: 'Do your best impression of your partner.' },
+  { icon: '⏪', text: 'Name one moment tonight you\'d replay.' },
+  { icon: '🔮', text: 'Make a prediction for the next 3 turns.' },
+  { icon: '💪', text: 'Partner assigns your next drink strength.' },
+  { icon: '🍸', text: 'Tell the bartender (out loud) one thing about your partner.' },
+  { icon: '💬', text: 'Say something genuine. No roasting for 10 seconds.' },
+];
 
 // ─── Multi-stage book celebration ───────────────────────────────────────────
 async function showBookCelebration(playerName, scenario, playerId) {
@@ -1030,15 +1281,21 @@ async function showBookCelebration(playerName, scenario, playerId) {
   }
   await _wait(1400);
 
-  // Stage 4 — dare chip (short, not a paragraph wall)
+  // Stage 4 — dare chip + social dare (appear together)
   const dareShort = meta.dare?.length > 120 ? `${meta.dare.slice(0, 117)}…` : meta.dare;
+  const social = SOCIAL_DARES[Math.floor(Math.random() * SOCIAL_DARES.length)];
   el.innerHTML += `
     <div class="book-dare-chip">
       <strong>Dare</strong>
       ${dareShort ?? 'Do the filth.'}
+    </div>
+    <div class="book-social-dare">
+      <span class="book-social-dare-icon">${social.icon}</span>
+      <span class="book-social-dare-text">${social.text}</span>
     </div>`;
   if (gsapReady()) {
     gsap.from('.book-dare-chip', { y: 24, opacity: 0, duration: 0.4, ease: 'power2.out' });
+    gsap.from('.book-social-dare', { y: 24, opacity: 0, duration: 0.4, ease: 'power2.out', delay: 0.18 });
   }
   await _wait(2200);
 
@@ -1058,14 +1315,14 @@ function showChooseLoserDrink(msg) {
   const content = $('drink-choice-content');
   if (!panel || !content || !msg.losers?.length) return;
 
-  state.pendingDrinkChoice = msg;
   const loser = msg.losers[0];
   let selected = DRINK_PRESET_LABELS[0].drinkLabel;
+  const scenarioShort = msg.scenario.length > 38 ? `${msg.scenario.slice(0, 38)}…` : msg.scenario;
 
   content.innerHTML = `
     <div class="drink-choice-sheet">
-      <h2>Assign the drink</h2>
-      <p>${loser.name} takes it for completing your set — <em>${msg.scenario.slice(0, 48)}${msg.scenario.length > 48 ? '…' : ''}</em></p>
+      <h2>🏆 ${loser.name} drinks</h2>
+      <p>You completed <em>${scenarioShort}</em></p>
       <div class="drink-choice-grid" id="drink-choice-grid">
         ${DRINK_PRESET_LABELS.map((d, i) =>
           `<button type="button" class="drink-choice-btn${i === 0 ? ' drink-choice-btn--selected' : ''}" data-drink="${d.drinkLabel}">${d.label}</button>`
@@ -1099,7 +1356,6 @@ function showChooseLoserDrink(msg) {
       scenario: msg.scenario
     });
     panel.classList.add('hidden');
-    state.pendingDrinkChoice = null;
     haptic('heavy');
   }, { once: true });
 }
@@ -1122,7 +1378,7 @@ function showDrinkAssignedModal(pending) {
       <p style="font-size:13px;color:var(--text-secondary)">For set: ${latest.scenario.slice(0, 40)}…</p>
       <div class="drink-assigned-actions">
         <button type="button" class="drink-choice-assign" id="drink-log-now">🍺 Log it now</button>
-        <button type="button" style="background:rgba(255,255,255,0.1);color:white" id="drink-skip">Skip</button>
+        <button type="button" class="drink-assigned-skip" id="drink-skip">Skip for now</button>
       </div>
     </div>`;
   modal.classList.remove('hidden');
@@ -1151,35 +1407,71 @@ function showActionBanner(action) {
   let text = '';
 
   if (action.type === 'got') {
-    text = `${fromP?.name ?? '?'} got ${action.count} "${sName}" from ${toP?.name ?? '?'} — turn continues!`;
+    text = `${fromP?.name ?? '?'} got ${action.count} "${sName}" — turn continues!`;
+    // Flash hand zone when I receive cards
+    if (action.fromId === state.myId && gsapReady()) {
+      const hz = $('hand-zone');
+      if (hz) gsap.fromTo(hz, { filter: 'brightness(1)' }, { filter: 'brightness(1.4)', duration: 0.14, yoyo: true, repeat: 1 });
+    }
+    haptic('medium');
   } else if (action.type === 'ask_pending') {
-    text = `${fromP?.name ?? '?'} asked ${toP?.name ?? '?'} for "${sName}"…`;
+    text = `${fromP?.name ?? '?'} asks for "${sName}"…`;
   } else if (action.type === 'gfy_claim') {
-    text = `${fromP?.name ?? '?'}: "Go Fuck Yourself!" on "${sName}" — ${toP?.name ?? '?'} can accept or call bullshit.`;
+    text = `${fromP?.name ?? '?'}: "GFY" on "${sName}" — accept or call bullshit.`;
     playGFY();
   } else if (action.type === 'bullshit_caught' || action.type === 'bullshit_wrong') {
     showBullshitOverlay(action);
     return;
   } else if (action.type === 'steal') {
-    text = `${fromP?.name ?? '?'} stole a card from ${toP?.name ?? '?'}.`;
-    if (action.targetId === state.myId) showBanner('🃏 A card was stolen from your hand.');
+    if (action.targetId === state.myId) {
+      showBanner('🃏 They stole a card from your hand!');
+      haptic('heavy');
+    } else {
+      text = `${fromP?.name ?? '?'} stole a card from ${toP?.name ?? '?'}.`;
+    }
+  } else if (action.type === 'comeback') {
+    const labels = { steal: 'stole a comeback card', reveal: `peeked a rank`, extra_turn: 'keeps the turn', wild_ask: 'earned Wild Ask' };
+    text = `${fromP?.name ?? '?'} — ${labels[action.kind] ?? 'used Comeback'}.`;
+  } else if (action.type === 'recovery') {
+    return;
   } else if (action.type === 'chaos') {
     text = `⚡ ${action.title} — ${action.text}`;
   } else if (action.type === 'gfy') {
     const lucky = action.continueTurn;
-    text = lucky
-      ? `🍀 ${fromP?.name ?? '?'} drew a match from the pond!`
-      : `${toP?.name ?? '?'}: "Go Fuck Yourself!" — ${fromP?.name ?? '?'} draws from the pond.`;
 
     if (lucky) {
+      text = `🍀 ${fromP?.name ?? '?'} drew a match from the pond!`;
       playBook();
       flashLuckyDraw(action);
       return;
     }
 
+    // Differentiate honest GFY vs successful bluff
+    if (action.bluffSucceeded) {
+      if (action.fromId === state.myId) {
+        // I was the asker — I got fooled by a bluff
+        text = `😤 ${toP?.name ?? 'They'} had it all along. You got played.`;
+        showGFYOverlay(fromP?.name ?? 'You', toP?.name ?? '?', true);
+        return;
+      } else if (action.targetId === state.myId) {
+        // I was the target — my bluff worked
+        text = `🎭 Bluff worked — they took the bait.`;
+        showBluffLandedToast();
+        banner.innerHTML = text;
+        banner.classList.remove('hidden');
+        setTimeout(() => banner.classList.add('hidden'), 3500);
+        return;
+      } else {
+        text = `🎭 ${toP?.name ?? '?'} bluffed ${fromP?.name ?? '?'} — bluff worked.`;
+      }
+    } else {
+      text = `${toP?.name ?? '?'}: "GFY!" — ${fromP?.name ?? '?'} draws from the pond.`;
+    }
+
     playGFY();
     if (action.fromId === state.myId) {
-      showGFYOverlay(fromP?.name ?? 'You', toP?.name ?? '?');
+      showGFYOverlay(fromP?.name ?? 'You', toP?.name ?? '?', false);
+      if (action.closeToPond) showCloseCallMoment();
     } else if (gsapReady()) {
       gsap.fromTo('#screen-game',
         { x: -8 },
@@ -1188,24 +1480,181 @@ function showActionBanner(action) {
     }
   }
 
-  banner.innerHTML = text;
-  banner.classList.remove('hidden');
-  setTimeout(() => banner.classList.add('hidden'), 3500);
+  if (text) {
+    banner.innerHTML = text;
+    banner.classList.remove('hidden');
+    setTimeout(() => banner.classList.add('hidden'), 3500);
+  }
+}
+
+// ─── Lifetime stats — persistent across sessions ────────────────────────────
+const LIFETIME_KEY = 'gfy_lifetime';
+
+function getLifetime() {
+  try { return JSON.parse(localStorage.getItem(LIFETIME_KEY) ?? '{}'); }
+  catch { return {}; }
+}
+
+function updateLifetimeStats(data, myId, playerStats) {
+  try {
+    const lt = getLifetime();
+    const myS = playerStats[myId] ?? {};
+    lt.totalGames = (lt.totalGames ?? 0) + 1;
+    lt.wins       = (lt.wins ?? 0) + (data.winner.id === myId ? 1 : 0);
+    lt.totalBluffs  = (lt.totalBluffs  ?? 0) + (myS.bluffsSurvived ?? 0);
+    lt.totalMisses  = (lt.totalMisses  ?? 0) + (myS.gfyMisses ?? 0);
+    lt.totalLucky   = (lt.totalLucky   ?? 0) + (myS.luckyDraws ?? 0);
+    lt.totalBooks   = (lt.totalBooks   ?? 0) + (myS.books ?? 0);
+    lt.lastPlayedAt = Date.now();
+    localStorage.setItem(LIFETIME_KEY, JSON.stringify(lt));
+  } catch { /* quota */ }
+}
+
+// ─── Results awards — per-category trophies ───────────────────────────────────
+function _computeAwards(sorted, playerStats) {
+  if (sorted.length < 2) return [];
+  const [a, b] = sorted;
+  const aS = playerStats[a.id] ?? {};
+  const bS = playerStats[b.id] ?? {};
+  const awards = [];
+
+  const _pick = (aVal, bVal, min, emoji, title, fmt) => {
+    const maxVal = Math.max(aVal, bVal);
+    if (maxVal < min) return;
+    const who = aVal >= bVal ? a : b;
+    awards.push({ emoji, title, name: who.name, stat: fmt(maxVal) });
+  };
+
+  _pick(aS.luckyDraws ?? 0, bS.luckyDraws ?? 0, 2, '🍀', 'Lucky Draw King',
+    n => `${n} draw${n > 1 ? 's' : ''}`);
+  _pick(aS.bluffsSurvived ?? 0, bS.bluffsSurvived ?? 0, 1, '🎭', 'Smooth Criminal',
+    n => `${n} bluff${n > 1 ? 's' : ''} landed`);
+  _pick(aS.bullshitCalls ?? 0, bS.bullshitCalls ?? 0, 2, '🔍', 'Lie Detector',
+    n => `caught ${n} lie${n > 1 ? 's' : ''}`);
+  _pick(aS.gfyMisses ?? 0, bS.gfyMisses ?? 0, 5, '🐸', 'Pond Goblin',
+    n => `${n} misses`);
+  _pick(aS.successfulAsks ?? 0, bS.successfulAsks ?? 0, 5, '🦈', 'Card Shark',
+    n => `${n} asks`);
+
+  return awards;
+}
+
+// ─── Night Story generator ────────────────────────────────────────────────────
+function _generateNightStory(sorted, myId, playerStats) {
+  const winner = sorted[0];
+  const loser = sorted[1];
+  if (!winner || !loser) return null;
+
+  const wS = playerStats[winner.id] ?? {};
+  const lS = playerStats[loser.id] ?? {};
+  const margin = winner.books - loser.books;
+
+  const parts = [];
+
+  // Opening
+  if (margin >= 4) {
+    parts.push(`${winner.name} dominated — ${winner.books} sets to ${loser.books}`);
+  } else if (margin === 1) {
+    parts.push(`${winner.name} scraped it — ${winner.books}–${loser.books} photo finish`);
+  } else if (margin === 2) {
+    parts.push(`${winner.name} pulled ahead — ${winner.books}–${loser.books}`);
+  } else {
+    parts.push(`${winner.name} won ${winner.books}–${loser.books}`);
+  }
+
+  // Winner's defining moment
+  if ((wS.bluffsSurvived ?? 0) >= 2) {
+    parts.push(`bluffed ${wS.bluffsSurvived} times clean`);
+  } else if ((wS.luckyDraws ?? 0) >= 3) {
+    parts.push(`rode ${wS.luckyDraws} lucky pond draws`);
+  } else if ((wS.successfulAsks ?? 0) >= 6) {
+    parts.push(`landed ${wS.successfulAsks} straight asks`);
+  } else if ((wS.bullshitCalls ?? 0) >= 2) {
+    parts.push(`caught ${wS.bullshitCalls} lies`);
+  }
+
+  // Loser's narrative
+  if ((lS.gfyMisses ?? 0) >= 6) {
+    parts.push(`${loser.name} missed the pond ${lS.gfyMisses} times`);
+  } else if ((lS.bluffsSurvived ?? 0) >= 2) {
+    parts.push(`${loser.name} was smooth but came up short`);
+  } else if ((lS.bullshitWrong ?? 0) >= 1) {
+    parts.push(`${loser.name} called bullshit wrong ${lS.bullshitWrong} time${lS.bullshitWrong > 1 ? 's' : ''}`);
+  }
+
+  return parts.join(' — ') + '. Absolute cinema.';
 }
 
 // ─── Results screen ───────────────────────────────────────────────────────────
 function showResults(data) {
   releaseWakeLock();
+  updateLifetimeStats(data, state.myId, state.playerStats);
   const el = $('results-content');
   if (!el) return;
   const sorted = [...data.scores].sort((a, b) => b.books - a.books);
+
+  const me = sorted.find(s => s.id === state.myId);
+  const them = sorted.find(s => s.id !== state.myId);
+  const myS = state.playerStats[state.myId] ?? {};
+  const thS = state.playerStats[them?.id ?? ''] ?? {};
+
+  const statRows = [
+    { emoji: '🍀', label: 'Lucky draws', a: myS.luckyDraws ?? 0, b: thS.luckyDraws ?? 0 },
+    { emoji: '✅', label: 'Asks landed', a: myS.successfulAsks ?? 0, b: thS.successfulAsks ?? 0 },
+    { emoji: '💀', label: 'GFY misses', a: myS.gfyMisses ?? 0, b: thS.gfyMisses ?? 0 },
+    { emoji: '🎭', label: 'Bluffs survived', a: myS.bluffsSurvived ?? 0, b: thS.bluffsSurvived ?? 0 },
+    { emoji: '🐂', label: 'Bullshit calls', a: myS.bullshitCalls ?? 0, b: thS.bullshitCalls ?? 0 },
+  ].filter(r => r.a > 0 || r.b > 0);
+
+  const statsHtml = statRows.length ? `
+    <div class="results-night-stats">
+      <div class="results-night-title">Night Stats</div>
+      <div class="results-stats-header">
+        <span></span>
+        <span class="results-stats-name">${me?.name ?? 'You'}</span>
+        <span class="results-stats-name results-stats-name--them">${them?.name ?? 'Them'}</span>
+      </div>
+      ${statRows.map(r => `
+        <div class="results-stat-row">
+          <span class="results-stat-label">${r.emoji} ${r.label}</span>
+          <span class="results-stat-val results-stat-val--me">${r.a}</span>
+          <span class="results-stat-val results-stat-val--them">${r.b}</span>
+        </div>`).join('')}
+    </div>` : '';
+
+  const nightStory = _generateNightStory(sorted, state.myId, state.playerStats);
+  const storyHtml = nightStory
+    ? `<div class="results-night-story">${nightStory}</div>`
+    : '';
+
+  const awards = _computeAwards(sorted, state.playerStats);
+  const awardsHtml = awards.length ? `
+    <div class="results-awards">
+      ${awards.map(a => `
+        <div class="results-award">
+          <span class="results-award-emoji">${a.emoji}</span>
+          <div class="results-award-body">
+            <span class="results-award-title">${a.title}</span>
+            <span class="results-award-name">${a.name} · ${a.stat}</span>
+          </div>
+        </div>`).join('')}
+    </div>` : '';
+
   el.innerHTML = `
     <div class="winner-announce">🏆 ${data.winner.name} wins!</div>
     <ul class="score-list">
       ${sorted.map((s, i) => `<li class="score-item">${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} ${s.name} — ${s.books} set${s.books !== 1 ? 's' : ''}</li>`).join('')}
-    </ul>`;
+    </ul>
+    ${storyHtml}
+    ${awardsHtml}
+    ${statsHtml}`;
+
   if (gsapReady()) {
-    gsap.from('.winner-announce', { scale: 0, rotation: -12, duration: 0.85, ease: 'elastic.out(1, 0.45)' });
+    gsap.from('.winner-announce', { scale: 0, rotation: -12, duration: 0.8, ease: 'elastic.out(1, 0.45)' });
+    gsap.from(
+      ['.score-item', '.results-night-story', '.results-award', '.results-night-stats'],
+      { y: 16, opacity: 0, duration: 0.45, stagger: 0.07, ease: 'power2.out', delay: 0.28 }
+    );
     launchConfetti($('screen-results'));
   }
   showScreen('results');
@@ -1249,14 +1698,14 @@ function _sessionContextLabel() {
 
 // ─── Home screen profile display ─────────────────────────────────────────────
 const BARTENDER_PREVIEW_LINES = [
-  "Bhenchod — dom/sub energy loaded. Paatal Lok writers could never.",
-  "Dhurandhar-level filth on your questionnaire. Same team, zero mercy.",
-  "Farzi chaos on the cards. Absolute cinema.",
-  "Dhootha twist energy tonight. Dom in charge, sub taking it.",
-  "Bad Boy of Bollywood roast loaded. Limits sacred. Kinks weaponized.",
-  "The Night Manager of this room — bartender just narrates.",
-  "Hathiram in Paatal Lok read your filth file. Case closed.",
-  "Samay Raina meets Mirzapur — dom/sub, not couple warfare.",
+  "Kunal bhai energy loaded — public humiliation tour starts when you miss. Go Fuck Yourself.",
+  "Filth file read. Samay meets Mirzapur — observational destruction only.",
+  "Partner bolenge Go Fuck Yourself. Pond might agree. Bartender definitely will.",
+  "Farzi confidence on the cards. Scam victim ya CEO — tonight decides.",
+  "Band Baaja Baaraat couple chaos — same team, zero corporate tone.",
+  "Nandini bhai, pond character development dega. Card optional.",
+  "Dhurandhar climax confidence, pond reality check. Absolute cinema.",
+  "Table dead? Toxic relationship simulator. Go Fuck Yourself.",
 ];
 
 function updateHomeForProfile(profile) {
@@ -1280,6 +1729,19 @@ function updateHomeForProfile(profile) {
     if (preview) preview.classList.remove('hidden');
     if (previewLine) {
       previewLine.textContent = BARTENDER_PREVIEW_LINES[Math.floor(Math.random() * BARTENDER_PREVIEW_LINES.length)];
+    }
+
+    // Show lifetime stats if the player has history
+    const ltEl = $('home-lifetime');
+    if (ltEl) {
+      const lt = getLifetime();
+      if ((lt.totalGames ?? 0) >= 2) {
+        const winPct = lt.totalGames > 0 ? Math.round((lt.wins / lt.totalGames) * 100) : 0;
+        ltEl.textContent = `${lt.totalGames} matches · ${lt.wins ?? 0}W · ${winPct}% win rate`;
+        ltEl.classList.remove('hidden');
+      } else {
+        ltEl.classList.add('hidden');
+      }
     }
   } else {
     greeting?.classList.add('hidden');
@@ -1407,6 +1869,14 @@ function _bartenderSessionContext(playerName) {
   return formatSessionMemory(state.session, stats, playerName);
 }
 
+function _recordBartenderFranchise(franchise) {
+  if (!franchise) return;
+  _bartenderRecentFranchises.push(franchise);
+  if (_bartenderRecentFranchises.length > 5) {
+    _bartenderRecentFranchises = _bartenderRecentFranchises.slice(-5);
+  }
+}
+
 async function triggerBartender(mode, opts = {}) {
   const now = Date.now();
   if (now < _aiCooldownUntil) return;
@@ -1415,20 +1885,26 @@ async function triggerBartender(mode, opts = {}) {
   const playersContext = opts.playersContext ?? _buildPlayersContext();
   const playerName = opts.playerName ?? 'Player';
   const sessionMemory = opts.sessionMemory ?? _bartenderSessionContext(playerName);
+  const profile = opts.profile ?? getProfile();
 
   const result = await apiPost('/api/host', {
     mode,
     playerName,
     scenario:   opts.scenario   ?? null,
-    profile:    opts.profile    ?? null,
+    profile,
     playersContext,
     streakInfo: opts.streakInfo ?? null,
     otherPlayer: opts.otherPlayer ?? null,
     sessionMemory,
-    gameContext: opts.gameContext ?? `${_sessionContextLabel()} session`
+    gameContext: opts.gameContext ?? `${_sessionContextLabel()} session`,
+    recentFranchises: _bartenderRecentFranchises.slice(-5),
+    referenceMode: opts.referenceMode ?? null,
   }).catch(() => null);
 
-  if (result?.line) showBartenderTranscript(result.line);
+  if (result?.line) {
+    _recordBartenderFranchise(result.franchise);
+    showBartenderTranscript(result.line);
+  }
 }
 
 function _ensureStats(playerId) {
@@ -1454,8 +1930,75 @@ function _processAction(session, action, players) {
   if (!session) return;
   clearExpiredChaos(session);
 
-  const earned = updateStatsFromAction(state.playerStats[action.fromId] ?? _ensureStats(action.fromId), action);
+  const fromStats = state.playerStats[action.fromId] ?? _ensureStats(action.fromId);
+  const earned = updateStatsFromAction(fromStats, action);
   earned.forEach(a => showAchievementToast(a));
+
+  // Client-side chaos events (Power Hour, Pond Tax, Bollywood Twist, etc.)
+  const clientChaos = maybeTriggerChaos(session);
+  if (clientChaos) {
+    showChaosBanner(clientChaos);
+    const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
+    setTimeout(() => triggerBartender('chaos', {
+      playerName: myName,
+      scenario: clientChaos.title,
+      profile: getProfile(),
+      otherPlayer: _partnerName(state.myId)
+    }), 1800);
+  }
+
+  // ── Bartender callback highlights ───────────────────────────────────────────
+  // Record dramatic moments so the bartender can reference them later in the match.
+  const _turn = session.actionCount;
+  const _nameOf = id => state.players.find(p => p.id === id)?.name ?? '?';
+  const _rankName = rank => SCENARIOS.find(s => s.rank === rank)?.name ?? rank;
+
+  if (action.type === 'gfy' && action.closeToPond && action.fromId === state.myId) {
+    recordHighlight(session, {
+      summary: `${_nameOf(action.fromId)} had 3 of "${_rankName(action.rank)}", missed the pond`,
+      type: 'close_call', turn: _turn
+    });
+  }
+  if (action.type === 'gfy' && !action.continueTurn && action.fromId === state.myId
+      && fromStats.consecutiveMisses >= 4) {
+    recordHighlight(session, {
+      summary: `${_nameOf(action.fromId)} on a ${fromStats.consecutiveMisses}-miss cold streak`,
+      type: 'streak', turn: _turn
+    });
+  }
+  if (action.type === 'gfy' && action.bluffSucceeded && action.targetId === state.myId) {
+    recordHighlight(session, {
+      summary: `${_nameOf(action.targetId)} bluffed ${_nameOf(action.fromId)} clean on "${_rankName(action.rank)}"`,
+      type: 'bluff', turn: _turn
+    });
+  }
+  if (action.type === 'bullshit_caught' && action.fromId === state.myId) {
+    recordHighlight(session, {
+      summary: `${_nameOf(action.fromId)} caught ${_nameOf(action.targetId)} lying on "${_rankName(action.rank)}"`,
+      type: 'bullshit', turn: _turn
+    });
+  }
+  if (action.type === 'gfy' && action.continueTurn && action.fromId === state.myId
+      && fromStats.luckyDraws >= 2) {
+    recordHighlight(session, {
+      summary: `${_nameOf(action.fromId)} got lucky draw #${fromStats.luckyDraws} on "${_rankName(action.rank)}"`,
+      type: 'lucky', turn: _turn
+    });
+  }
+
+  // Rivalry pattern detection — streak-based toasts (fire once per streak crossing)
+  if (action.fromId === state.myId) {
+    const my = fromStats;
+    if (action.type === 'gfy' && !action.continueTurn && my.consecutiveMisses === 4) {
+      showAchievementToast({ label: 'Miss King', emoji: '🎣' });
+    }
+    if (action.type === 'gfy' && action.bluffSucceeded && my.bluffsSurvived === 2) {
+      showAchievementToast({ label: 'Smooth Criminal', emoji: '🎭' });
+    }
+    if ((action.type === 'bullshit_caught') && my.bullshitCalls === 2) {
+      showAchievementToast({ label: 'Lie Detector', emoji: '🔍' });
+    }
+  }
 
   const fromP = players?.find(p => p.id === action.fromId);
   if (action.type === 'got') {
@@ -1495,8 +2038,6 @@ function _processAction(session, action, players) {
       summary: `${fromP?.name ?? '?'} wrong bullshit call — draws 4`
     });
   }
-
-  // Chaos events run on the server
 }
 
 // ─── WebSocket event routing ──────────────────────────────────────────────────
@@ -1534,6 +2075,7 @@ function wireHandlers() {
 
   API.onMessage('gameStarted', msg => {
     acquireWakeLock();
+    _bartenderRecentFranchises = [];
     state.playerStats = {};
     state.session = createSessionState();
     state._shownPendingDrinkKeys = new Set();
@@ -1546,6 +2088,8 @@ function wireHandlers() {
     _lastCommentedActionSig = null;
     _lastProcessedActionSig = null;
     _aiCooldownUntil = 0;
+    _prevHandRanks = new Set();
+    state.gameHeat = 0;
     showScreen('game');
     runSetupSequence(msg);
   });
@@ -1556,8 +2100,21 @@ function wireHandlers() {
     state.gameState = msg.gameState;
     state.pendingDrinks = msg.pendingDrinks;
     state.pendingAsk = msg.gameState.pendingAsk ?? null;
+    const prevComeback = state.myPowers?.comebackToken ?? 0;
     state.myPowers = msg.gameState.myPowers ?? null;
     state.pendingBookPowerup = msg.gameState.pendingBookPowerup ?? null;
+
+    // Newly granted comeback token — you're down 2+ books, this is your lifeline
+    if ((state.myPowers?.comebackToken ?? 0) > prevComeback && !_dealingLocked) {
+      showAchievementToast({ emoji: '⚡', label: 'Comeback token unlocked — use it!' });
+      if (state.session) {
+        const myName = state.players.find(p => p.id === state.myId)?.name ?? 'Player';
+        recordHighlight(state.session, {
+          summary: `${myName} was down, earned comeback token — still fighting`,
+          type: 'comeback', turn: state.session.actionCount
+        });
+      }
+    }
     state.luckyReward = msg.gameState.luckyReward ?? null;
     if (msg.gameState.peekReveal) state.peekReveal = msg.gameState.peekReveal;
     if (msg.pendingDrinks?.length) showDrinkAssignedModal(msg.pendingDrinks);
@@ -1577,11 +2134,47 @@ function wireHandlers() {
       updatePartnerHints();
     }
 
+    // Heat meter tracking — trigger bartender commentary when heat escalates
+    const newHeat = msg.gameState.stalemate?.heatLevel ?? 0;
+    if (newHeat >= 3 && (state.gameHeat ?? 0) < 3 && !_dealingLocked) {
+      const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
+      setTimeout(() => triggerBartender('heat', {
+        playerName: myName,
+        scenario: `heat level ${newHeat}`,
+        profile: getProfile(),
+        otherPlayer: _partnerName(state.myId)
+      }), 1400);
+    }
+    if (newHeat >= 5 && (state.gameHeat ?? 0) < 5) { haptic('heavy'); playHeatWarning(); }
+    state.gameHeat = newHeat;
+
     if (msg.gameState.lastChaos) {
       const cs = JSON.stringify(msg.gameState.lastChaos);
       if (cs !== state._lastChaosSig) {
         state._lastChaosSig = cs;
-        showBanner(`⚡ ${msg.gameState.lastChaos.title} — ${msg.gameState.lastChaos.text}`);
+        if (msg.gameState.lastChaos.recovery) {
+          showRecoveryBanner(msg.gameState.lastChaos);
+        } else {
+          showBanner(`⚡ ${msg.gameState.lastChaos.title} — ${msg.gameState.lastChaos.text}`);
+          const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
+          setTimeout(() => triggerBartender('chaos', {
+            playerName: myName,
+            scenario: msg.gameState.lastChaos.title,
+            profile: getProfile(),
+            otherPlayer: _partnerName(state.myId)
+          }), 2200);
+        }
+      }
+    }
+
+    if (msg.gameState.rankReveal) {
+      const rr = msg.gameState.rankReveal;
+      const rs = `${rr.rank}-${rr.at}`;
+      if (rs !== state._lastRankRevealSig) {
+        state._lastRankRevealSig = rs;
+        const name = SCENARIOS.find(s => s.rank === rr.rank)?.name ?? rr.rank;
+        showBanner(`👁️ Rank Reveal — you both hold <strong>${name}</strong> (${rr.rank})`);
+        haptic('medium');
       }
     }
 
@@ -1601,29 +2194,55 @@ function wireHandlers() {
       }
 
       if (sig !== _lastCommentedActionSig) {
+        const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
+        const stats = state.playerStats[state.myId] ?? {};
+
         if (action.type === 'gfy' && action.fromId === state.myId) {
           _lastCommentedActionSig = sig;
-          const mode = action.continueTurn ? 'lucky' : (action.bluffSucceeded ? 'bluff_win' : 'gfy');
-          const stats = state.playerStats[state.myId] ?? {};
-          const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
-          const streakInfo = !action.continueTurn && (stats.consecutiveMisses ?? 0) > 1
+          let mode;
+          if (action.continueTurn) {
+            mode = 'lucky';
+          } else if (action.closeToPond) {
+            mode = 'close_call';
+          } else if (action.bluffSucceeded) {
+            mode = 'bluff_win';
+          } else {
+            mode = 'gfy';
+          }
+
+          const streakInfo = (!action.continueTurn && !action.closeToPond && (stats.consecutiveMisses ?? 0) > 1)
             ? `${stats.consecutiveMisses} misses in a row tonight`
-            : action.continueTurn && (stats.luckyDraws ?? 0) > 1
+            : (action.continueTurn && (stats.luckyDraws ?? 0) > 1)
               ? `Lucky draw number ${stats.luckyDraws} tonight`
               : null;
+
+          const referenceMode = (action.continueTurn && (stats.gfyMisses ?? 0) >= 3)
+            ? 'comeback'
+            : null;
+
           setTimeout(() => triggerBartender(mode, {
             playerName: myName,
             scenario:   SCENARIOS.find(s => s.rank === action.rank)?.name,
             profile:    getProfile(),
             streakInfo,
+            referenceMode,
             otherPlayer: state.players.find(p => p.id === action.targetId)?.name ?? _partnerName(state.myId)
-          }), 3700);
+          }), action.closeToPond ? 2800 : 3700);
+
+        } else if (action.type === 'gfy' && action.bluffSucceeded && action.targetId === state.myId) {
+          // I bluffed and it landed — bartender celebrates my deception
+          _lastCommentedActionSig = sig;
+          setTimeout(() => triggerBartender('bluff_landed', {
+            playerName: myName,
+            profile: getProfile(),
+            otherPlayer: state.players.find(p => p.id === action.fromId)?.name ?? _partnerName(state.myId)
+          }), 2400);
+
         } else if (
           (action.type === 'bullshit_caught' || action.type === 'bullshit_wrong')
           && (action.fromId === state.myId || action.targetId === state.myId)
         ) {
           _lastCommentedActionSig = sig;
-          const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
           setTimeout(() => triggerBartender('bullshit', {
             playerName: myName,
             scenario: _rankLabel(action.rank),
@@ -1631,6 +2250,19 @@ function wireHandlers() {
             streakInfo: action.type === 'bullshit_caught' ? 'caught a liar' : 'wrong bullshit call',
             otherPlayer: state.players.find(p => p.id === (action.fromId === state.myId ? action.targetId : action.fromId))?.name
           }), 3200);
+
+        } else if (
+          action.type === 'steal'
+          && (action.fromId === state.myId || action.targetId === state.myId)
+        ) {
+          _lastCommentedActionSig = sig;
+          const thief = action.fromId === state.myId;
+          setTimeout(() => triggerBartender('steal', {
+            playerName: myName,
+            scenario: thief ? `stole from ${state.players.find(p => p.id === action.targetId)?.name}` : `got robbed by ${state.players.find(p => p.id === action.fromId)?.name}`,
+            profile: getProfile(),
+            otherPlayer: state.players.find(p => p.id !== state.myId)?.name
+          }), 2000);
         }
       }
     }
@@ -1669,11 +2301,24 @@ function wireHandlers() {
 }
 
 // ─── UI event wiring ──────────────────────────────────────────────────────────
+function _askOpponentWithSelectedCard() {
+  const opp = state.players.find(p => p.id !== state.myId);
+  if (!opp || !state.selectedCard) return;
+  state.selectedTarget = { id: opp.id, name: opp.name };
+  sendAsk();
+}
+
 function wireUI() {
   document.addEventListener('touchmove', _onDragMove, { passive: false });
   document.addEventListener('touchend', _onDragEnd, { passive: true });
   document.addEventListener('mousemove', _onDragMove);
   document.addEventListener('mouseup', _onDragEnd);
+
+  $('draw-pile-el')?.addEventListener('click', () => {
+    if (state.gameState?.currentTurnPlayerId !== state.myId || _askFlowBlocksPlay()) return;
+    if (!state.selectedCard) return;
+    _askOpponentWithSelectedCard();
+  });
 
   $('btn-create')?.addEventListener('click', () => {
     const profile = getProfile();
@@ -1729,18 +2374,15 @@ function wireUI() {
     if ((stats.luckyDraws ?? 0) > 2) streakParts.push(`${stats.luckyDraws} lucky draws tonight`);
     if ((stats.books ?? 0) > 1) streakParts.push(`${stats.books} books collected`);
 
-    _aiCooldownUntil = 0;
-    const result = await apiPost('/api/host', {
-      mode: 'roast',
+    await triggerBartender('roast', {
       playerName: me.name,
       scenario,
       profile: myProfile,
       playersContext,
       streakInfo: streakParts.length ? streakParts.join(', ') : null,
       otherPlayer: _partnerName(state.myId),
-      gameContext: `${_sessionContextLabel()}, books: ${myBooks.length}`
-    }).catch(() => null);
-    if (result?.line) showBartenderTranscript(result.line);
+      gameContext: `${_sessionContextLabel()}, books: ${myBooks.length}`,
+    });
   });
 
   $('bartender-transcript')?.addEventListener('click', () => {
@@ -1779,11 +2421,26 @@ function wireUI() {
 }
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
+function showRecoveryBanner(event) {
+  const banner = $('action-banner');
+  if (!banner) return;
+  const emoji = event.emoji ?? '🌀';
+  banner.innerHTML = `${emoji} <strong>${event.title}</strong> — ${event.text}`;
+  banner.classList.remove('hidden', 'banner--error');
+  banner.classList.add('banner--recovery');
+  haptic('heavy');
+  setTimeout(() => {
+    banner.classList.add('hidden');
+    banner.classList.remove('banner--recovery');
+  }, 4200);
+}
+
 function showBanner(text, isError = false) {
   const banner = $('action-banner');
   if (!banner) return;
   banner.innerHTML = text;
   banner.classList.toggle('banner--error', isError);
+  banner.classList.remove('banner--recovery');
   banner.classList.remove('hidden');
   setTimeout(() => banner.classList.add('hidden'), 3200);
 }
@@ -1812,9 +2469,17 @@ export function init() {
   const hero = document.querySelector('.lp-hero-inner');
   if (hero) hero.classList.add('lp-in-view');
   if (gsapReady()) {
-    gsap.fromTo('.lp-logo-lockup',
-      { opacity: 0, y: 24, scale: 0.96 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: 'power2.out' }
+    gsap.fromTo('.lp-hero-stack',
+      { opacity: 0, y: 16 },
+      { opacity: 1, y: 0, duration: 0.55, ease: 'power2.out' }
+    );
+    gsap.fromTo('.lp-logo',
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.65, ease: 'power2.out', delay: 0.08 }
+    );
+    gsap.fromTo('.lp-tagline, .lp-hero-actions',
+      { opacity: 0, y: 14 },
+      { opacity: 1, y: 0, duration: 0.55, ease: 'power2.out', delay: 0.18, stagger: 0.06 }
     );
   }
 }

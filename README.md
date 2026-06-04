@@ -64,7 +64,7 @@ The server is authoritative — clients never see each other's hands. Snapshots 
 - Chip-based **kinks** and **hard limits** (plus custom entries)
 - Free-text: dirtiest fantasy, roast material, drink + why, swear word
 - Dark cinema picker with AI suggestions (Paatal Lok, Dhurandhar, etc.)
-- **Bhenchod Bartender** uses questionnaire data for Hinglish roasts (Samay Raina energy)
+- **Bhenchod Bartender** — Samay Raina-style observational roasts; full phrase **Go Fuck Yourself** in lines (never "GFY"); cinema-inspired refs only
 - Respects limit tags — listed limits are never referenced in roasts
 - Offline roast bank when `NVIDIA_API_KEY` is unset
 

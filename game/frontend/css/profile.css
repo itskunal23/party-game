@@ -89,42 +89,55 @@
   margin-top: 1px;
 }
 
-/* ── Step dots (tap to jump) ─────────────────────────────────────────────────── */
+/* ── Step dots — 44px HIG touch targets, visual via ::after ─────────────── */
 .pf-steps {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  padding: 0 20px 8px;
+  gap: 0;
+  padding: 0 20px 0;
   flex-shrink: 0;
 }
 
 .pf-step-dot {
-  width: 10px;
-  height: 10px;
-  min-width: 10px;
-  min-height: 10px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pf-step-dot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   border: 1.5px solid rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.08);
-  cursor: pointer;
   transition: transform 0.15s var(--spring), background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
-.pf-step-dot--done {
+.pf-step-dot--done::after {
   background: rgba(91, 141, 239, 0.45);
   border-color: rgba(91, 141, 239, 0.6);
 }
 
-.pf-step-dot--on {
-  transform: scale(1.35);
+.pf-step-dot--on::after {
+  transform: scale(1.6);
   background: var(--brand-blue-bright);
   border-color: var(--brand-blue-bright);
   box-shadow: 0 0 12px rgba(91, 141, 239, 0.55);
 }
 
-.pf-step-dot:active { transform: scale(1.1); }
+.pf-step-dot:not(.pf-step-dot--on):active::after { transform: scale(1.3); }
+.pf-step-dot--on:active::after { transform: scale(1.4); }
 
 /* ── Question area ──────────────────────────────────────────────────────────── */
 .pf-area {
@@ -759,10 +772,20 @@
 }
 
 /* ── Movie search ────────────────────────────────────────────────────────────── */
+.pf-text-input--sm {
+  font-size: 16px;
+  padding: 14px 20px;
+  min-height: 52px;
+}
+
 .pf-movie-wrap {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.pf-movie-quick {
+  min-height: 0;
 }
 
 .pf-movie-suggestions { min-height: 0; }

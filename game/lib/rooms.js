@@ -6,6 +6,10 @@ import {
   buildPendingAskView, buildBookPowerupView, buildLuckyRewardView,
   BULLSHIT_PENALTY, maybeServerChaos, checkMissionProgress, rankCounts
 } from './game-powers.js';
+import {
+  initStalemateTrackers, postTurnHooks, recordBookComplete, updateComebackTokens,
+  getNearBookRank, drawFromDeckWeighted
+} from './stalemate.js';
 
 const ROOM_CHARS = 'ACDEFGHJKLMNPQRSTUVWXYZ';
 const ROOM_EXPIRY_MS = 6 * 60 * 60 * 1000;
@@ -76,7 +80,14 @@ function buildSnapshot(room, forPlayerId) {
       luckyReward: buildLuckyRewardView(getPlayerPowers(state, forPlayerId)),
       peekReveal: state.peekReveal?.get(forPlayerId) ?? null,
       lastChaos: state.lastChaos ?? null,
-      cardTax: !!state.cardTax
+      cardTax: !!state.cardTax,
+      rankReveal: state.rankReveal ?? null,
+      stalemate: {
+        gfyStreak: state.gfyStreak ?? 0,
+        turnsWithoutTransfer: state.turnsWithoutTransfer ?? 0,
+        turnsWithoutBook: state.turnsWithoutBook ?? 0,
+        heatLevel: state.heatLevel ?? 0
+      }
     },
     pendingDrinks: state.pendingDrinks.get(forPlayerId) ?? [],
     hostMessage: null
@@ -159,6 +170,9 @@ function resolveBooks(room, playerId) {
       state.pendingBookPowerup.set(playerId, { scenario, losers });
     }
 
+    recordBookComplete(state);
+    updateComebackTokens(room);
+
     broadcast(room, {
       type: 'bookComplete',
       playerId,
@@ -171,8 +185,17 @@ function resolveBooks(room, playerId) {
 
 function advanceTurn(room) {
   const state = room.gameState;
+  const currentId = state.currentTurnPlayerId;
+  if (state.pendingExtraTurn === currentId) {
+    state.pendingExtraTurn = null;
+    broadcastSnapshots(room);
+    const keeper = room.players.get(currentId);
+    if (keeper?.isBot) scheduleBotTurn(room, keeper, i => handleIntent(room, i));
+    return;
+  }
+
   const playerIds = [...room.players.keys()];
-  const idx = playerIds.indexOf(state.currentTurnPlayerId);
+  const idx = playerIds.indexOf(currentId);
   state.currentTurnPlayerId = playerIds[(idx + 1) % playerIds.length];
 
   if (checkGameOver(room)) {
@@ -199,7 +222,7 @@ function _sendChooseLoserDrink(room, winnerId, scenario, losers) {
 
 function _gfyDrawCount(state, pendingAsk, powers) {
   let n = 1;
-  if (pendingAsk?.kickDoor || powers?.activeKickDoor) n = 2;
+  if (pendingAsk?.wildAsk || pendingAsk?.kickDoor || powers?.activeKickDoor) n = 2;
   if (pendingAsk?.doubleOrNothing || powers?.activeDouble) n = 2;
   if (state.cardTax) {
     n = Math.max(n, 2);
@@ -214,15 +237,14 @@ function _clearAskModifiers(powers) {
   powers.activeDouble = false;
 }
 
-function _afterActionChaos(room) {
-  return maybeServerChaos(room);
+function _postTurnEffects(room, outcomeKind) {
+  const recovery = postTurnHooks(room, outcomeKind);
+  if (!recovery) maybeServerChaos(room);
+  return recovery;
 }
 
 function _afterAskOutcome(room, askerId, continueTurn) {
-  const state = room.gameState;
   if (checkGameOver(room)) { finalizeGame(room); return; }
-
-  _afterActionChaos(room);
 
   const asker = room.players.get(askerId);
   if (continueTurn) {
@@ -239,9 +261,27 @@ function _completeGot(room, askerId, targetId, rank, count) {
   const powers = getPlayerPowers(state, askerId);
   _clearAskModifiers(powers);
   clearPendingAsk(state);
-  state.lastAction = { type: 'got', fromId: askerId, targetId, rank, count };
+
+  // Double transfer chaos event
+  let actualCount = count;
+  if (state.doubleTransfer) {
+    state.doubleTransfer = false;
+    const target = room.players.get(targetId);
+    const asker = room.players.get(askerId);
+    if (target && asker) {
+      const extra = target.hand.filter(c => c.rank === rank);
+      if (extra.length) {
+        target.hand = target.hand.filter(c => c.rank !== rank);
+        asker.hand.push(...extra);
+        actualCount = extra.length;
+      }
+    }
+  }
+
+  state.lastAction = { type: 'got', fromId: askerId, targetId, rank, count: actualCount };
   resolveBooks(room, askerId);
   if (checkGameOver(room)) { finalizeGame(room); return; }
+  _postTurnEffects(room, 'transfer');
   _afterAskOutcome(room, askerId, true);
 }
 
@@ -258,11 +298,18 @@ function _executeGfyDraw(room, askerId, targetId, rank, extra = {}) {
   _clearAskModifiers(powers);
   clearPendingAsk(state);
 
+  // Detect "had 3, needed 1" before drawing
+  const hadThreeBeforeDraw = asker.hand.filter(c => c.rank === rank).length === 3;
+
   let drawnCard = null;
   let continueTurn = false;
 
-  if (state.deck.length > 0) {
-    const drawn = drawFromDeck(state, asker, drawCount);
+  const droughtActive = !!state.pondDrought;
+  if (droughtActive) state.pondDrought = false;
+
+  if (state.deck.length > 0 && !droughtActive) {
+    const nearRank = getNearBookRank(asker.hand);
+    const drawn = drawFromDeckWeighted(state, asker, drawCount, nearRank);
     drawnCard = drawn[0] ?? null;
     continueTurn = !isDouble && drawn.some(c => c.rank === rank);
   }
@@ -290,9 +337,11 @@ function _executeGfyDraw(room, askerId, targetId, rank, extra = {}) {
     drawnCard,
     continueTurn,
     drawCount,
+    closeToPond: hadThreeBeforeDraw && !continueTurn && !isDouble,
     ...extra
   };
   resolveBooks(room, askerId);
+  _postTurnEffects(room, continueTurn ? 'gfy_lucky' : 'gfy_miss');
   _afterAskOutcome(room, askerId, continueTurn);
 }
 
@@ -331,7 +380,7 @@ function _applyBullshitPenalty(room, loserId, winnerId, rank, caughtBluffer) {
 
   resolveBooks(room, winnerId);
   if (checkGameOver(room)) { finalizeGame(room); return; }
-  _afterActionChaos(room);
+  _postTurnEffects(room, 'transfer');
   broadcastSnapshots(room);
 
   if (caughtBluffer) {
@@ -357,13 +406,13 @@ export function handleIntent(room, intent) {
     if (!asker || !target) return;
 
     const powers = getPlayerPowers(state, fromId);
-    const useKick = powers?.activeKickDoor && !powers.kickDoorUsed;
+    const useWild = powers?.activeKickDoor && (powers.wildAskToken ?? 0) > 0;
     const useDouble = powers?.activeDouble && !powers.doubleUsed;
 
     const hasRank = asker.hand.some(c => c.rank === rank);
     if (!hasRank) {
-      if (!useKick) return;
-      powers.kickDoorUsed = true;
+      if (!useWild) return;
+      powers.wildAskToken--;
     }
     if (useDouble) powers.doubleUsed = true;
 
@@ -373,10 +422,11 @@ export function handleIntent(room, intent) {
       rank,
       phase: 'awaiting_response',
       isBluff: false,
-      kickDoor: useKick,
+      wildAsk: useWild,
+      kickDoor: useWild,
       doubleOrNothing: useDouble
     };
-    state.lastAction = { type: 'ask_pending', fromId, targetId, rank, kickDoor: useKick, double: useDouble };
+    state.lastAction = { type: 'ask_pending', fromId, targetId, rank, wildAsk: useWild, kickDoor: useWild, double: useDouble };
     broadcastSnapshots(room);
 
     if (target.isBot) scheduleBotAskResponse(room, target, i => handleIntent(room, i));
@@ -465,7 +515,7 @@ export function handleIntent(room, intent) {
     const powers = getPlayerPowers(state, fromId);
     if (!powers || state.currentTurnPlayerId !== fromId || state.pendingAsk) return;
     const { move } = intent;
-    if (move === 'kick_door' && !powers.kickDoorUsed) {
+    if (move === 'kick_door' && (powers.wildAskToken ?? 0) > 0) {
       powers.activeKickDoor = !powers.activeKickDoor;
       if (powers.activeKickDoor) powers.activeDouble = false;
     } else if (move === 'double' && !powers.doubleUsed) {
@@ -478,22 +528,51 @@ export function handleIntent(room, intent) {
 
   if (type === 'useMove') {
     if (state.pendingAsk || state.currentTurnPlayerId !== fromId) return;
-    if (intent.move !== 'steal') return;
     const powers = getPlayerPowers(state, fromId);
-    if (!powers || powers.stealToken < 1) return;
     const asker = room.players.get(fromId);
     const target = room.players.get(intent.targetId);
-    if (!asker || !target || target.id === fromId || !target.hand.length) return;
+    if (!asker || !target || target.id === fromId) return;
 
-    powers.stealToken -= 1;
-    const idx = Math.floor(Math.random() * target.hand.length);
-    const stolen = target.hand.splice(idx, 1)[0];
-    asker.hand.push(stolen);
+    if (intent.move === 'steal') {
+      if (!powers || powers.stealToken < 1 || !target.hand.length) return;
+      powers.stealToken -= 1;
+      const idx = Math.floor(Math.random() * target.hand.length);
+      const stolen = target.hand.splice(idx, 1)[0];
+      asker.hand.push(stolen);
+      state.lastAction = { type: 'steal', fromId, targetId: target.id, rank: stolen.rank };
+    } else if (intent.move === 'comeback') {
+      if (!powers?.comebackToken) return;
+      const { kind } = intent;
+      powers.comebackToken -= 1;
+      if (kind === 'steal') {
+        if (!target.hand.length) return;
+        const idx = Math.floor(Math.random() * target.hand.length);
+        const stolen = target.hand.splice(idx, 1)[0];
+        asker.hand.push(stolen);
+        state.lastAction = { type: 'comeback', fromId, targetId: target.id, kind: 'steal', rank: stolen.rank };
+      } else if (kind === 'reveal') {
+        if (!target.hand.length) return;
+        const card = target.hand[Math.floor(Math.random() * target.hand.length)];
+        if (!state.peekReveal) state.peekReveal = new Map();
+        state.peekReveal.set(fromId, { [card.rank]: 1 });
+        state.lastAction = { type: 'comeback', fromId, targetId: target.id, kind: 'reveal', rank: card.rank };
+      } else if (kind === 'extra_turn') {
+        state.pendingExtraTurn = fromId;
+        state.lastAction = { type: 'comeback', fromId, kind: 'extra_turn' };
+      } else if (kind === 'wild_ask') {
+        powers.wildAskToken = (powers.wildAskToken ?? 0) + 1;
+        state.lastAction = { type: 'comeback', fromId, kind: 'wild_ask' };
+      } else {
+        powers.comebackToken += 1;
+        return;
+      }
+    } else {
+      return;
+    }
 
-    state.lastAction = { type: 'steal', fromId, targetId: target.id, rank: stolen.rank };
     resolveBooks(room, fromId);
     if (checkGameOver(room)) { finalizeGame(room); return; }
-    _afterActionChaos(room);
+    _postTurnEffects(room, 'transfer');
     broadcastSnapshots(room);
     return;
   }
@@ -684,9 +763,15 @@ export function startGame(roomCode, requesterId) {
   room.gameState.lastChaosAt = 0;
   room.gameState.lastChaos = null;
   room.gameState.cardTax = false;
+  room.gameState.pondDrought = false;
+  room.gameState.doubleTransfer = false;
+  room.gameState.heatLevel = 0;
+  room.gameState._lastHeatChaosAt = 0;
   room.gameState.firstBookWinner = null;
   room.gameState.lastAction = null;
   room.gameState.discardPile = [];
+  room.gameState.pendingExtraTurn = null;
+  initStalemateTrackers(room.gameState);
 
   const first = room.players.get(playerIds[0]);
 

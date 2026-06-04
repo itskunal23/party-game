@@ -8,9 +8,30 @@
   cursor: grab;
   -webkit-user-drag: none;
   filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45));
-  transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+  transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1),
+              opacity 0.22s,
+              filter 0.22s;
   animation: handDealIn 0.42s cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
   animation-delay: calc(var(--deal-i, 0) * 0.04s);
+}
+
+/* Hearthstone-style lean — neighbors react when a card is selected */
+.hand-card-wrapper--lean-left {
+  transform: translateX(-10px) rotate(-4deg) scale(0.96);
+  opacity: 0.82;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35));
+}
+
+.hand-card-wrapper--lean-right {
+  transform: translateX(10px) rotate(4deg) scale(0.96);
+  opacity: 0.82;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35));
+}
+
+.hand-card-wrapper--lean-far {
+  transform: scale(0.93);
+  opacity: 0.65;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.3));
 }
 
 .hand-card-wrapper--stacked {
@@ -37,6 +58,30 @@
 @keyframes handDealIn {
   from { opacity: 0; transform: translateY(36px) scale(0.94); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* New card received from partner — flies in from above with a gold glow */
+.hand-card-wrapper--new {
+  animation: cardReceivedIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.hand-card-wrapper--new .card--face {
+  box-shadow:
+    0 10px 32px rgba(0,0,0,0.55),
+    0 0 0 2px rgba(255, 214, 10, 0.6),
+    0 0 24px rgba(255, 214, 10, 0.3),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+  animation: newCardGlow 1.2s ease-out forwards;
+}
+
+@keyframes cardReceivedIn {
+  from { opacity: 0; transform: translateY(-60px) scale(0.7) rotate(8deg); }
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+}
+
+@keyframes newCardGlow {
+  0%   { box-shadow: 0 10px 32px rgba(0,0,0,0.55), 0 0 0 2px rgba(255,214,10,0.6), 0 0 24px rgba(255,214,10,0.3), inset 0 1px 0 rgba(255,255,255,0.85); }
+  100% { box-shadow: 0 10px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.85); }
 }
 
 /* Duplicate copies sit behind the face card in the same slot */
@@ -150,13 +195,13 @@
 
 .card-name {
   font-family: -apple-system, system-ui, sans-serif;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   color: #18182E;
   text-align: center;
   line-height: 1.25;
-  padding: 0 3px;
-  letter-spacing: 0.1px;
+  padding: 0 4px;
+  letter-spacing: 0px;
   text-transform: none;
   overflow: hidden;
   display: -webkit-box;
@@ -165,15 +210,15 @@
 }
 
 .card-dare {
-  font-size: 7.5px;
-  color: #5A5A72;
+  font-size: 9px;
+  color: #4A4A62;
   text-align: center;
-  padding: 2px 3px 0;
+  padding: 2px 4px 0;
   line-height: 1.35;
   font-weight: 500;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
 }
 

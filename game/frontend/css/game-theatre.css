@@ -13,25 +13,34 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(var(--safe-top) + 10px) 16px 8px;
+  padding: calc(var(--safe-top) + 8px) 12px 6px;
   flex-shrink: 0;
   background: transparent;
-  gap: 8px;
+  gap: 6px;
 }
 
 .game-topbar-item {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   color: rgba(255, 255, 255, 0.82);
   background: rgba(255, 255, 255, 0.09);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.13);
-  padding: 6px 14px;
+  padding: 5px 10px;
   border-radius: 100px;
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.06);
   letter-spacing: -0.1px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* Room code capsule slightly muted since it's secondary info */
+#room-code-display {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 11px;
+  letter-spacing: 0.5px;
 }
 
 .turn-hint {
@@ -148,9 +157,19 @@
 }
 
 .partner-drop--disabled {
-  opacity: 0.75;
+  opacity: 0.72;
   cursor: default;
   pointer-events: none;
+}
+
+/* Pulse glow when it's the partner's turn — "they're thinking" */
+.partner-drop--active:not(.partner-drop--disabled) {
+  animation: partnerThinking 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes partnerThinking {
+  from { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25); border-color: rgba(91, 141, 239, 0.25); }
+  to   { box-shadow: 0 4px 28px rgba(91, 141, 239, 0.35), 0 0 20px rgba(0, 51, 160, 0.22); border-color: rgba(91, 141, 239, 0.55); }
 }
 
 .partner-drop--active {
@@ -244,6 +263,10 @@
   border-color: rgba(255, 255, 255, 0.22);
 }
 
+.draw-pile--drop {
+  cursor: pointer;
+}
+
 .game--dragging .draw-pile--drop {
   border: 2px dashed rgba(255, 255, 255, 0.2);
 }
@@ -295,6 +318,21 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.action-guide--heat {
+  color: rgba(255, 149, 0, 0.9);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+@keyframes heatPulse {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+
+.action-guide--heat {
+  animation: heatPulse 1.8s ease-in-out infinite;
+}
+
 .action-guide-icon {
   flex-shrink: 0;
   width: 22px;
@@ -323,89 +361,6 @@
   gap: 0;
 }
 
-/* ── Opponent zone (legacy — unused) ──────────────────────────────────────── */
-#opponent-zone {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  padding: 8px 14px;
-  overflow-x: auto;
-  flex-shrink: 0;
-  min-height: 118px;
-  align-items: flex-start;
-  scrollbar-width: none;
-}
-
-#opponent-zone::-webkit-scrollbar { display: none; }
-
-.opponent-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
-  padding: 10px 12px;
-  cursor: pointer;
-  will-change: transform;
-  transition: border-color 0.2s, background 0.2s, transform 0.25s var(--spring), box-shadow 0.2s;
-  flex-shrink: 0;
-  min-width: 86px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.06);
-}
-
-.opponent-card.targeted {
-  border-color: var(--brand-blue);
-  background: rgba(0, 51, 160, 0.18);
-  box-shadow: 0 0 28px rgba(0, 51, 160, 0.48), 0 4px 12px rgba(0,0,0,0.25);
-  transform: translateY(-4px) scale(1.04);
-}
-
-.opponent-card.opponent--active {
-  border-color: rgba(0, 51, 160, 0.45);
-  background: rgba(0, 51, 160, 0.1);
-}
-
-.opp-name-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.opp-turn-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--brand-blue);
-  flex-shrink: 0;
-  animation: pulse 1s ease-in-out infinite;
-}
-
-.opp-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
-  text-align: center;
-  max-width: 68px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: -0.1px;
-}
-
-.opp-books { font-size: 11px; color: var(--brand-gold); font-weight: 700; }
-
-.opp-no-cards {
-  font-size: 10px;
-  color: rgba(255,255,255,0.25);
-  font-style: italic;
-}
-
-/* ── Action zone ──────────────────────────────────────────────────────────── */
-#action-zone-old-placeholder { display: none; }
 
 /* ── Center zone (draw pile) ──────────────────────────────────────────────── */
 #center-zone {
@@ -439,6 +394,15 @@
 
 #action-banner.hidden { opacity: 0; pointer-events: none; }
 #action-banner.banner--error { border-left-color: var(--brand-red); }
+#action-banner.banner--recovery {
+  border-left-color: #ffb347;
+  background: rgba(255, 179, 71, 0.12);
+  animation: recovery-pulse 0.6s ease-out;
+}
+@keyframes recovery-pulse {
+  0% { transform: scale(0.97); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
 
 /* ── Hand zone — horizontal row, scroll when hand is wide ─────────────────── */
 #hand-zone {
@@ -472,60 +436,6 @@
   justify-content: center;
 }
 
-/* ── Player selector (drag-to-ask overlay) ───────────────────────────────── */
-#player-selector {
-  position: absolute;
-  bottom: 236px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  padding: 0 20px;
-  z-index: 200;
-  pointer-events: none;
-  flex-wrap: wrap;
-}
-
-#player-selector.hidden { display: none; }
-
-.player-bubble {
-  background: rgba(255, 255, 255, 0.11);
-  border: 1.5px solid rgba(255, 255, 255, 0.18);
-  border-radius: 50px;
-  padding: 12px 22px;
-  color: white;
-  font-size: 15px;
-  font-weight: 700;
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.1);
-  will-change: transform, box-shadow;
-  transition: border-color 0.15s, background 0.15s, transform 0.22s var(--spring), box-shadow 0.15s;
-  white-space: nowrap;
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  user-select: none;
-  letter-spacing: -0.2px;
-}
-
-.player-bubble.hovered {
-  border-color: var(--brand-blue);
-  background: rgba(0, 51, 160, 0.28);
-  transform: scale(1.12) translateY(-8px);
-  box-shadow: 0 16px 36px rgba(0, 51, 160, 0.48), inset 0 1px 0 rgba(255,255,255,0.15);
-}
-
-.waiting-text {
-  color: rgba(255,255,255,0.38);
-  font-size: 14px;
-  font-weight: 500;
-  text-align: center;
-  margin: 0;
-  padding: var(--space-sm) 0;
-  letter-spacing: 0.1px;
-}
 
 /* ── Bottom toolbar — iOS tab bar aesthetic ───────────────────────────────── */
 .game-toolbar {
@@ -611,14 +521,22 @@
 #sidegame-panel.hidden { display: none; }
 #sidegame-panel > * { width: 100%; }
 
-/* ── Turn indicator glow ──────────────────────────────────────────────────── */
-.opponent-card.opponent--active {
-  animation: turnGlow 2s ease-in-out infinite alternate;
-}
-
-@keyframes turnGlow {
-  from { box-shadow: 0 4px 12px rgba(0,0,0,0.22), 0 0 8px rgba(0, 51, 160, 0.18); }
-  to   { box-shadow: 0 4px 16px rgba(0,0,0,0.28), 0 0 28px rgba(0, 51, 160, 0.52); }
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .partner-drop--active:not(.partner-drop--disabled),
+  .hand-card-wrapper:not(.is-selected):not(.is-dragging) .hand-card-stack .card,
+  .hand-card-wrapper--new,
+  .hand-card-wrapper--new .card--face,
+  .action-guide--heat {
+    animation: none !important;
+  }
+  .hand-card-wrapper--lean-left,
+  .hand-card-wrapper--lean-right,
+  .hand-card-wrapper--lean-far {
+    transform: none;
+    opacity: 1;
+    filter: none;
+  }
 }
 
 /* ── Screen-game flex ─────────────────────────────────────────────────────── */

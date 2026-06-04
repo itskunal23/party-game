@@ -77,7 +77,7 @@ const QUESTIONS = [
     id: '_gate',
     type: 'gate',
     question: 'Core file\nlocked.',
-    hint: '~60 seconds done. Play now or add more filth?'
+    hint: 'Core file done in ~30 seconds. Play now or add more filth?'
   },
   {
     id: 'age',
@@ -92,21 +92,6 @@ const QUESTIONS = [
       { label: '22 – 28', sub: 'Prime chaos years', value: 26 },
       { label: '29 – 35', sub: 'Seasoned degenerate', value: 32 },
       { label: '36+', sub: 'Vintage filth', value: 40 }
-    ]
-  },
-  {
-    id: 'height',
-    type: 'pick-one',
-    tier: 'extended',
-    question: 'How tall\nare you?',
-    hint: 'US feet — tap one',
-    required: false,
-    autoAdvance: true,
-    options: [
-      { label: "5'0\" – 5'5\"", sub: 'Compact chaos', value: 5.2 },
-      { label: "5'6\" – 5'9\"", sub: 'Average menace', value: 5.75 },
-      { label: "5'10\" – 6'1\"", sub: 'Long reach energy', value: 6.0 },
-      { label: "6'2\"+", sub: 'Towering filth', value: 6.3 }
     ]
   },
   {
@@ -145,6 +130,11 @@ const QUESTIONS = [
     required: false,
     maxLength: 30
   }
+];
+
+const MEDIA_QUICK = [
+  'Paatal Lok', 'Mirzapur', 'Dhurandhar', 'Farzi',
+  'Sacred Games', 'Scam 1992', 'Dhootha', 'Delhi Crime'
 ];
 
 // ─── Module state ─────────────────────────────────────────────────────────────
@@ -198,7 +188,7 @@ export function initProfile(el, onComplete) {
       <div class="pf-progress-track">
         <div class="pf-progress-fill" id="pf-progress"></div>
       </div>
-      <div class="pf-step-num" id="pf-step-num">1 / ${QUESTIONS.length}</div>
+      <div class="pf-step-num" id="pf-step-num">1 / 5</div>
     </div>
     <nav class="pf-steps" id="pf-steps" aria-label="Question steps"></nav>
     <div class="pf-intro">
@@ -484,15 +474,20 @@ function _inputHTML(q) {
     const selChips = _movieSelected.map(m =>
       `<button type="button" class="pf-chip pf-chip--on pf-chip--movie" data-val="${_ea(m)}">${_e(m)} ×</button>`
     ).join('');
+    const quickChips = MEDIA_QUICK
+      .filter(t => !_movieSelected.includes(t))
+      .map(t => `<button type="button" class="pf-chip pf-chip--quick" data-val="${_ea(t)}">${_e(t)}</button>`)
+      .join('');
     return `
       <div class="pf-movie-wrap">
-        <input class="pf-text-input" id="pf-movie-input" type="text"
-          placeholder="${_ea(q.placeholder ?? 'Type a movie or show...')}"
-          autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false">
-        <div class="pf-chips pf-movie-suggestions" id="pf-movie-suggestions"></div>
+        <div class="pf-chips pf-movie-quick" id="pf-movie-quick">${quickChips}</div>
         <div class="pf-movie-selected" id="pf-movie-selected">
           ${selChips || '<span class="pf-movie-empty">Nothing selected yet</span>'}
         </div>
+        <input class="pf-text-input pf-text-input--sm" id="pf-movie-input" type="text"
+          placeholder="Or search for a title…"
+          autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false">
+        <div class="pf-chips pf-movie-suggestions" id="pf-movie-suggestions"></div>
       </div>`;
   }
 
@@ -541,16 +536,26 @@ function _stepLabel(q) {
 function _renderStepDots() {
   const nav = document.getElementById('pf-steps');
   if (!nav) return;
-  nav.innerHTML = QUESTIONS.map((q, i) =>
-    `<button type="button" class="pf-step-dot${i === _idx ? ' pf-step-dot--on' : ''}${i < _idx ? ' pf-step-dot--done' : ''}"
-      data-idx="${i}" aria-label="Step ${i + 1}: ${_ea(_stepLabel(q))}"
-      aria-current="${i === _idx ? 'step' : 'false'}"></button>`
-  ).join('');
+
+  const GATE_IDX = QUESTIONS.findIndex(q => q.type === 'gate');
+  const inCore = _idx <= GATE_IDX;
+
+  // Only show the 5 dots for the current tier (core or extended)
+  const visibleIdxs = inCore
+    ? QUESTIONS.slice(0, GATE_IDX).map((_, i) => i)
+    : QUESTIONS.slice(GATE_IDX + 1).map((_, i) => GATE_IDX + 1 + i);
+
+  nav.innerHTML = visibleIdxs.map(i => {
+    const q = QUESTIONS[i];
+    const isOn = i === _idx;
+    const isDone = i < _idx;
+    return `<button type="button" class="pf-step-dot${isOn ? ' pf-step-dot--on' : ''}${isDone ? ' pf-step-dot--done' : ''}"
+      data-idx="${i}" aria-label="${_ea(_stepLabel(q))}"
+      aria-current="${isOn ? 'step' : 'false'}"></button>`;
+  }).join('');
+
   nav.querySelectorAll('.pf-step-dot').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = parseInt(btn.dataset.idx, 10);
-      _goToStep(target);
-    });
+    btn.addEventListener('click', () => _goToStep(parseInt(btn.dataset.idx, 10)));
   });
 }
 
@@ -569,7 +574,15 @@ function _render(idx, dir) {
     _movieSelected = Array.isArray(_answers.mediaFaves) ? [..._answers.mediaFaves] : _movieSelected;
   }
 
-  const pct = (idx / QUESTIONS.length) * 100;
+  const GATE_IDX = QUESTIONS.findIndex(q => q.type === 'gate');
+  const CORE_COUNT = GATE_IDX; // questions before the gate
+  const isCore = idx < GATE_IDX;
+  const isGateQ = idx === GATE_IDX;
+  const pct = isCore
+    ? ((idx) / CORE_COUNT) * 100
+    : isGateQ
+      ? 100
+      : 100;
   const bar = document.getElementById('pf-progress');
   if (bar) {
     if (dir === 'init') bar.style.transition = 'none';
@@ -578,7 +591,15 @@ function _render(idx, dir) {
   }
 
   const stepNum = document.getElementById('pf-step-num');
-  if (stepNum) stepNum.textContent = `${idx + 1} / ${QUESTIONS.length}`;
+  if (stepNum) {
+    if (isGateQ || idx > GATE_IDX) {
+      const extIdx = idx - GATE_IDX;
+      const extTotal = QUESTIONS.length - GATE_IDX - 1;
+      stepNum.textContent = extIdx === 0 ? 'Core done' : `Bonus ${extIdx}/${extTotal}`;
+    } else {
+      stepNum.textContent = `${idx + 1} / ${CORE_COUNT}`;
+    }
+  }
 
   const back = document.getElementById('pf-back');
   if (back) back.style.visibility = idx > 0 ? 'visible' : 'hidden';
@@ -592,7 +613,7 @@ function _render(idx, dir) {
     skip.classList.toggle('pf-skip--solo', isPickOne);
   }
   if (cont) {
-    cont.textContent = idx === QUESTIONS.length - 1 ? "Let's fucking go" : 'Continue';
+    cont.textContent = idx >= QUESTIONS.length - 1 ? "Let's fucking go" : 'Continue';
     cont.style.display = (isPickOne || isGate) ? 'none' : '';
     cont.disabled = false;
     cont.classList.remove('pf-continue--busy');
@@ -829,6 +850,15 @@ function _wire(q) {
       btn.addEventListener('click', () => {
         _movieSelected = _movieSelected.filter(m => m !== btn.dataset.val);
         btn.remove(); haptic('light'); _updateMovieEmpty();
+      });
+    });
+    root.querySelectorAll('.pf-chip--quick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (_movieSelected.length >= 3) { haptic('heavy'); return; }
+        _addMovie(btn.dataset.val, root);
+        btn.style.opacity = '0.28';
+        btn.style.pointerEvents = 'none';
+        haptic('light');
       });
     });
   }
