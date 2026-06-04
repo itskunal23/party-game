@@ -7,6 +7,33 @@ Everything you can do in **GFY**, what **Bhenchod Bartender** does, and how **dr
 
 > **21+ only.** Drink responsibly. BAC numbers are entertainment estimates, not medical advice. Never drive after drinking.
 
+## Simple rules (read this first)
+
+**Goal:** Collect all 4 cards of a set → complete the book → assign a drink → do the dare.
+
+**Each turn:**
+1. Pick a card (or use **Kick Door** to ask for a rank you don't have).
+2. Swipe it at your partner (or tap them).
+3. They pick: **Give** · **GFY** (don't have it) · **Bluff** (lie — say GFY but keep cards).
+4. If they say GFY, you pick: **Accept** (draw from pond) or **Bullshit** (call the lie).
+   - Liar caught → they draw **4**.
+   - Wrong call → **you** draw **4**.
+
+**Once per game (tap the pills on your turn):**
+| Move | What it does |
+|------|----------------|
+| **Steal** | Take 1 random card from them (they don't see which). |
+| **Kick Door** | Ask for any rank — even one you don't hold. Miss = draw **2**. |
+| **2×** | Win = keep going. Lose = draw **2** and lose turn. |
+
+**Bonuses:**
+- **3 lucky pond draws** → pick: draw 2 OR peek at their hand (by rank).
+- **Complete a book** → pick: draw 1 · they draw 1 · get steal back.
+- **Secret mission** → shown at start; finish it for bragging rights.
+- **Chaos** → random mid-game (everyone draws 1, card tax, steal refresh).
+
+**Bartender:** One dirty sentence per roast — no essays.
+
 ---
 
 ## Design direction (product audit)
@@ -17,7 +44,7 @@ Everything you can do in **GFY**, what **Bhenchod Bartender** does, and how **dr
 |--------|----------------|
 | **Reveal moments** | Multi-stage book celebration (slam → shake → sting → toast → dare → bartender → drink assign) |
 | **Direct manipulation** | No Ask/Confirm buttons — grab card, throw at partner or pond |
-| **Hand feel** | Larger cards (132×192), fan arc, lift on select, elastic snap-back, drag glow, haptics |
+| **Hand feel** | Cards in a horizontal row; duplicates stack with a count badge |
 | **Bartender memory** | Session log + streaks fed into every roast (`sessionMemory`) |
 | **Streak titles** | Lucky Bastard, Card Shark, Pond Goblin, Chaos Lord — pop when unlocked |
 | **Chaos events** | Power Hour, Pond Tax, Reverse Roast, Bollywood Twist, Golden Set — random mid-game |
@@ -61,7 +88,7 @@ Landing page → Filth questionnaire (first time) → Home → Lobby → Game
 | 5 | Partner | Enter code → **Join** |
 | 6 | Host | Tap **Start Game** when both are in the lobby |
 
-Optional URL hints: `?who=kunal` or `?who=nandini` pre-fills a name in the questionnaire. Not required.
+Optional: enter your name in the questionnaire when you join — no URL tricks needed.
 
 **Solo mode:** If only one human is in the room when the host starts, **Bhenchod Bot** joins automatically as the second player.
 

@@ -53,6 +53,54 @@ wss.on('connection', (ws) => {
         handleIntent(room, { type: 'ask', fromId: meta.playerId, targetId, rank });
       }
 
+      else if (type === 'respondAsk') {
+        const meta = getMetaFromSocket(ws);
+        if (!meta) return;
+        const room = getRoom(meta.roomCode);
+        if (!room) return;
+        handleIntent(room, { type: 'respondAsk', fromId: meta.playerId, response: msg.response });
+      }
+
+      else if (type === 'resolveAsk') {
+        const meta = getMetaFromSocket(ws);
+        if (!meta) return;
+        const room = getRoom(meta.roomCode);
+        if (!room) return;
+        handleIntent(room, { type: 'resolveAsk', fromId: meta.playerId, action: msg.action });
+      }
+
+      else if (type === 'activateMove') {
+        const meta = getMetaFromSocket(ws);
+        if (!meta) return;
+        const room = getRoom(meta.roomCode);
+        if (!room) return;
+        handleIntent(room, { type: 'activateMove', fromId: meta.playerId, move: msg.move });
+      }
+
+      else if (type === 'useMove') {
+        const meta = getMetaFromSocket(ws);
+        if (!meta) return;
+        const room = getRoom(meta.roomCode);
+        if (!room) return;
+        handleIntent(room, { type: 'useMove', fromId: meta.playerId, move: msg.move, targetId: msg.targetId });
+      }
+
+      else if (type === 'bookPowerup') {
+        const meta = getMetaFromSocket(ws);
+        if (!meta) return;
+        const room = getRoom(meta.roomCode);
+        if (!room) return;
+        handleIntent(room, { type: 'bookPowerup', fromId: meta.playerId, choice: msg.choice });
+      }
+
+      else if (type === 'luckyReward') {
+        const meta = getMetaFromSocket(ws);
+        if (!meta) return;
+        const room = getRoom(meta.roomCode);
+        if (!room) return;
+        handleIntent(room, { type: 'luckyReward', fromId: meta.playerId, choice: msg.choice });
+      }
+
       else if (type === 'logDrink') {
         const meta = getMetaFromSocket(ws);
         if (meta) logDrink(meta.roomCode, meta.playerId, drink);

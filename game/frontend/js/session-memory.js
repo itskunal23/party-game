@@ -36,6 +36,13 @@ export function updateStatsFromAction(stats, action, playerName) {
       s.gfyMisses = (s.gfyMisses ?? 0) + 1;
       s.consecutiveMisses = (s.consecutiveMisses ?? 0) + 1;
     }
+    if (action.bluffSucceeded) s.bluffsSurvived = (s.bluffsSurvived ?? 0) + 1;
+  } else if (action.type === 'bullshit_caught') {
+    s.bullshitCalls = (s.bullshitCalls ?? 0) + 1;
+    s.consecutiveMisses = 0;
+  } else if (action.type === 'bullshit_wrong') {
+    s.bullshitWrong = (s.bullshitWrong ?? 0) + 1;
+    s.gfyMisses = (s.gfyMisses ?? 0) + 1;
   } else if (action.type === 'got') {
     s.successfulAsks = (s.successfulAsks ?? 0) + 1;
     s.steals = (s.steals ?? 0) + (action.count ?? 1);
@@ -74,6 +81,9 @@ export function formatSessionMemory(session, stats, playerName) {
   const streakBits = [];
   if ((s.consecutiveMisses ?? 0) >= 3) streakBits.push(`${s.consecutiveMisses} GFY misses in a row`);
   if ((s.luckyDraws ?? 0) >= 2) streakBits.push(`${s.luckyDraws} lucky pond draws`);
+  if ((s.bullshitCalls ?? 0) >= 1) streakBits.push(`${s.bullshitCalls} bullshit calls landed`);
+  if ((s.bluffsSurvived ?? 0) >= 1) streakBits.push(`${s.bluffsSurvived} bluffs survived`);
+  if ((s.bullshitWrong ?? 0) >= 1) streakBits.push(`${s.bullshitWrong} wrong bullshit calls`);
   if ((s.successfulAsks ?? 0) >= 3) streakBits.push(`${s.successfulAsks} successful asks`);
   if ((s.consecutiveBooks ?? 0) >= 2) streakBits.push(`${s.consecutiveBooks} books back-to-back`);
   if (streakBits.length) parts.push(`${playerName} streaks: ${streakBits.join(', ')}`);

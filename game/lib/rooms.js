@@ -1,6 +1,11 @@
 import { createDeck, shuffle, dealHands, checkForBook, TOTAL_SETS } from '../frontend/js/game.js';
-import { createBot, scheduleBotTurn } from './bot.js';
+import { createBot, scheduleBotTurn, scheduleBotAskResponse, scheduleBotBullshitResolve } from './bot.js';
 import { estimateBAC } from './bac.js';
+import {
+  initPlayerPowers, getPlayerPowers, drawFromDeck, clearPendingAsk,
+  buildPendingAskView, buildBookPowerupView, buildLuckyRewardView,
+  BULLSHIT_PENALTY, maybeServerChaos, checkMissionProgress, rankCounts
+} from './game-powers.js';
 
 const ROOM_CHARS = 'ACDEFGHJKLMNPQRSTUVWXYZ';
 const ROOM_EXPIRY_MS = 6 * 60 * 60 * 1000;
@@ -64,7 +69,14 @@ function buildSnapshot(room, forPlayerId) {
       deckCount: state.deck.length,
       totalSets: TOTAL_SETS,
       completedSets: _countCompletedSets(state),
-      lastAction: state.lastAction
+      lastAction: state.lastAction,
+      pendingAsk: buildPendingAskView(state.pendingAsk, forPlayerId, room),
+      myPowers: getPlayerPowers(state, forPlayerId),
+      pendingBookPowerup: buildBookPowerupView(state, forPlayerId),
+      luckyReward: buildLuckyRewardView(getPlayerPowers(state, forPlayerId)),
+      peekReveal: state.peekReveal?.get(forPlayerId) ?? null,
+      lastChaos: state.lastChaos ?? null,
+      cardTax: !!state.cardTax
     },
     pendingDrinks: state.pendingDrinks.get(forPlayerId) ?? [],
     hostMessage: null
@@ -122,6 +134,12 @@ function resolveBooks(room, playerId) {
     state.books.get(playerId).push(scenario);
     newBooks.push(scenario);
 
+    if (!state.firstBookWinner) {
+      state.firstBookWinner = playerId;
+      const mp = getPlayerPowers(state, playerId);
+      if (mp?.mission?.id === 'first_book') checkMissionProgress(mp, 'first_book');
+    }
+
     // Ask winner to choose what the loser drinks (2-player: exactly 1 loser)
     const losers = [];
     for (const [otherId, otherPlayer] of room.players) {
@@ -137,11 +155,8 @@ function resolveBooks(room, playerId) {
     }
 
     if (losers.length > 0) {
-      // Store pending choice so winner can assign
-      if (!state.pendingDrinkChoices) state.pendingDrinkChoices = new Map();
-      state.pendingDrinkChoices.set(playerId, { scenario, losers, timestamp: Date.now() });
-      // Notify winner to choose
-      sendTo(player, { type: 'chooseLoserDrink', scenario, losers });
+      if (!state.pendingBookPowerup) state.pendingBookPowerup = new Map();
+      state.pendingBookPowerup.set(playerId, { scenario, losers });
     }
 
     broadcast(room, {
@@ -173,12 +188,167 @@ function advanceTurn(room) {
   }
 }
 
+function _sendChooseLoserDrink(room, winnerId, scenario, losers) {
+  const winner = room.players.get(winnerId);
+  if (!winner || winner.isBot) return;
+  const state = room.gameState;
+  if (!state.pendingDrinkChoices) state.pendingDrinkChoices = new Map();
+  state.pendingDrinkChoices.set(winnerId, { scenario, losers, timestamp: Date.now() });
+  sendTo(winner, { type: 'chooseLoserDrink', scenario, losers });
+}
+
+function _gfyDrawCount(state, pendingAsk, powers) {
+  let n = 1;
+  if (pendingAsk?.kickDoor || powers?.activeKickDoor) n = 2;
+  if (pendingAsk?.doubleOrNothing || powers?.activeDouble) n = 2;
+  if (state.cardTax) {
+    n = Math.max(n, 2);
+    state.cardTax = false;
+  }
+  return n;
+}
+
+function _clearAskModifiers(powers) {
+  if (!powers) return;
+  powers.activeKickDoor = false;
+  powers.activeDouble = false;
+}
+
+function _afterActionChaos(room) {
+  return maybeServerChaos(room);
+}
+
+function _afterAskOutcome(room, askerId, continueTurn) {
+  const state = room.gameState;
+  if (checkGameOver(room)) { finalizeGame(room); return; }
+
+  _afterActionChaos(room);
+
+  const asker = room.players.get(askerId);
+  if (continueTurn) {
+    broadcastSnapshots(room);
+    if (asker?.isBot) scheduleBotTurn(room, asker, i => handleIntent(room, i));
+  } else {
+    advanceTurn(room);
+  }
+}
+
+function _completeGot(room, askerId, targetId, rank, count) {
+  const state = room.gameState;
+  const pending = state.pendingAsk;
+  const powers = getPlayerPowers(state, askerId);
+  _clearAskModifiers(powers);
+  clearPendingAsk(state);
+  state.lastAction = { type: 'got', fromId: askerId, targetId, rank, count };
+  resolveBooks(room, askerId);
+  if (checkGameOver(room)) { finalizeGame(room); return; }
+  _afterAskOutcome(room, askerId, true);
+}
+
+function _executeGfyDraw(room, askerId, targetId, rank, extra = {}) {
+  const state = room.gameState;
+  const asker = room.players.get(askerId);
+  if (!asker) return;
+
+  const pending = state.pendingAsk;
+  const powers = getPlayerPowers(state, askerId);
+  const drawCount = extra.drawCount ?? _gfyDrawCount(state, pending, powers);
+  const isDouble = pending?.doubleOrNothing || powers?.activeDouble || extra.doubleOrNothing;
+
+  _clearAskModifiers(powers);
+  clearPendingAsk(state);
+
+  let drawnCard = null;
+  let continueTurn = false;
+
+  if (state.deck.length > 0) {
+    const drawn = drawFromDeck(state, asker, drawCount);
+    drawnCard = drawn[0] ?? null;
+    continueTurn = !isDouble && drawn.some(c => c.rank === rank);
+  }
+
+  if (continueTurn) {
+    if (powers) {
+      powers.luckyStacks = (powers.luckyStacks ?? 0) + 1;
+      checkMissionProgress(powers, 'lucky');
+      if (powers.luckyStacks >= 3 && !powers.luckyRewardPending) {
+        powers.luckyRewardPending = true;
+      }
+    }
+  }
+
+  if (extra.bluffSucceeded) {
+    const targetPowers = getPlayerPowers(state, targetId);
+    if (targetPowers) checkMissionProgress(targetPowers, 'bluff_ok');
+  }
+
+  state.lastAction = {
+    type: 'gfy',
+    fromId: askerId,
+    targetId,
+    rank,
+    drawnCard,
+    continueTurn,
+    drawCount,
+    ...extra
+  };
+  resolveBooks(room, askerId);
+  _afterAskOutcome(room, askerId, continueTurn);
+}
+
+function _applyBullshitPenalty(room, loserId, winnerId, rank, caughtBluffer) {
+  const state = room.gameState;
+  const loser = room.players.get(loserId);
+  const winner = room.players.get(winnerId);
+  if (!loser) return;
+
+  clearPendingAsk(state);
+  const drawn = drawFromDeck(state, loser, BULLSHIT_PENALTY);
+
+  const loserPowers = getPlayerPowers(state, loserId);
+  const winnerPowers = getPlayerPowers(state, winnerId);
+  if (caughtBluffer) {
+    if (loserPowers) loserPowers.bluffsCaught = (loserPowers.bluffsCaught ?? 0) + 1;
+    if (winnerPowers) {
+      winnerPowers.bullshitCalls = (winnerPowers.bullshitCalls ?? 0) + 1;
+      checkMissionProgress(winnerPowers, 'bullshit_ok');
+    }
+  } else if (loserPowers) {
+    loserPowers.bullshitWrong = (loserPowers.bullshitWrong ?? 0) + 1;
+  }
+
+  _clearAskModifiers(getPlayerPowers(state, winnerId));
+  _clearAskModifiers(loserPowers);
+
+  state.lastAction = {
+    type: caughtBluffer ? 'bullshit_caught' : 'bullshit_wrong',
+    fromId: winnerId,
+    targetId: loserId,
+    rank,
+    count: drawn.length,
+    turnContinues: caughtBluffer
+  };
+
+  resolveBooks(room, winnerId);
+  if (checkGameOver(room)) { finalizeGame(room); return; }
+  _afterActionChaos(room);
+  broadcastSnapshots(room);
+
+  if (caughtBluffer) {
+    const asker = room.players.get(winnerId);
+    if (asker?.isBot) scheduleBotTurn(room, asker, i => handleIntent(room, i));
+  } else {
+    advanceTurn(room);
+  }
+}
+
 export function handleIntent(room, intent) {
   const state = room.gameState;
   const { type, fromId } = intent;
   room.lastActivity = new Date();
 
   if (type === 'ask') {
+    if (state.pendingAsk) return;
     const { targetId, rank } = intent;
     if (state.currentTurnPlayerId !== fromId) return;
 
@@ -186,48 +356,195 @@ export function handleIntent(room, intent) {
     const target = room.players.get(targetId);
     if (!asker || !target) return;
 
-    const askerHasRank = asker.hand.some(c => c.rank === rank);
-    if (!askerHasRank) return;
+    const powers = getPlayerPowers(state, fromId);
+    const useKick = powers?.activeKickDoor && !powers.kickDoorUsed;
+    const useDouble = powers?.activeDouble && !powers.doubleUsed;
 
-    const matching = target.hand.filter(c => c.rank === rank);
+    const hasRank = asker.hand.some(c => c.rank === rank);
+    if (!hasRank) {
+      if (!useKick) return;
+      powers.kickDoorUsed = true;
+    }
+    if (useDouble) powers.doubleUsed = true;
 
-    if (matching.length > 0) {
-      // Transfer cards
-      target.hand = target.hand.filter(c => c.rank !== rank);
+    state.pendingAsk = {
+      askerId: fromId,
+      targetId,
+      rank,
+      phase: 'awaiting_response',
+      isBluff: false,
+      kickDoor: useKick,
+      doubleOrNothing: useDouble
+    };
+    state.lastAction = { type: 'ask_pending', fromId, targetId, rank, kickDoor: useKick, double: useDouble };
+    broadcastSnapshots(room);
+
+    if (target.isBot) scheduleBotAskResponse(room, target, i => handleIntent(room, i));
+    return;
+  }
+
+  if (type === 'respondAsk') {
+    const pending = state.pendingAsk;
+    if (!pending || pending.targetId !== fromId || pending.phase !== 'awaiting_response') return;
+
+    const { response } = intent;
+    const target = room.players.get(fromId);
+    const asker = room.players.get(pending.askerId);
+    if (!target || !asker) return;
+
+    const matching = target.hand.filter(c => c.rank === pending.rank);
+
+    if (response === 'give') {
+      if (!matching.length) return;
+      target.hand = target.hand.filter(c => c.rank !== pending.rank);
       asker.hand.push(...matching);
-      state.lastAction = { type: 'got', fromId, targetId, rank, count: matching.length };
-      resolveBooks(room, fromId);
+      _completeGot(room, pending.askerId, fromId, pending.rank, matching.length);
+      return;
+    }
 
-      if (checkGameOver(room)) { finalizeGame(room); return; }
+    if (response === 'gfy') {
+      if (matching.length) return;
+      pending.phase = 'awaiting_resolution';
+      pending.isBluff = false;
+      state.lastAction = {
+        type: 'gfy_claim',
+        fromId,
+        targetId: pending.askerId,
+        rank: pending.rank
+      };
       broadcastSnapshots(room);
+      if (asker.isBot) scheduleBotBullshitResolve(room, asker, i => handleIntent(room, i));
+      return;
+    }
 
-      // Bot's turn continues
-      if (asker.isBot) {
-        scheduleBotTurn(room, asker, i => handleIntent(room, i));
-      }
-    } else {
-      // Go Fuck Yourself — draw a card
-      let drawnCard = null;
-      let continueTurn = false;
+    if (response === 'bluff') {
+      if (!matching.length) return;
+      pending.phase = 'awaiting_resolution';
+      pending.isBluff = true;
+      const powers = getPlayerPowers(state, fromId);
+      if (powers) powers.bluffsAttempted = (powers.bluffsAttempted ?? 0) + 1;
+      state.lastAction = {
+        type: 'gfy_claim',
+        fromId,
+        targetId: pending.askerId,
+        rank: pending.rank,
+        bluff: true
+      };
+      broadcastSnapshots(room);
+      if (asker.isBot) scheduleBotBullshitResolve(room, asker, i => handleIntent(room, i));
+    }
+    return;
+  }
 
-      if (state.deck.length > 0) {
-        drawnCard = state.deck.pop();
-        asker.hand.push(drawnCard);
-        continueTurn = drawnCard.rank === rank;
-      }
+  if (type === 'resolveAsk') {
+    const pending = state.pendingAsk;
+    if (!pending || pending.askerId !== fromId || pending.phase !== 'awaiting_resolution') return;
 
-      state.lastAction = { type: 'gfy', fromId, targetId, rank, drawnCard, continueTurn };
-      resolveBooks(room, fromId);
+    const { action } = intent;
+    const target = room.players.get(pending.targetId);
+    if (!target) return;
 
-      if (checkGameOver(room)) { finalizeGame(room); return; }
+    if (action === 'accept') {
+      _executeGfyDraw(room, fromId, pending.targetId, pending.rank, {
+        bluffSucceeded: pending.isBluff
+      });
+      return;
+    }
 
-      if (continueTurn) {
-        broadcastSnapshots(room);
-        if (asker.isBot) scheduleBotTurn(room, asker, i => handleIntent(room, i));
+    if (action === 'bullshit') {
+      if (pending.isBluff) {
+        _applyBullshitPenalty(room, pending.targetId, fromId, pending.rank, true);
       } else {
-        advanceTurn(room);
+        _applyBullshitPenalty(room, fromId, pending.targetId, pending.rank, false);
       }
     }
+    return;
+  }
+
+  if (type === 'activateMove') {
+    const powers = getPlayerPowers(state, fromId);
+    if (!powers || state.currentTurnPlayerId !== fromId || state.pendingAsk) return;
+    const { move } = intent;
+    if (move === 'kick_door' && !powers.kickDoorUsed) {
+      powers.activeKickDoor = !powers.activeKickDoor;
+      if (powers.activeKickDoor) powers.activeDouble = false;
+    } else if (move === 'double' && !powers.doubleUsed) {
+      powers.activeDouble = !powers.activeDouble;
+      if (powers.activeDouble) powers.activeKickDoor = false;
+    }
+    broadcastSnapshots(room);
+    return;
+  }
+
+  if (type === 'useMove') {
+    if (state.pendingAsk || state.currentTurnPlayerId !== fromId) return;
+    if (intent.move !== 'steal') return;
+    const powers = getPlayerPowers(state, fromId);
+    if (!powers || powers.stealToken < 1) return;
+    const asker = room.players.get(fromId);
+    const target = room.players.get(intent.targetId);
+    if (!asker || !target || target.id === fromId || !target.hand.length) return;
+
+    powers.stealToken -= 1;
+    const idx = Math.floor(Math.random() * target.hand.length);
+    const stolen = target.hand.splice(idx, 1)[0];
+    asker.hand.push(stolen);
+
+    state.lastAction = { type: 'steal', fromId, targetId: target.id, rank: stolen.rank };
+    resolveBooks(room, fromId);
+    if (checkGameOver(room)) { finalizeGame(room); return; }
+    _afterActionChaos(room);
+    broadcastSnapshots(room);
+    return;
+  }
+
+  if (type === 'bookPowerup') {
+    const pending = state.pendingBookPowerup?.get(fromId);
+    if (!pending) return;
+    const winner = room.players.get(fromId);
+    if (!winner) return;
+    const { choice } = intent;
+    const powers = getPlayerPowers(state, fromId);
+
+    if (choice === 'draw1') drawFromDeck(state, winner, 1);
+    else if (choice === 'opp_draw1') {
+      const opp = [...room.players.values()].find(p => p.id !== fromId && !p.isBot);
+      if (opp) drawFromDeck(state, opp, 1);
+    } else if (choice === 'steal_back' && powers) {
+      powers.stealToken = (powers.stealToken ?? 0) + 1;
+    }
+
+    state.pendingBookPowerup.delete(fromId);
+    resolveBooks(room, fromId);
+    if (pending.losers?.length) _sendChooseLoserDrink(room, fromId, pending.scenario, pending.losers);
+    broadcastSnapshots(room);
+    return;
+  }
+
+  if (type === 'luckyReward') {
+    const powers = getPlayerPowers(state, fromId);
+    if (!powers?.luckyRewardPending) return;
+    const player = room.players.get(fromId);
+    if (!player) return;
+
+    powers.luckyRewardPending = false;
+    powers.luckyStacks = 0;
+
+    if (intent.choice === 'draw2') {
+      drawFromDeck(state, player, 2);
+      state.lastAction = { type: 'lucky_reward', fromId, reward: 'draw2' };
+    } else if (intent.choice === 'peek') {
+      const opp = [...room.players.values()].find(p => p.id !== fromId);
+      if (opp) {
+        if (!state.peekReveal) state.peekReveal = new Map();
+        state.peekReveal.set(fromId, rankCounts(opp.hand));
+      }
+      state.lastAction = { type: 'lucky_reward', fromId, reward: 'peek' };
+    }
+
+    resolveBooks(room, fromId);
+    broadcastSnapshots(room);
+    return;
   }
 }
 
@@ -262,7 +579,15 @@ export function createRoom(hostSocket, hostName, playerProfile = {}) {
       pendingDrinks: new Map(),
       books: new Map(),
       turnCount: 0,
-      lastAction: null
+      lastAction: null,
+      pendingAsk: null,
+      playerPowers: new Map(),
+      pendingBookPowerup: new Map(),
+      peekReveal: new Map(),
+      actionCount: 0,
+      lastChaosAt: 0,
+      cardTax: false,
+      firstBookWinner: null
     },
     createdAt: new Date(),
     lastActivity: new Date()
@@ -351,6 +676,15 @@ export function startGame(roomCode, requesterId) {
   room.gameState.books = new Map();
   room.gameState.pendingDrinks = new Map();
   room.gameState.pendingDrinkChoices = new Map();
+  room.gameState.pendingAsk = null;
+  room.gameState.playerPowers = initPlayerPowers(playerIds);
+  room.gameState.pendingBookPowerup = new Map();
+  room.gameState.peekReveal = new Map();
+  room.gameState.actionCount = 0;
+  room.gameState.lastChaosAt = 0;
+  room.gameState.lastChaos = null;
+  room.gameState.cardTax = false;
+  room.gameState.firstBookWinner = null;
   room.gameState.lastAction = null;
   room.gameState.discardPile = [];
 

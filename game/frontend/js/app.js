@@ -10,7 +10,7 @@ import {
   createSessionState, recordEvent, updateStatsFromAction, onBookComplete,
   formatSessionMemory
 } from './session-memory.js';
-import { maybeTriggerChaos, clearExpiredChaos } from './chaos-events.js';
+import { clearExpiredChaos } from './chaos-events.js';
 import { initLandingMotion, wireLandingJoin } from './landing.js';
 
 let _pendingRoomCode = null;
@@ -30,6 +30,8 @@ let state = {
   playerStats: {},
   session: null,
   pendingDrinkChoice: null,
+  pendingAsk: null,
+  myPowers: null,
   _shownPendingDrinkKeys: new Set()
 };
 
@@ -381,7 +383,7 @@ function renderHand() {
 // ─── Card tap — select / deselect with spring ─────────────────────────────────
 function _onCardTap(wrapper, card) {
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
-  if (!isMyTurn) return;
+  if (!isMyTurn || _askFlowBlocksPlay()) return;
 
   haptic('light');
 
@@ -412,7 +414,7 @@ function _onCardTap(wrapper, card) {
 // ─── Drag — physical card lift ────────────────────────────────────────────────
 function _onCardTouchStart(e, wrapper, card) {
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
-  if (!isMyTurn) return;
+  if (!isMyTurn || _askFlowBlocksPlay()) return;
   const t = e.touches[0];
   _drag = { wrapper, card, startX: t.clientX, startY: t.clientY, dx: 0, dy: 0, active: false, dropTarget: null };
   haptic('light');
@@ -654,8 +656,271 @@ function selectPartner(player, el) {
     sendAsk();
     return;
   }
+  if (state.myPowers?.activeKickDoor && !state.myPowers.kickDoorUsed) {
+    showKickDoorRankPicker(player);
+    return;
+  }
   updateActionZone();
   updatePartnerHints();
+}
+
+const ALL_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+function showKickDoorRankPicker(partner) {
+  const panel = $('reward-panel');
+  const title = $('reward-panel-title');
+  const actions = $('reward-panel-actions');
+  if (!panel || !title || !actions) return;
+
+  const held = new Set(state.myHand.map(c => c.rank));
+  const ranks = ALL_RANKS.filter(r => !held.has(r));
+  if (!ranks.length) {
+    showBanner('You already hold every rank.');
+    return;
+  }
+
+  title.textContent = `Kick Door — ask ${partner.name} for:`;
+  actions.innerHTML = ranks.map(r =>
+    `<button type="button" class="ask-response-btn ask-response-btn--bluff" data-rank="${r}">${r}</button>`
+  ).join('');
+
+  actions.querySelectorAll('[data-rank]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      panel.classList.add('hidden');
+      playCardSlide();
+      haptic('medium');
+      API.send({ type: 'ask', rank: btn.dataset.rank, targetId: partner.id });
+      state.selectedTarget = null;
+      document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
+      if ($('action-zone')) $('action-zone').innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> Waiting…</p>`;
+    }, { once: true });
+  });
+  panel.classList.remove('hidden');
+}
+
+// ─── Ask flow UI (bluff + bullshit) ───────────────────────────────────────────
+function _rankLabel(rank) {
+  return SCENARIOS.find(s => s.rank === rank)?.name ?? rank;
+}
+
+function _askFlowBlocksPlay() {
+  const p = state.pendingAsk;
+  if (!p) return false;
+  return ['respond', 'resolve', 'waiting_target', 'waiting_bullshit'].includes(p.phase);
+}
+
+function sendRespondAsk(response) {
+  haptic('medium');
+  API.send({ type: 'respondAsk', response });
+  $('ask-response-panel')?.classList.add('hidden');
+}
+
+function sendResolveAsk(action) {
+  haptic(action === 'bullshit' ? 'heavy' : 'medium');
+  API.send({ type: 'resolveAsk', action });
+  $('bullshit-bar')?.classList.add('hidden');
+}
+
+function renderSpecialMovesBar() {
+  const bar = $('special-moves-bar');
+  if (!bar) return;
+  const powers = state.myPowers;
+  const isPlaying = state.gameState?.phase === 'playing';
+  const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
+  const blocked = state.pendingAsk || state.pendingBookPowerup || state.luckyReward;
+
+  if (!isPlaying || !isMyTurn || !powers || blocked) {
+    bar.classList.add('hidden');
+    return;
+  }
+
+  const parts = [];
+  if (powers.stealToken > 0) {
+    parts.push(`<button type="button" class="move-pill move-pill--steal" data-move="steal">Steal</button>`);
+  }
+  if (!powers.kickDoorUsed) {
+    parts.push(`<button type="button" class="move-pill${powers.activeKickDoor ? ' move-pill--on' : ''}" data-move="kick_door">Kick Door</button>`);
+  }
+  if (!powers.doubleUsed) {
+    parts.push(`<button type="button" class="move-pill${powers.activeDouble ? ' move-pill--on' : ''}" data-move="double">2×</button>`);
+  }
+  if (powers.luckyStacks > 0) {
+    parts.push(`<span class="move-pill move-pill--disabled">${powers.luckyStacks}🍀</span>`);
+  }
+
+  if (!parts.length) {
+    bar.classList.add('hidden');
+    return;
+  }
+
+  bar.innerHTML = parts.join('');
+  bar.querySelectorAll('[data-move]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const move = btn.dataset.move;
+      if (move === 'steal') {
+        const opp = state.players.find(p => p.id !== state.myId);
+        if (opp) API.send({ type: 'useMove', move: 'steal', targetId: opp.id });
+      } else {
+        API.send({ type: 'activateMove', move });
+      }
+      haptic('light');
+    });
+  });
+  bar.classList.remove('hidden');
+}
+
+function renderRewardPanels() {
+  const panel = $('reward-panel');
+  const title = $('reward-panel-title');
+  const actions = $('reward-panel-actions');
+  if (!panel || !title || !actions) return;
+
+  const book = state.pendingBookPowerup;
+  const lucky = state.luckyReward;
+
+  if (book?.choices?.length) {
+    title.textContent = 'Book bonus — pick one:';
+    actions.innerHTML = book.choices.map(c =>
+      `<button type="button" class="ask-response-btn ask-response-btn--give" data-choice="${c.id}">${c.label}</button>`
+    ).join('');
+    actions.querySelectorAll('[data-choice]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        API.send({ type: 'bookPowerup', choice: btn.dataset.choice });
+        panel.classList.add('hidden');
+        haptic('medium');
+      }, { once: true });
+    });
+    panel.classList.remove('hidden');
+    return;
+  }
+
+  if (lucky?.choices?.length) {
+    title.textContent = '3 lucky draws — pick one:';
+    actions.innerHTML = lucky.choices.map(c =>
+      `<button type="button" class="ask-response-btn ask-response-btn--bluff" data-choice="${c.id}">${c.label}</button>`
+    ).join('');
+    actions.querySelectorAll('[data-choice]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        API.send({ type: 'luckyReward', choice: btn.dataset.choice });
+        panel.classList.add('hidden');
+        haptic('medium');
+      }, { once: true });
+    });
+    panel.classList.remove('hidden');
+    return;
+  }
+
+  panel.classList.add('hidden');
+}
+
+function renderPeekBanner() {
+  const peek = state.peekReveal;
+  if (!peek || typeof peek !== 'object') return;
+  const bits = Object.entries(peek).map(([r, n]) => `${r}: ${n}`).join(' · ');
+  if (bits) showBanner(`👀 Peek — their ranks: ${bits}`);
+  state.peekReveal = null;
+}
+
+function showMissionIntro() {
+  const m = state.myPowers?.mission;
+  if (!m || state._missionShown) return;
+  state._missionShown = true;
+  showBanner(`🎯 Your secret mission: ${m.text}`);
+}
+
+function checkMissionComplete() {
+  const m = state.myPowers?.mission;
+  if (!m?.done || state._missionDoneShown) return;
+  state._missionDoneShown = true;
+  showAchievementToast({ label: 'Mission complete', emoji: '🎯' });
+  haptic('heavy');
+}
+
+function renderAskFlowUI() {
+  const pending = state.pendingAsk;
+  const panel = $('ask-response-panel');
+  const bullBar = $('bullshit-bar');
+  const title = $('ask-response-title');
+  const actions = $('ask-response-actions');
+
+  renderSpecialMovesBar();
+  renderRewardPanels();
+
+  if (!pending || state.gameState?.phase !== 'playing') {
+    panel?.classList.add('hidden');
+    bullBar?.classList.add('hidden');
+    return;
+  }
+
+  if (pending.phase === 'respond') {
+    bullBar?.classList.add('hidden');
+    if (!title || !actions || !panel) return;
+    title.textContent = `${pending.askerName} wants ${_rankLabel(pending.rank)}. You have:`;
+    actions.innerHTML = '';
+    if (pending.canGive) {
+      const give = document.createElement('button');
+      give.type = 'button';
+      give.className = 'ask-response-btn ask-response-btn--give';
+      give.textContent = 'Give cards';
+      give.addEventListener('click', () => sendRespondAsk('give'), { once: true });
+      actions.appendChild(give);
+    }
+    if (pending.canBluff) {
+      const bluff = document.createElement('button');
+      bluff.type = 'button';
+      bluff.className = 'ask-response-btn ask-response-btn--bluff';
+      bluff.textContent = 'Bluff (say GFY, keep cards)';
+      bluff.addEventListener('click', () => sendRespondAsk('bluff'), { once: true });
+      actions.appendChild(bluff);
+    }
+    if (pending.canGfy) {
+      const gfy = document.createElement('button');
+      gfy.type = 'button';
+      gfy.className = 'ask-response-btn ask-response-btn--gfy';
+      gfy.textContent = 'GFY — I don\'t have it';
+      gfy.addEventListener('click', () => sendRespondAsk('gfy'), { once: true });
+      actions.appendChild(gfy);
+    }
+    panel.classList.remove('hidden');
+    return;
+  }
+
+  panel?.classList.add('hidden');
+
+  if (pending.phase === 'resolve') {
+    const label = $('bullshit-bar-label');
+    if (label) {
+      label.textContent = `They said GFY on ${_rankLabel(pending.rank)}. Trust it?`;
+    }
+    bullBar?.classList.remove('hidden');
+    return;
+  }
+
+  bullBar?.classList.add('hidden');
+}
+
+function showBullshitOverlay(action) {
+  const overlay = $('bullshit-overlay');
+  const title = $('bullshit-overlay-title');
+  const sub = $('bullshit-overlay-sub');
+  const emoji = $('bullshit-overlay-emoji');
+  if (!overlay || !title || !sub) return;
+
+  const caller = state.players.find(p => p.id === action.fromId);
+  const loser = state.players.find(p => p.id === action.targetId);
+  const caught = action.type === 'bullshit_caught';
+
+  if (emoji) emoji.textContent = caught ? '🐂' : '🤡';
+  title.textContent = caught ? 'BULLSHIT!' : 'WRONG CALL';
+  sub.textContent = caught
+    ? `${loser?.name ?? 'They'} got caught lying — draws ${action.count ?? 4} cards. ${caller?.name ?? 'You'} keep the turn.`
+    : `${caller?.name ?? 'You'} called bullshit on an honest GFY — draws ${action.count ?? 4}. Turn over.`;
+
+  overlay.classList.remove('hidden');
+  haptic('heavy');
+  playGFY();
+
+  setTimeout(() => overlay.classList.add('hidden'), 2800);
 }
 
 // ─── Action zone ──────────────────────────────────────────────────────────────
@@ -664,15 +929,42 @@ function updateActionZone() {
   if (!zone) return;
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
   const partner = state.players.find(p => p.id !== state.myId);
+  const pending = state.pendingAsk;
+
+  if (pending?.phase === 'respond') {
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🎭</span> Pick <strong>Give</strong>, <strong>GFY</strong>, or <strong>Bluff</strong></p>`;
+    return;
+  }
+  if (pending?.phase === 'waiting_bullshit') {
+    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">🐂</span> They decide: accept or bullshit…</p>`;
+    return;
+  }
+  if (pending?.phase === 'resolve') {
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🐂</span> <strong>Accept</strong> = draw from pond · <strong>Bullshit</strong> = call the lie (wrong = you draw 4)</p>`;
+    return;
+  }
+  if (pending?.phase === 'waiting_target') {
+    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> Waiting for their answer…</p>`;
+    return;
+  }
+  if (state.pendingBookPowerup) {
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">📚</span> Pick your book bonus below</p>`;
+    return;
+  }
+  if (state.luckyReward) {
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🍀</span> Pick your lucky reward below</p>`;
+    return;
+  }
 
   if (!isMyTurn) {
     const current = state.players.find(p => p.id === state.gameState?.currentTurnPlayerId);
     zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> ${current?.name ?? 'Partner'} is picking a card to ask for…</p>`;
     return;
   }
+  if (_askFlowBlocksPlay()) return;
   if (!state.selectedCard) {
-    zone.innerHTML = `<p class="action-guide"><span class="action-guide-icon">①</span> Pick a card from your hand below</p>
-      <p class="action-guide action-guide--sub"><span class="action-guide-icon">②</span> Swipe it ↑ to <strong>${partner?.name ?? 'them'}</strong> or the pond</p>`;
+    zone.innerHTML = `<p class="action-guide"><span class="action-guide-icon">①</span> Pick a card · swipe ↑ to ask</p>
+      <p class="action-guide action-guide--sub"><span class="action-guide-icon">②</span> Use pills above for Steal / Kick Door / 2× (once each)</p>`;
     return;
   }
   if (!state.selectedTarget) {
@@ -688,7 +980,7 @@ function updateActionZone() {
 }
 
 function sendAsk() {
-  if (!state.selectedCard || !state.selectedTarget) return;
+  if (!state.selectedCard || !state.selectedTarget || _askFlowBlocksPlay()) return;
   playCardSlide();
   haptic('medium');
   API.send({ type: 'ask', rank: state.selectedCard.rank, targetId: state.selectedTarget.id });
@@ -860,6 +1152,19 @@ function showActionBanner(action) {
 
   if (action.type === 'got') {
     text = `${fromP?.name ?? '?'} got ${action.count} "${sName}" from ${toP?.name ?? '?'} — turn continues!`;
+  } else if (action.type === 'ask_pending') {
+    text = `${fromP?.name ?? '?'} asked ${toP?.name ?? '?'} for "${sName}"…`;
+  } else if (action.type === 'gfy_claim') {
+    text = `${fromP?.name ?? '?'}: "Go Fuck Yourself!" on "${sName}" — ${toP?.name ?? '?'} can accept or call bullshit.`;
+    playGFY();
+  } else if (action.type === 'bullshit_caught' || action.type === 'bullshit_wrong') {
+    showBullshitOverlay(action);
+    return;
+  } else if (action.type === 'steal') {
+    text = `${fromP?.name ?? '?'} stole a card from ${toP?.name ?? '?'}.`;
+    if (action.targetId === state.myId) showBanner('🃏 A card was stolen from your hand.');
+  } else if (action.type === 'chaos') {
+    text = `⚡ ${action.title} — ${action.text}`;
   } else if (action.type === 'gfy') {
     const lucky = action.continueTurn;
     text = lucky
@@ -1083,7 +1388,8 @@ function showBartenderTranscript(line) {
   const overlay = $('bartender-transcript');
   const textEl = $('bartender-transcript-line');
   if (!overlay || !textEl) return;
-  textEl.textContent = line;
+  const one = (line ?? '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+/)[0] ?? '';
+  textEl.textContent = one.length > 140 ? `${one.slice(0, 137)}…` : one;
   overlay.classList.remove('hidden');
   haptic('light');
   if (gsapReady()) {
@@ -1164,7 +1470,9 @@ function _processAction(session, action, players) {
       playerName: fromP?.name,
       summary: action.continueTurn
         ? `${fromP?.name ?? '?'} lucky pond draw`
-        : `${fromP?.name ?? '?'} GFY miss`
+        : action.bluffSucceeded
+          ? `${fromP?.name ?? '?'} ate a bluff GFY`
+          : `${fromP?.name ?? '?'} GFY miss`
     });
     if (!action.continueTurn && session.pondTax && action.fromId === state.myId) {
       showDrinkAssignedModal([{
@@ -1174,10 +1482,21 @@ function _processAction(session, action, players) {
         toastFor: 'Bartender'
       }]);
     }
+  } else if (action.type === 'bullshit_caught') {
+    recordEvent(session, {
+      type: 'bullshit',
+      playerName: fromP?.name,
+      summary: `${fromP?.name ?? '?'} caught ${players?.find(p => p.id === action.targetId)?.name ?? 'them'} lying`
+    });
+  } else if (action.type === 'bullshit_wrong') {
+    recordEvent(session, {
+      type: 'bullshit',
+      playerName: fromP?.name,
+      summary: `${fromP?.name ?? '?'} wrong bullshit call — draws 4`
+    });
   }
 
-  const chaos = maybeTriggerChaos(session);
-  if (chaos) showChaosBanner(chaos);
+  // Chaos events run on the server
 }
 
 // ─── WebSocket event routing ──────────────────────────────────────────────────
@@ -1218,6 +1537,12 @@ function wireHandlers() {
     state.playerStats = {};
     state.session = createSessionState();
     state._shownPendingDrinkKeys = new Set();
+    state._missionShown = false;
+    state._missionDoneShown = false;
+    state._lastChaosSig = null;
+    state._cardTaxShown = false;
+    state.pendingBookPowerup = null;
+    state.luckyReward = null;
     _lastCommentedActionSig = null;
     _lastProcessedActionSig = null;
     _aiCooldownUntil = 0;
@@ -1230,6 +1555,11 @@ function wireHandlers() {
     state.players = msg.players;
     state.gameState = msg.gameState;
     state.pendingDrinks = msg.pendingDrinks;
+    state.pendingAsk = msg.gameState.pendingAsk ?? null;
+    state.myPowers = msg.gameState.myPowers ?? null;
+    state.pendingBookPowerup = msg.gameState.pendingBookPowerup ?? null;
+    state.luckyReward = msg.gameState.luckyReward ?? null;
+    if (msg.gameState.peekReveal) state.peekReveal = msg.gameState.peekReveal;
     if (msg.pendingDrinks?.length) showDrinkAssignedModal(msg.pendingDrinks);
 
     updateGameHud();
@@ -1238,8 +1568,26 @@ function wireHandlers() {
       renderHand();
       renderPartnerZone();
       renderMyBooks();
+      renderAskFlowUI();
+      renderRewardPanels();
+      renderPeekBanner();
+      showMissionIntro();
+      checkMissionComplete();
       updateActionZone();
       updatePartnerHints();
+    }
+
+    if (msg.gameState.lastChaos) {
+      const cs = JSON.stringify(msg.gameState.lastChaos);
+      if (cs !== state._lastChaosSig) {
+        state._lastChaosSig = cs;
+        showBanner(`⚡ ${msg.gameState.lastChaos.title} — ${msg.gameState.lastChaos.text}`);
+      }
+    }
+
+    if (msg.gameState.cardTax && !state._cardTaxShown) {
+      state._cardTaxShown = true;
+      showBanner('💸 Card Tax — next GFY miss draws 2');
     }
 
     if (msg.gameState.lastAction) {
@@ -1252,23 +1600,38 @@ function wireHandlers() {
         showActionBanner(action);
       }
 
-      if (sig !== _lastCommentedActionSig && action.type === 'gfy' && action.fromId === state.myId) {
-        _lastCommentedActionSig = sig;
-        const mode = action.continueTurn ? 'lucky' : 'gfy';
-        const stats = state.playerStats[state.myId] ?? {};
-        const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
-        const streakInfo = !action.continueTurn && (stats.consecutiveMisses ?? 0) > 1
-          ? `${stats.consecutiveMisses} misses in a row tonight`
-          : action.continueTurn && (stats.luckyDraws ?? 0) > 1
-            ? `Lucky draw number ${stats.luckyDraws} tonight`
-            : null;
-        setTimeout(() => triggerBartender(mode, {
-          playerName: myName,
-          scenario:   SCENARIOS.find(s => s.rank === action.rank)?.name,
-          profile:    getProfile(),
-          streakInfo,
-          otherPlayer: state.players.find(p => p.id === action.targetId)?.name ?? _partnerName(state.myId)
-        }), 3700);
+      if (sig !== _lastCommentedActionSig) {
+        if (action.type === 'gfy' && action.fromId === state.myId) {
+          _lastCommentedActionSig = sig;
+          const mode = action.continueTurn ? 'lucky' : (action.bluffSucceeded ? 'bluff_win' : 'gfy');
+          const stats = state.playerStats[state.myId] ?? {};
+          const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
+          const streakInfo = !action.continueTurn && (stats.consecutiveMisses ?? 0) > 1
+            ? `${stats.consecutiveMisses} misses in a row tonight`
+            : action.continueTurn && (stats.luckyDraws ?? 0) > 1
+              ? `Lucky draw number ${stats.luckyDraws} tonight`
+              : null;
+          setTimeout(() => triggerBartender(mode, {
+            playerName: myName,
+            scenario:   SCENARIOS.find(s => s.rank === action.rank)?.name,
+            profile:    getProfile(),
+            streakInfo,
+            otherPlayer: state.players.find(p => p.id === action.targetId)?.name ?? _partnerName(state.myId)
+          }), 3700);
+        } else if (
+          (action.type === 'bullshit_caught' || action.type === 'bullshit_wrong')
+          && (action.fromId === state.myId || action.targetId === state.myId)
+        ) {
+          _lastCommentedActionSig = sig;
+          const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
+          setTimeout(() => triggerBartender('bullshit', {
+            playerName: myName,
+            scenario: _rankLabel(action.rank),
+            profile: getProfile(),
+            streakInfo: action.type === 'bullshit_caught' ? 'caught a liar' : 'wrong bullshit call',
+            otherPlayer: state.players.find(p => p.id === (action.fromId === state.myId ? action.targetId : action.fromId))?.name
+          }), 3200);
+        }
       }
     }
   });
@@ -1394,6 +1757,9 @@ function wireUI() {
   $('btn-drink-log')?.addEventListener('click', () => {
     $('bac-panel-container')?.classList.toggle('hidden');
   });
+
+  $('btn-accept-gfy')?.addEventListener('click', () => sendResolveAsk('accept'));
+  $('btn-call-bullshit')?.addEventListener('click', () => sendResolveAsk('bullshit'));
 
   $('screen-toast')?.addEventListener('click', () => { if (state.screen === 'toast') showScreen('game'); });
 

@@ -25,7 +25,14 @@ function _otherFromContext(playersContext, currentName) {
   return null;
 }
 
-async function nvidiaChat(model, messages, maxTokens = 100) {
+function oneLine(text) {
+  if (!text) return '';
+  const flat = text.replace(/\s+/g, ' ').trim();
+  const cut = flat.split(/(?<=[.!?])\s+/)[0] ?? flat;
+  return cut.length > 120 ? `${cut.slice(0, 117)}…` : cut;
+}
+
+async function nvidiaChat(model, messages, maxTokens = 55) {
   const res = await fetch(`${NVIDIA_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -64,10 +71,10 @@ export function createApp() {
 
     try {
       const userPrompt = buildPrompt(mode, { playerName, scenario, profile, playersContext, gameContext, streakInfo, otherPlayer, sessionMemory });
-      const line = await nvidiaChat(HOST_MODEL, [
+      const line = oneLine(await nvidiaChat(HOST_MODEL, [
         { role: 'system', content: BARTENDER_PERSONA },
         { role: 'user', content: userPrompt }
-      ], 150);
+      ], 55));
       res.json({ line });
     } catch {
       res.json({ line: offlineLine(mode, profile, _otherFromContext(playersContext, playerName)) });

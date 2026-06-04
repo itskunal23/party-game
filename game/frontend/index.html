@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="/css/game-theatre.css">
   <link rel="stylesheet" href="/css/gfy-board.css">
   <link rel="stylesheet" href="/css/book-celebration.css">
+  <link rel="stylesheet" href="/css/ask-flow.css">
 
   <!-- GSAP -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
@@ -296,7 +297,7 @@
 
     <ul id="lobby-player-list"></ul>
 
-    <p class="lobby-rules">Shuffle · deal 5 cards each · ask for matches · collect sets of 4 · draw from the pond on a miss</p>
+    <p class="lobby-rules">Ask · bluff · call bullshit · collect sets of 4 · special moves once per game</p>
 
     <p class="lobby-waiting" id="lobby-waiting">Waiting for your partner… (2 phones, same room)</p>
 
@@ -333,6 +334,18 @@
 
     <!-- Action banner -->
     <div id="action-banner" class="hidden"></div>
+
+    <!-- Special moves (steal / double / kick door — coming online next) -->
+    <div id="special-moves-bar" class="special-moves-bar hidden" aria-label="Special moves"></div>
+
+    <!-- Bullshit decision when opponent claims GFY -->
+    <div id="bullshit-bar" class="bullshit-bar hidden" role="toolbar" aria-label="Accept or call bullshit">
+      <p class="bullshit-bar-label" id="bullshit-bar-label"></p>
+      <div class="bullshit-bar-actions">
+        <button type="button" class="move-pill move-pill--accept" id="btn-accept-gfy">Accept GFY</button>
+        <button type="button" class="move-pill move-pill--bullshit" id="btn-call-bullshit">🐂 Bullshit</button>
+      </div>
+    </div>
 
     <!-- Your hand (horizontal row — swipe sideways if you have many) -->
     <div id="hand-zone"></div>
@@ -392,6 +405,31 @@
   <div id="gfy-overlay" class="hidden">
     <div class="gfy-text">GO FUCK<br>YOURSELF</div>
     <div class="gfy-sub" id="gfy-sub"></div>
+  </div>
+
+  <!-- Target responds: give / GFY / bluff -->
+  <div id="ask-response-panel" class="ask-response-panel hidden" role="dialog" aria-modal="true">
+    <div class="ask-response-sheet">
+      <p class="ask-response-title" id="ask-response-title"></p>
+      <div class="ask-response-actions" id="ask-response-actions"></div>
+    </div>
+  </div>
+
+  <!-- Book bonus or lucky reward pick -->
+  <div id="reward-panel" class="ask-response-panel hidden" role="dialog" aria-modal="true">
+    <div class="ask-response-sheet">
+      <p class="ask-response-title" id="reward-panel-title"></p>
+      <div class="ask-response-actions" id="reward-panel-actions"></div>
+    </div>
+  </div>
+
+  <!-- Bullshit caught / wrong -->
+  <div id="bullshit-overlay" class="hidden" role="alert">
+    <div class="bullshit-overlay-inner">
+      <div class="bullshit-overlay-emoji" id="bullshit-overlay-emoji">🐂</div>
+      <h2 class="bullshit-overlay-title" id="bullshit-overlay-title">BULLSHIT</h2>
+      <p class="bullshit-overlay-sub" id="bullshit-overlay-sub"></p>
+    </div>
   </div>
 
   <!-- Achievement + chaos overlays -->

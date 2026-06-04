@@ -45,13 +45,15 @@ LIMITS ARE SACRED:
 - DO NOT REFERENCE / OFF LIMITS = hard red lines. Never joke those topics.
 
 RESPONSE RULES:
-- 1-2 sentences MAX. Punchy. Swear every response.
-- Use player names. Reference partner when it reinforces dom/sub — not rivalry.
-- Cinema ref: optional but when used, name the title AND say why ("because you just…, this is [Title] energy when…"). Wrong ref is worse than no ref.
-- Reference SESSION MEMORY when provided — connect tonight's arc (misses, books, chaos events, achievements). Sound like you watched the whole session, not isolated lines.
+- EXACTLY ONE short sentence. Max 20 words. Never a paragraph.
+- Punchy. Swear once. Use a name when you have one.
+- Optional: one movie/show name + three-word "because" — skip if it doesn't fit.
+- Reference session memory in at most five words.
 - Brutal funny, never real trauma.`;
 
-const REFERENCE_PROMPT = `REFERENCE RULE FOR THIS LINE: Pick at most ONE movie/show. It must match the moment's lane (see CINEMA LANES in persona). Say why you picked it — "because [what they just did] is [specific plot beat] from [Title]". Prefer their mediaFaves if it fits. No random drops.`;
+const REFERENCE_PROMPT = `One sentence, max 20 words. Optional one titled ref with a short because.`;
+
+const LINE_SUFFIX = `\n\nReply with ONE sentence only. Max 20 words. No line breaks.`;
 
 const COUPLE_BLOCK = `\n\n${COUPLE_CONTEXT}`;
 
@@ -104,62 +106,52 @@ export function buildPrompt(mode, { playerName, scenario, profile, playersContex
   const dynamicBlock = `\n\nDYNAMIC FOR THIS LINE: ${dynamic}`;
 
   if (mode === 'book') {
-    return `${COUPLE_BLOCK}${dynamicBlock}${memoryBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
-
-${playerName} completed the 4-card set "${scenario}".${partnerLine}
-${REFERENCE_PROMPT} Book close = Delhi Crime puzzle complete OR Dhurandhar power flex if Kunal — explain why that title fits THIS set. Dom/sub rules. 1-2 sentences.`;
+    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}
+${playerName} just completed set "${scenario}".${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'gfy') {
-    const from = otherPlayer ? `asked ${otherPlayer}` : 'asked someone';
-    return `${COUPLE_BLOCK}${dynamicBlock}${memoryBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
-
-${playerName} ${from} for cards, got Go Fuck Yourself, drew from the deck, missed.${partnerLine}
-${REFERENCE_PROMPT} GFY miss: Paatal Lok if slow grind/patience; Gangs of Wasseypur if petty GFY loop; Dhootha if cruel tease — say WHY. Kunal stays dom even on miss (Pushpa "jukega nahi"). Never emasculate Kunal. 1-2 sentences.`;
+    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}
+${playerName} asked for cards, got GFY, missed the pond.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'lucky') {
-    const from = otherPlayer ? `asked ${otherPlayer}` : 'asked someone';
-    return `${COUPLE_BLOCK}${dynamicBlock}${memoryBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
-
-${playerName} ${from}, got GFY'd, then drew exactly what they needed.${partnerLine}
-${REFERENCE_PROMPT} Lucky pond: Farzi counterfeit OR Scam 1992 hustle — because luck shouldn't have worked but did. Say why. Dom/sub. 1-2 sentences.`;
+    return `${COUPLE_BLOCK}${ctx}${streakBlock}${memoryBlock}
+${playerName} got GFY'd then lucked the exact card from the pond.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'steal') {
-    return `${COUPLE_BLOCK}${dynamicBlock}${memoryBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}
+${playerName} stole a random card from ${otherPlayer ?? 'someone'}.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+  }
 
-${playerName} raided ${otherPlayer ?? "someone"}'s hand.${partnerLine}
-${REFERENCE_PROMPT} Steal/heist: Mirzapur turf grab OR Paatal Lok evidence snatch — because they took cards, not random. Dom/sub. 1-2 sentences.`;
+  if (mode === 'bullshit' || mode === 'bluff_win') {
+    const vibe = streakInfo?.includes('caught') ? 'caught a liar' : streakInfo?.includes('wrong') ? 'wrong bullshit call' : 'bluff drama';
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}
+${playerName} — ${vibe} on "${scenario}".${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'game_over') {
-    return `${COUPLE_BLOCK}${dynamicBlock}${memoryBlock}${ctx}${allPlayersBlock}
-
-Game over. ${playerName} ${scenario ?? 'survived the chaos'}.${partnerLine}
-Closing toast: same team walked out filthy — ${REFERENCE_PROMPT} Finale: Sacred Games roll credits OR Family Man survived the double life — because the session ended, explain why. No couple war. 1-2 sentences.`;
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}
+Game over. ${playerName} ${scenario ?? 'won'}.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'roast') {
-    return `${COUPLE_BLOCK}${dynamicBlock}${memoryBlock}${ctx}${profileBlock}${allPlayersBlock}${streakBlock}
-
-${playerName} hit the Bartender button.${partnerLine}
-Destroy with questionnaire specifics. ${REFERENCE_PROMPT} Bad Boy of Bollywood if exposing partnerRoast; prefer their mediaFaves if the roast topic matches that show's lane. Dom/sub. 1-2 sentences.`;
+    return `${COUPLE_BLOCK}${profileBlock}${memoryBlock}
+Roast ${playerName} using their questionnaire filth.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'question') {
-    return `${COUPLE_BLOCK}${dynamicBlock}${memoryBlock}${ctx}${profileBlock}${allPlayersBlock}
-
-Ask ${playerName} a filthy question about "${scenario}" tied to their kinks. ${REFERENCE_PROMPT} Dom/sub aware. 1-2 sentences.`;
+    return `${COUPLE_BLOCK}${profileBlock}
+One filthy question for ${playerName} about "${scenario}".${LINE_SUFFIX}`;
   }
 
   if (mode === 'dare') {
-    return `${COUPLE_BLOCK}${dynamicBlock}${memoryBlock}${ctx}${profileBlock}${allPlayersBlock}
-
-Dare for ${playerName} about "${scenario}" — weaponize kinks. ${otherPlayer ? `${otherPlayer} watching.` : ''} ${REFERENCE_PROMPT} Dom/sub framing. 1-2 sentences.`;
+    return `${COUPLE_BLOCK}${profileBlock}
+One dare for ${playerName} about "${scenario}".${LINE_SUFFIX}`;
   }
 
-  return `${COUPLE_BLOCK}${dynamicBlock}${memoryBlock}${ctx}${allPlayersBlock}\n\nChaotic filth about what just happened. Dom/sub rules. ${REFERENCE_PROMPT} 1-2 sentences. Swear.`;
+  return `${COUPLE_BLOCK}${ctx}${memoryBlock}\nRoast what just happened.${LINE_SUFFIX}`;
 }
 
 function _formatProfile(p) {
@@ -241,6 +233,19 @@ const OFFLINE = {
       "Petty theft because Mirzapur small play — Mukhtar energy unchanged on his end.",
     ],
     default: ["Cards stolen because Delhi Crime — procedural snatch, bhenchod."],
+  },
+  bullshit: {
+    default: [
+      "BULLSHIT — because Dhootha gaslit the whole room and got caught with the cards, saala.",
+      "Called it because Scam 1992 audit — liar draws four, absolute cinema.",
+      "Wrong call because Paatal Lok — Hathiram believed the wrong file. Four cards, bhenchod.",
+    ],
+  },
+  bluff_win: {
+    default: [
+      "Bluff landed because Farzi — fake GFY, real cards hidden. Mind games, dom energy.",
+      "They ate the GFY because Mirzapur — you lied straight-faced and they folded.",
+    ],
   },
   game_over: [
     "Roll credits because Paatal Lok outro — same filthy team, case closed.",
