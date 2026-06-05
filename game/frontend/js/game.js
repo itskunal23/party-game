@@ -120,6 +120,102 @@ export function dealHands(deck, cardsEach, playerCount) {
   return hands;
 }
 
+function _handRankCounts(hand) {
+  const counts = {};
+  for (const c of hand) counts[c.rank] = (counts[c.rank] ?? 0) + 1;
+  return counts;
+}
+
+function _hasPairOrBetter(hand) {
+  return Object.values(_handRankCounts(hand)).some(n => n >= 2);
+}
+
+/**
+ * Smart 2-player deal — 70–80% overlap pool, guaranteed pair/triple each.
+ * Falls back to standard dealing for non-2-player games.
+ * @param {number} overlapRatio 0.7–0.85 (default 0.75)
+ */
+export function smartDealHands(deck, cardsEach, playerCount, overlapRatio = 0.75) {
+  if (playerCount !== 2) return dealHands(deck, cardsEach, playerCount);
+
+  const byRank = new Map();
+  for (const card of deck) {
+    if (!byRank.has(card.rank)) byRank.set(card.rank, []);
+    byRank.get(card.rank).push(card);
+  }
+
+  const ranks = [...byRank.keys()].sort(() => Math.random() - 0.5);
+  const h0 = [], h1 = [];
+  const usedIds = new Set();
+
+  const sharedTarget = Math.max(3, Math.round(cardsEach * overlapRatio));
+  const sharedRankCount = Math.min(3, Math.max(2, Math.ceil(sharedTarget / 2)));
+  const splitPatterns = [
+    [2, 2], [2, 1], [1, 2], [3, 1], [1, 3], [2, 2], [2, 1]
+  ];
+
+  const sharedRanks = ranks.slice(0, sharedRankCount);
+  sharedRanks.forEach((rank, idx) => {
+    const pool = byRank.get(rank) ?? [];
+    let [p0n, p1n] = splitPatterns[idx % splitPatterns.length];
+    const cap0 = cardsEach - h0.length;
+    const cap1 = cardsEach - h1.length;
+    p0n = Math.min(p0n, cap0, pool.length);
+    p1n = Math.min(p1n, cap1, pool.length - p0n);
+    if (p0n + p1n < 2 && pool.length >= 2) {
+      p0n = Math.min(1, cap0);
+      p1n = Math.min(1, cap1);
+    }
+    let pi = 0;
+    for (let i = 0; i < p0n && pi < pool.length; i++, pi++) {
+      h0.push(pool[pi]);
+      usedIds.add(pool[pi].id);
+    }
+    for (let i = 0; i < p1n && pi < pool.length; i++, pi++) {
+      h1.push(pool[pi]);
+      usedIds.add(pool[pi].id);
+    }
+  });
+
+  // Unique filler — ~20–30% of hand
+  let ri = sharedRankCount;
+  while ((h0.length < cardsEach || h1.length < cardsEach) && ri < ranks.length) {
+    const pool = (byRank.get(ranks[ri++]) ?? []).filter(c => !usedIds.has(c.id));
+    if (!pool.length) continue;
+    if (h0.length < cardsEach) {
+      h0.push(pool[0]);
+      usedIds.add(pool[0].id);
+    }
+    if (h1.length < cardsEach && pool.length > 1) {
+      h1.push(pool[1]);
+      usedIds.add(pool[1].id);
+    } else if (h1.length < cardsEach) {
+      const extra = pool.find(c => !usedIds.has(c.id));
+      if (extra) { h1.push(extra); usedIds.add(extra.id); }
+    }
+  }
+
+  // Guarantee pair or triple — steal one more from a shared rank if needed
+  for (const rank of sharedRanks) {
+    if (_hasPairOrBetter(h0) && _hasPairOrBetter(h1)) break;
+    const pool = (byRank.get(rank) ?? []).filter(c => !usedIds.has(c.id));
+    if (!pool.length) continue;
+    if (!_hasPairOrBetter(h0) && h0.length < cardsEach) {
+      h0.push(pool[0]);
+      usedIds.add(pool[0].id);
+    } else if (!_hasPairOrBetter(h1) && h1.length < cardsEach) {
+      h1.push(pool[0]);
+      usedIds.add(pool[0].id);
+    }
+  }
+
+  const remaining = deck.filter(c => !usedIds.has(c.id)).sort(() => Math.random() - 0.5);
+  deck.length = 0;
+  remaining.forEach(c => deck.push(c));
+
+  return [h0, h1];
+}
+
 export function validateAsk(hand, rank) {
   return hand.some(c => c.rank === rank);
 }

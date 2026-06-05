@@ -173,6 +173,11 @@ ${playerName} had 3 of "${scenario}" and drew from the pond — wrong card. One 
 Chaos event triggered: "${scenario}". React to the chaos, not the players.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
+  if (mode === 'house_refill') {
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
+${playerName} ended a turn with almost no cards — the house refilled them from the pond. ${scenario ?? 'They got cooked.'} Roast the dead hand and the mercy cards.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+  }
+
   if (mode === 'bluff_landed') {
     return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
 ${playerName} bluffed — said "Go Fuck Yourself" but secretly held the cards — and ${otherPlayer ?? 'partner'} believed them. Bluff landed clean.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
@@ -362,6 +367,18 @@ const OFFLINE = {
   dare: [
     "Mirzapur intensity — apna dirtiest kink chip aloud bolo. Dom/sub eyes on you. Go.",
   ],
+  house_refill: {
+    default: [
+      "Bhai haath khali tha, house ne pond se cards refill kar diye. You're getting absolutely cooked — have some fucking cards.",
+      "Table mercy round — almost no cards, pond bailed you out. Mirzapur mein bhi itni sympathy nahi milti. Go Fuck Yourself later.",
+    ],
+    kunal: [
+      "Kunal bhai, dom table pe haath khali — house refill. Pond ne pity cards diye. Still running the room, but embarrassing frame.",
+    ],
+    nandini: [
+      "Nandini bhai, cards khatam, house ne refill maara. Kunal still upstairs — tum pond se charity le rahi ho. Character development.",
+    ],
+  },
 };
 
 function _speakerKey(name) {

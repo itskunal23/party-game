@@ -1,4 +1,4 @@
-import { createDeck, shuffle, dealHands, checkForBook, TOTAL_SETS } from '../frontend/js/game.js';
+import { createDeck, shuffle, dealHands, smartDealHands, checkForBook, TOTAL_SETS } from '../frontend/js/game.js';
 import { createBot, scheduleBotTurn, scheduleBotAskResponse, scheduleBotBullshitResolve } from './bot.js';
 import { estimateBAC } from './bac.js';
 import {
@@ -9,8 +9,9 @@ import {
 } from './game-powers.js';
 import {
   initStalemateTrackers, postTurnHooks, recordBookComplete, updateComebackTokens,
-  getNearBookRank, drawFromDeckWeighted
+  smartDrawFromPond
 } from './stalemate.js';
+import { initPacing, recordPacingEvent, getDealOverlap, buildPacingSnapshot } from './pacing.js';
 
 const ROOM_CHARS = 'ACDEFGHJKLMNPQRSTUVWXYZ';
 const ROOM_EXPIRY_MS = 6 * 60 * 60 * 1000;
@@ -89,7 +90,9 @@ function buildSnapshot(room, forPlayerId) {
         turnsWithoutBook: state.turnsWithoutBook ?? 0,
         heatLevel: state.heatLevel ?? 0
       },
-      bonusDraw: state.bonusDraw ?? null
+      bonusDraw: state.bonusDraw ?? null,
+      houseRefill: state.houseRefill ?? null,
+      pacing: buildPacingSnapshot(state)
     },
     pendingDrinks: state.pendingDrinks.get(forPlayerId) ?? [],
     hostMessage: null
@@ -173,6 +176,7 @@ function resolveBooks(room, playerId) {
     }
 
     recordBookComplete(state);
+    recordPacingEvent(state, 'book');
     updateComebackTokens(room);
 
     broadcast(room, {
@@ -185,7 +189,20 @@ function resolveBooks(room, playerId) {
   return newBooks;
 }
 
-// Card economy: apply bonus draws at turn start to prevent dead states
+// ── House refill: player ends turn with < 3 cards → draw back to 5 ──────────
+function _checkHouseRefill(room, endingPlayerId) {
+  const state = room.gameState;
+  if (state.deck.length === 0) return;
+  const player = room.players.get(endingPlayerId);
+  if (!player || player.hand.length >= 3) return;
+  const needed = Math.min(5 - player.hand.length, state.deck.length);
+  if (needed <= 0) return;
+  smartDrawFromPond(room, player, needed);
+  player.turnsWithoutReceiving = 0;
+  state.houseRefill = { playerId: endingPlayerId, count: needed, toast: 'house_refill' };
+}
+
+// ── Turn-start bonus draws: dead-hand rescue + low-hand protection ─────────
 function _tryBonusDraws(room) {
   const state = room.gameState;
   if (state.deck.length === 0) return;
@@ -195,13 +212,11 @@ function _tryBonusDraws(room) {
   state.bonusDraw = null;
 
   if ((player.turnsWithoutReceiving ?? 0) >= 5) {
-    // Dead-hand rescue: 5 turns with no card received → draw 2
-    drawFromDeck(state, player, 2);
+    smartDrawFromPond(room, player, 2);
     player.turnsWithoutReceiving = 0;
     state.bonusDraw = { playerId: player.id, reason: 'dead_hand', count: 2 };
   } else if (player.hand.length <= 2) {
-    // Low hand protection: ≤2 cards → draw 1 before turn starts
-    drawFromDeck(state, player, 1);
+    smartDrawFromPond(room, player, 1);
     state.bonusDraw = { playerId: player.id, reason: 'low_hand', count: 1 };
   }
 }
@@ -209,14 +224,20 @@ function _tryBonusDraws(room) {
 function advanceTurn(room) {
   const state = room.gameState;
   const currentId = state.currentTurnPlayerId;
+
   if (state.pendingExtraTurn === currentId) {
     state.pendingExtraTurn = null;
+    state.houseRefill = null;
     _tryBonusDraws(room);
     broadcastSnapshots(room);
     const keeper = room.players.get(currentId);
     if (keeper?.isBot) scheduleBotTurn(room, keeper, i => handleIntent(room, i));
     return;
   }
+
+  // House refill — player whose turn is ending gets refilled if < 3 cards
+  state.houseRefill = null;
+  _checkHouseRefill(room, currentId);
 
   const playerIds = [...room.players.keys()];
   const idx = playerIds.indexOf(currentId);
@@ -227,6 +248,7 @@ function advanceTurn(room) {
     return;
   }
 
+  // Turn-start bonuses for the NEXT player
   _tryBonusDraws(room);
   broadcastSnapshots(room);
 
@@ -264,7 +286,10 @@ function _clearAskModifiers(powers) {
 
 function _postTurnEffects(room, outcomeKind) {
   const recovery = postTurnHooks(room, outcomeKind);
-  if (!recovery) maybeServerChaos(room);
+  if (!recovery) {
+    const chaos = maybeServerChaos(room);
+    if (chaos) recordPacingEvent(room.gameState, 'chaos');
+  }
   return recovery;
 }
 
@@ -337,8 +362,7 @@ function _executeGfyDraw(room, askerId, targetId, rank, extra = {}) {
   if (droughtActive) state.pondDrought = false;
 
   if (state.deck.length > 0 && !droughtActive) {
-    const nearRank = getNearBookRank(asker.hand);
-    const drawn = drawFromDeckWeighted(state, asker, drawCount, nearRank);
+    const drawn = smartDrawFromPond(room, asker, drawCount);
     drawnCard = drawn[0] ?? null;
     continueTurn = !isDouble && drawn.some(c => c.rank === rank);
   }
@@ -465,6 +489,7 @@ export function handleIntent(room, intent) {
       doubleOrNothing: useDouble
     };
     state.lastAction = { type: 'ask_pending', fromId, targetId, rank, wildAsk: useWild, kickDoor: useWild, double: useDouble };
+    recordPacingEvent(state, 'ask');
     broadcastSnapshots(room);
 
     if (target.isBot) scheduleBotAskResponse(room, target, i => handleIntent(room, i));
@@ -511,6 +536,7 @@ export function handleIntent(room, intent) {
       pending.isBluff = true;
       const powers = getPlayerPowers(state, fromId);
       if (powers) powers.bluffsAttempted = (powers.bluffsAttempted ?? 0) + 1;
+      recordPacingEvent(state, 'bluff');
       state.lastAction = {
         type: 'gfy_claim',
         fromId,
@@ -540,6 +566,7 @@ export function handleIntent(room, intent) {
     }
 
     if (action === 'bullshit') {
+      recordPacingEvent(state, 'bullshit');
       if (pending.isBluff) {
         _applyBullshitPenalty(room, pending.targetId, fromId, pending.rank, true);
       } else {
@@ -785,7 +812,8 @@ export function startGame(roomCode, requesterId) {
   const playerCount = room.players.size;
   const cardsEach = playerCount >= 5 ? 4 : 5;
   const deck = shuffle(createDeck());
-  const hands = dealHands(deck, cardsEach, playerCount);
+  initPacing(room.gameState);
+  const hands = smartDealHands(deck, cardsEach, playerCount, getDealOverlap(room.gameState));
 
   const playerIds = [...room.players.keys()];
   playerIds.forEach((id, i) => {
@@ -813,6 +841,7 @@ export function startGame(roomCode, requesterId) {
   room.gameState.heatLevel = 0;
   room.gameState._lastHeatChaosAt = 0;
   room.gameState.bonusDraw = null;
+  room.gameState.houseRefill = null;
   room.gameState.firstBookWinner = null;
 
   // Reset per-player tracking on new game
@@ -850,6 +879,11 @@ export function logDrink(roomCode, playerId, drink) {
 
   player.drinks = player.drinks ?? [];
   player.drinks.push({ ...drink, timestamp: Date.now() });
+
+  const pending = room.gameState.pendingDrinks.get(playerId) ?? [];
+  if (pending.length) {
+    room.gameState.pendingDrinks.set(playerId, []);
+  }
 
   const result = estimateBAC({
     weight: player.profile.weight ?? 70,

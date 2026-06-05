@@ -1,6 +1,7 @@
 /** Detect GFY deadlocks and inject recovery events server-side */
 
 import { drawFromDeck, getPlayerPowers, rankCounts } from './game-powers.js';
+import { getDrawBias, maybeAdjustPacing, recordPacingEvent } from './pacing.js';
 
 export const RECOVERY_EVENTS = [
   { id: 'pond_surge', title: 'Pond Surge', text: 'Everyone draws 2 cards.', emoji: '🌊' },
@@ -213,9 +214,46 @@ export function getNearBookRank(hand) {
   return null;
 }
 
-export function drawFromDeckWeighted(state, player, count, preferredRank) {
+export function getPairRank(hand) {
+  const counts = rankCounts(hand);
+  let best = null;
+  let bestN = 0;
+  for (const [rank, n] of Object.entries(counts)) {
+    if (n >= 2 && n > bestN) {
+      best = rank;
+      bestN = n;
+    }
+  }
+  return best;
+}
+
+/** Best rank to bias toward when table is stuck (heat >= 3). */
+export function getAcceleratedBookRank(room, player) {
+  const state = room.gameState;
+  const heat = state.heatLevel ?? 0;
+  if (heat < 3) return getNearBookRank(player.hand) ?? getPairRank(player.hand);
+
+  const near = getNearBookRank(player.hand);
+  if (near) return near;
+
+  const pair = getPairRank(player.hand);
+  if (pair) return pair;
+
+  const overlap = ranksInBothHands(room);
+  if (overlap.length) {
+    const counts = rankCounts(player.hand);
+    for (const r of overlap) {
+      if ((counts[r] ?? 0) >= 2) return r;
+    }
+    return overlap[0];
+  }
+
+  return getPairRank(player.hand);
+}
+
+export function drawFromDeckWeighted(state, player, count, preferredRank, biasOverride) {
   const drawn = [];
-  const bias = 0.38;
+  const bias = biasOverride ?? getDrawBias(state);
   for (let i = 0; i < count && state.deck.length > 0; i++) {
     if (preferredRank && Math.random() < bias) {
       const idx = state.deck.findIndex(c => c.rank === preferredRank);
@@ -228,6 +266,13 @@ export function drawFromDeckWeighted(state, player, count, preferredRank) {
   }
   if (drawn.length) player.hand.push(...drawn);
   return drawn;
+}
+
+/** Pond draw with pacing + heat-aware book acceleration. */
+export function smartDrawFromPond(room, player, count) {
+  const state = room.gameState;
+  const preferred = getAcceleratedBookRank(room, player);
+  return drawFromDeckWeighted(state, player, count, preferred, getDrawBias(state));
 }
 
 export function updateComebackTokens(room) {
@@ -279,9 +324,11 @@ export function postTurnHooks(room, outcomeKind) {
 
   const recovery = checkAndApplyRecovery(room);
   if (recovery) {
-    // Major recovery resets heat completely
+    recordPacingEvent(room.gameState, 'recovery');
     room.gameState.heatLevel = 0;
     room.gameState._lastHeatChaosAt = 0;
   }
+
+  maybeAdjustPacing(room);
   return recovery;
 }

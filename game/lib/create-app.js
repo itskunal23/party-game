@@ -4,6 +4,7 @@ import { dirname, join } from 'path';
 import { BARTENDER_PERSONA, buildPrompt, offlineLine, resolveBartenderReference } from './prompts.js';
 import { estimateBAC } from './bac.js';
 import { getRoomCount } from './rooms.js';
+import { detectDrinkFromImage } from './vision.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = join(__dirname, '../frontend');
@@ -127,26 +128,8 @@ export function createApp() {
   app.post('/api/detect-drink', async (req, res) => {
     const { image } = req.body;
     if (!image) return res.status(400).json({ error: 'no image' });
-
-    if (!AI_KEY) {
-      return res.json({ drink: 'Unknown drink', estimatedAbv: 5, estimatedOz: 12 });
-    }
-
-    try {
-      const content = await nvidiaChat(VISION_MODEL, [
-        {
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image}` } },
-            { type: 'text', text: 'Identify this drink. Reply with JSON only: {"drink":"name","estimatedAbv":number,"estimatedOz":number}' }
-          ]
-        }
-      ], 60);
-      const parsed = JSON.parse(content.match(/\{[\s\S]*\}/)?.[0] ?? '{}');
-      res.json({ drink: parsed.drink ?? 'Drink', estimatedAbv: parsed.estimatedAbv ?? 5, estimatedOz: parsed.estimatedOz ?? 12 });
-    } catch {
-      res.json({ drink: 'Drink', estimatedAbv: 5, estimatedOz: 12 });
-    }
+    const result = await detectDrinkFromImage(image, { retries: 2, timeoutMs: 12_000 });
+    res.json(result);
   });
 
   app.post('/api/movie-suggest', async (req, res) => {

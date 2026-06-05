@@ -19,6 +19,10 @@ Everything you can do in **GFY**, what **Bhenchod Bartender** does, and how **dr
    - Liar caught → they draw **4**.
    - Wrong call → **you** draw **2** (asymmetric — wrong calls hurt but don't wreck you).
 
+**Drinks:** Tap **🍺** → camera opens immediately → snap → vision detects → Confirm. Fallback picker if vision fails.
+
+**Pacing:** Opening hands share ~75% rank overlap (instant asks). House refill when you drop below 3 cards (back to 5). Pond draws bias toward near-books when heat ≥ 3.
+
 **Once per game (tap the pills on your turn):**
 | Move | What it does |
 |------|----------------|

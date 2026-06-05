@@ -1,6 +1,6 @@
 import * as API from './api.js';
 import { initMobile, acquireWakeLock, releaseWakeLock, haptic } from './mobile.js';
-import { initBac } from './bac.js';
+import { initBac, openDrinkScan } from './bac.js';
 import { SCENARIOS, TOTAL_SETS } from './game.js';
 import { apiPost } from './api.js';
 import {
@@ -34,7 +34,8 @@ let state = {
   myPowers: null,
   _shownPendingDrinkKeys: new Set(),
   gameHeat: 0,
-  _lastBonusDrawSig: null
+  _lastBonusDrawSig: null,
+  _lastHouseRefillSig: null
 };
 
 let _lastCommentedActionSig = null;
@@ -1403,6 +1404,7 @@ function showChooseLoserDrink(msg) {
       </div>
       <input class="drink-choice-custom" id="drink-choice-custom" type="text" placeholder="Or name their poison…" maxlength="40" autocomplete="off">
       <div class="drink-choice-actions">
+        <button type="button" class="drink-choice-scan" id="drink-choice-scan">📷 Scan their drink</button>
         <button type="button" class="drink-choice-assign" id="drink-choice-assign">Assign drink</button>
       </div>
     </div>`;
@@ -1418,6 +1420,19 @@ function showChooseLoserDrink(msg) {
       haptic('light');
     });
   });
+
+  $('drink-choice-scan')?.addEventListener('click', () => {
+    panel.classList.add('hidden');
+    openDrinkScan(drink => {
+      API.send({
+        type: 'chooseDrink',
+        loserId: loser.id,
+        drinkLabel: drink.label ?? 'Drink',
+        scenario: msg.scenario
+      });
+      haptic('heavy');
+    });
+  }, { once: true });
 
   $('drink-choice-assign')?.addEventListener('click', () => {
     const custom = $('drink-choice-custom')?.value?.trim();
@@ -1450,7 +1465,7 @@ function showDrinkAssignedModal(pending) {
       <div class="drink-assigned-drink">${latest.drinkLabel}</div>
       <p style="font-size:13px;color:var(--text-secondary)">For set: ${latest.scenario.slice(0, 40)}…</p>
       <div class="drink-assigned-actions">
-        <button type="button" class="drink-choice-assign" id="drink-log-now">🍺 Log it now</button>
+        <button type="button" class="drink-choice-assign" id="drink-log-now">📷 Scan & log drink</button>
         <button type="button" class="drink-assigned-skip" id="drink-skip">Skip for now</button>
       </div>
     </div>`;
@@ -1459,8 +1474,8 @@ function showDrinkAssignedModal(pending) {
 
   $('drink-log-now')?.addEventListener('click', () => {
     modal.classList.add('hidden');
-    $('bac-panel-container')?.classList.remove('hidden');
-    haptic('light');
+    haptic('medium');
+    openDrinkScan();
   }, { once: true });
 
   $('drink-skip')?.addEventListener('click', () => {
@@ -2226,6 +2241,7 @@ function wireHandlers() {
     _prevHandRanks = new Set();
     state.gameHeat = 0;
     state._lastBonusDrawSig = null;
+    state._lastHouseRefillSig = null;
     showScreen('game');
     runSetupSequence(msg);
   });
@@ -2284,6 +2300,21 @@ function wireHandlers() {
     }
     if (newHeat >= 5 && (state.gameHeat ?? 0) < 5) { haptic('heavy'); playHeatWarning(); }
     state.gameHeat = newHeat;
+
+    // ── House refill (< 3 cards at turn end → draw to 5) ─────────────────────
+    if (msg.gameState.houseRefill && !_dealingLocked) {
+      const hr = msg.gameState.houseRefill;
+      const hrSig = `${hr.playerId}-${hr.count}`;
+      if (hrSig !== state._lastHouseRefillSig) {
+        state._lastHouseRefillSig = hrSig;
+        if (hr.playerId === state.myId) {
+          showHouseRefillMoment(hr.count);
+        } else {
+          const who = state.players.find(p => p.id === hr.playerId)?.name ?? 'They';
+          showBanner(`🍸 ${who} got a house refill (${hr.count} cards)`);
+        }
+      }
+    }
 
     // ── Bonus draws (low hand / dead-hand rescue) ─────────────────────────────
     if (msg.gameState.bonusDraw && !_dealingLocked) {
@@ -2455,6 +2486,16 @@ function wireHandlers() {
 
   API.onMessage('gameOver', msg => showResults(msg));
   API.onMessage('error', msg => showBanner(msg.message, true));
+
+  API.onMessage('bacUpdate', msg => {
+    if (msg.playerId !== state.myId) return;
+    const fill = document.getElementById('bac-fill');
+    const label = document.getElementById('bac-label');
+    if (!fill || msg.level == null) return;
+    fill.style.height = `${msg.level * 10}%`;
+    fill.className = `bac-bar-fill level-${msg.level <= 3 ? 'low' : msg.level <= 6 ? 'mid' : msg.level <= 8 ? 'high' : 'danger'}`;
+    if (label) label.textContent = msg.level;
+  });
 }
 
 // ─── UI event wiring ──────────────────────────────────────────────────────────
@@ -2554,7 +2595,8 @@ function wireUI() {
   });
 
   $('btn-drink-log')?.addEventListener('click', () => {
-    $('bac-panel-container')?.classList.toggle('hidden');
+    haptic('medium');
+    openDrinkScan();
   });
 
   $('btn-accept-gfy')?.addEventListener('click', () => sendResolveAsk('accept'));
@@ -2590,6 +2632,35 @@ function showRecoveryBanner(event) {
     banner.classList.add('hidden');
     banner.classList.remove('banner--recovery');
   }, 4200);
+}
+
+function showHouseRefillMoment(count) {
+  const banner = $('action-banner');
+  if (banner) {
+    banner.innerHTML = `🍸 <strong>House Refill</strong> — ${count} card${count > 1 ? 's' : ''} from the pond`;
+    banner.classList.remove('hidden', 'banner--error');
+    banner.classList.add('banner--recovery');
+    setTimeout(() => {
+      banner.classList.add('hidden');
+      banner.classList.remove('banner--recovery');
+    }, 3800);
+  }
+  haptic('heavy');
+  const hz = $('hand-zone');
+  if (gsapReady() && hz) {
+    gsap.fromTo(hz,
+      { y: 0, filter: 'brightness(1)' },
+      { y: -6, filter: 'brightness(1.25)', duration: 0.12, yoyo: true, repeat: 5,
+        ease: 'power2.out', onComplete: () => gsap.set(hz, { y: 0, filter: 'none' }) }
+    );
+  }
+  const me = state.players.find(p => p.id === state.myId)?.name ?? 'Player';
+  setTimeout(() => triggerBartender('house_refill', {
+    playerName: me,
+    scenario: `house refill — drew ${count} cards — absolutely cooked`,
+    profile: getProfile(),
+    otherPlayer: _partnerName(state.myId)
+  }), 600);
 }
 
 function showBanner(text, isError = false) {
