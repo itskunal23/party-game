@@ -1,4 +1,4 @@
-const CACHE = 'gfy-v35';
+const CACHE = 'gfy-v36';
 
 const STATIC_SHELL = [
   '/',

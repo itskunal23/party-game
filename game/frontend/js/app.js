@@ -912,6 +912,123 @@ function sendResolveAsk(action) {
   $('bullshit-bar')?.classList.add('hidden');
 }
 
+const SPECIAL_MOVE_HELP = {
+  steal: {
+    title: 'Steal',
+    body: '<strong>Right now:</strong> grab 1 random card from your partner\'s hand. They won\'t see which one.<br><br><strong>Cost:</strong> uses your 1 steal token for this game (gone after). Your turn continues — you can still ask or play cards.',
+    confirm: 'Steal a card'
+  },
+  kick_door: {
+    title: 'Wild Ask',
+    arm: '<strong>Next ask only:</strong> you can request a rank you <em>don\'t</em> hold — tap your partner, then pick the rank.<br><br><strong>If they say Go Fuck Yourself:</strong> you draw from the pond; a miss costs <strong>2 cards</strong> (not 1).<br><br><strong>Cost:</strong> 1 Wild token when you make that ask.',
+    disarm: 'Wild Ask turned off. Next ask must be a rank you actually hold.',
+    confirm: 'Arm Wild Ask'
+  },
+  double: {
+    title: '2× (double or nothing)',
+    arm: '<strong>Next ask only:</strong> high risk on the Go Fuck Yourself path.<br><br><strong>If they give you the cards:</strong> you keep your turn.<br><strong>If they Go Fuck Yourself and you luck the pond:</strong> you get the card but <em>turn ends</em>.<br><strong>If you miss the pond:</strong> draw <strong>2</strong> and your turn ends.<br><br><strong>Cost:</strong> one use per game.',
+    disarm: '2× turned off — normal ask rules.',
+    confirm: 'Arm 2×'
+  }
+};
+
+function dismissMoveTipPanel() {
+  $('move-tip-panel')?.classList.add('hidden');
+}
+
+function showMoveTipPanel({ title, body, confirmLabel, onConfirm }) {
+  const panel = $('move-tip-panel');
+  const titleEl = $('move-tip-title');
+  const bodyEl = $('move-tip-body');
+  const actions = $('move-tip-actions');
+  if (!panel || !titleEl || !bodyEl || !actions) return;
+
+  titleEl.textContent = title;
+  bodyEl.innerHTML = body;
+  actions.innerHTML = `
+    <button type="button" class="ask-response-btn ask-response-btn--give" id="move-tip-confirm">${confirmLabel}</button>
+    <button type="button" class="ask-response-btn ask-response-btn--bluff" id="move-tip-cancel">Not now</button>`;
+
+  $('move-tip-confirm')?.addEventListener('click', () => {
+    dismissMoveTipPanel();
+    onConfirm?.();
+    haptic('medium');
+  }, { once: true });
+  $('move-tip-cancel')?.addEventListener('click', () => {
+    dismissMoveTipPanel();
+    haptic('light');
+  }, { once: true });
+
+  panel.classList.remove('hidden');
+}
+
+function _executeSpecialMove(move) {
+  if (move === 'steal') {
+    const opp = state.players.find(p => p.id !== state.myId);
+    if (!opp) return;
+    API.send({ type: 'useMove', move: 'steal', targetId: opp.id });
+    return;
+  }
+  API.send({ type: 'activateMove', move });
+}
+
+function _handleSpecialMoveClick(move) {
+  const powers = state.myPowers;
+  if (!powers) return;
+
+  if (move === 'steal') {
+    const opp = state.players.find(p => p.id !== state.myId);
+    if (!opp) return;
+    const help = SPECIAL_MOVE_HELP.steal;
+    showMoveTipPanel({
+      title: help.title,
+      body: help.body,
+      confirmLabel: help.confirm,
+      onConfirm: () => _executeSpecialMove('steal')
+    });
+    return;
+  }
+
+  if (move === 'kick_door') {
+    const help = SPECIAL_MOVE_HELP.kick_door;
+    if (powers.activeKickDoor) {
+      _executeSpecialMove('kick_door');
+      showBanner(help.disarm);
+      haptic('light');
+      return;
+    }
+    showMoveTipPanel({
+      title: help.title,
+      body: help.arm,
+      confirmLabel: help.confirm,
+      onConfirm: () => {
+        _executeSpecialMove('kick_door');
+        showBanner('Wild Ask armed — tap partner, then pick a rank you don\'t hold.');
+      }
+    });
+    return;
+  }
+
+  if (move === 'double') {
+    const help = SPECIAL_MOVE_HELP.double;
+    if (powers.activeDouble) {
+      _executeSpecialMove('double');
+      showBanner(help.disarm);
+      haptic('light');
+      return;
+    }
+    showMoveTipPanel({
+      title: help.title,
+      body: help.arm,
+      confirmLabel: help.confirm,
+      onConfirm: () => {
+        _executeSpecialMove('double');
+        showBanner('2× armed — next ask is double or nothing on Go Fuck Yourself.');
+      }
+    });
+  }
+}
+
 function renderSpecialMovesBar() {
   const bar = $('special-moves-bar');
   if (!bar) return;
@@ -951,14 +1068,15 @@ function renderSpecialMovesBar() {
   bar.querySelectorAll('[data-move]').forEach(btn => {
     btn.addEventListener('click', () => {
       const move = btn.dataset.move;
-      if (move === 'steal') {
-        const opp = state.players.find(p => p.id !== state.myId);
-        if (opp) API.send({ type: 'useMove', move: 'steal', targetId: opp.id });
-      } else if (move === 'comeback') {
+      if (move === 'comeback') {
         const opp = state.players.find(p => p.id !== state.myId);
         if (opp) showComebackPicker(opp);
-      } else {
-        API.send({ type: 'activateMove', move });
+        haptic('light');
+        return;
+      }
+      if (move === 'steal' || move === 'kick_door' || move === 'double') {
+        _handleSpecialMoveClick(move);
+        return;
       }
       haptic('light');
     });
@@ -1207,6 +1325,16 @@ function updateGameChrome() {
   if (_askFlowBlocksPlay()) return;
 
   if (!state.selectedCard) {
+    if (state.myPowers?.activeKickDoor && (state.myPowers.wildAskToken ?? 0) > 0) {
+      _setGameStatus('Wild armed — tap partner to pick a rank', 'accent');
+      _setActionCta('Pick a card or Wild Ask', { disabled: true });
+      return;
+    }
+    if (state.myPowers?.activeDouble && !state.myPowers.doubleUsed) {
+      _setGameStatus('2× armed — next ask is high stakes', 'accent');
+      _setActionCta('Pick a card', { disabled: true });
+      return;
+    }
     _setGameStatus(heat >= 4 ? heatSuffix.trim().replace(/^ · /, '') : '', 'wait', { visible: heat >= 4 });
     _setActionCta('Pick a card', { disabled: true });
     return;

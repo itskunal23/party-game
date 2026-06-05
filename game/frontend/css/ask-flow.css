@@ -225,6 +225,19 @@
   box-shadow: 0 0 16px rgba(255, 214, 0, 0.25);
 }
 
+.move-tip-body {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+  text-align: left;
+}
+
+.move-tip-body strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
 /* Bullshit caught overlay */
 #bullshit-overlay {
   position: fixed;
