@@ -195,15 +195,14 @@ Completed sets appear in **your books row** at the top of your hand area (emoji 
 
 ## Game board — what you can tap and swipe
 
-Phone-first layout: **stats → partner strip → books → pond → status → hand → primary button → tab bar**.
+Phone-first **bar-table** layout: minimal stats → connected playfield (opponent · pond · book emojis · compact moves) → dominant hand → primary CTA → floating glass dock.
 
 ### Top bar (stats only)
 
 | Element | Meaning |
 |---------|---------|
-| 🌊 **Deck** | Cards left in the draw pile |
-| 📦 | Sets completed globally (`0/13`) |
-| Room code | Current room (tap to copy from lobby; shown here in play) |
+| 🌊 **41** | Cards left in the draw pile (tap for room code) |
+| 📦 | Sets completed globally (`1/13`) |
 | 📚 | **Your** completed set count |
 
 ### Partner strip
@@ -459,7 +458,7 @@ Use between rounds or when waiting for partner's turn.
 | Tip | Why |
 |-----|-----|
 | **Add to Home Screen** (iOS Safari) | Full-screen, fewer tap bugs |
-| Hard refresh after deploy | Service worker cache (`gfy-v31`) |
+| Hard refresh after deploy | Service worker cache (`gfy-v32`) |
 | Same HTTPS origin on both phones | WebSocket room sync |
 | Wake lock | Acquired during game so screen stays on |
 | Tap bartender transcript to dismiss | No auto-hide by design |

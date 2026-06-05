@@ -360,34 +360,43 @@
       <button type="button" class="game-install-banner-dismiss" id="btn-dismiss-install-banner" aria-label="Dismiss">✕</button>
     </div>
 
-    <!-- Stats only — no tutorial copy -->
-    <div class="game-topbar">
-      <span class="game-topbar-item" id="deck-count">🌊 Deck —</span>
-      <span class="game-topbar-item" id="sets-progress">📦 0/13</span>
-      <span class="game-topbar-item" id="room-code-display"></span>
-      <span class="game-topbar-item" id="my-score">📚 0</span>
+    <div class="game-topbar game-topbar--minimal">
+      <button type="button" class="game-stat-chip" id="deck-count" aria-label="Deck count. Tap for room code.">🌊 —</button>
+      <span class="game-stat-chip" id="sets-progress">📦 0/13</span>
+      <span class="game-stat-chip" id="my-score">📚 0</span>
+      <span id="room-code-display" class="visually-hidden" aria-hidden="true"></span>
     </div>
 
-    <div id="partner-zone" class="partner-zone"></div>
+    <div class="game-playfield">
+      <div class="game-board-atmosphere" aria-hidden="true">
+        <div class="game-board-vignette"></div>
+        <div class="game-board-spotlight"></div>
+        <div class="game-board-opponent-glow"></div>
+      </div>
 
-    <div id="my-books-row" class="my-books-row"></div>
+      <div id="partner-zone" class="partner-zone"></div>
+      <div class="board-divider" aria-hidden="true"></div>
 
-    <div id="game-table" class="game-table">
-      <div id="drag-drop-lane" class="drag-drop-lane hidden" aria-hidden="true"></div>
-      <div id="center-zone">
-        <div class="draw-pile draw-pile--drop" id="draw-pile-el">
-          <div class="draw-pile-label">POND</div>
-          <div class="draw-pile-sublabel" id="pond-sublabel">Ask</div>
-          <div class="pond-ask-hint" id="pond-ask-hint">Swipe card here</div>
+      <div id="game-table" class="game-table">
+        <div id="drag-drop-lane" class="drag-drop-lane hidden" aria-hidden="true"></div>
+        <div id="center-zone">
+          <div class="draw-pile draw-pile--drop" id="draw-pile-el">
+            <div class="draw-pile-label">POND</div>
+            <div class="draw-pile-sublabel" id="pond-sublabel">Ask</div>
+            <div class="pond-ask-hint" id="pond-ask-hint">Swipe card here</div>
+          </div>
         </div>
       </div>
+
+      <div class="board-divider board-divider--soft" aria-hidden="true"></div>
+
+      <div id="my-books-row" class="my-books-row"></div>
+      <div id="special-moves-bar" class="special-moves-bar hidden" aria-label="Special moves"></div>
+
+      <p id="game-status" class="game-status-float game-status--neutral" aria-live="polite">Waiting…</p>
     </div>
 
-    <p id="game-status" class="game-status game-status--neutral" aria-live="polite">Waiting for game…</p>
-
     <div id="action-banner" class="hidden"></div>
-
-    <div id="special-moves-bar" class="special-moves-bar hidden" aria-label="Special moves"></div>
 
     <div id="bullshit-bar" class="bullshit-bar hidden" role="toolbar" aria-label="Accept or call bullshit">
       <p class="bullshit-bar-label" id="bullshit-bar-label"></p>
@@ -403,20 +412,18 @@
       <button type="button" id="action-cta" class="action-cta" disabled>Pick a card</button>
     </div>
 
-    <!-- Bottom toolbar -->
-    <div class="game-toolbar">
-      <button type="button" class="toolbar-btn" id="btn-drink-log">
-        <span class="toolbar-icon">🍺</span>
-        <span>Drinks</span>
-      </button>
-      <button type="button" class="toolbar-btn" id="btn-side-games">
-        <span class="toolbar-icon">🎲</span>
-        <span>Side Games</span>
-      </button>
-      <button type="button" class="toolbar-btn toolbar-btn--muted" id="btn-ai-host">
-        <span class="toolbar-icon">🍸</span>
-        <span>Roast</span>
-      </button>
+    <div class="game-dock-wrap">
+      <nav class="game-dock" aria-label="Game tools">
+        <button type="button" class="game-dock-btn" id="btn-drink-log" aria-label="Drinks">
+          <span class="game-dock-icon">🍺</span>
+        </button>
+        <button type="button" class="game-dock-btn" id="btn-side-games" aria-label="Side games">
+          <span class="game-dock-icon">🎲</span>
+        </button>
+        <button type="button" class="game-dock-btn game-dock-btn--muted" id="btn-ai-host" aria-label="Bartender roast">
+          <span class="game-dock-icon">🍸</span>
+        </button>
+      </nav>
     </div>
 
     <!-- BAC panel (slide up) -->

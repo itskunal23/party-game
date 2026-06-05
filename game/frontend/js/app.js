@@ -157,7 +157,7 @@ function updateGameHud() {
   const me = state.players.find(p => p.id === state.myId);
   const gs = state.gameState;
   if ($('my-score')) $('my-score').textContent = `📚 ${me?.books?.length ?? 0}`;
-  if ($('deck-count')) $('deck-count').textContent = `🌊 Deck ${gs?.deckCount ?? '—'}`;
+  if ($('deck-count')) $('deck-count').textContent = `🌊 ${gs?.deckCount ?? '—'}`;
   if ($('sets-progress')) {
     const done = gs?.completedSets ?? 0;
     const total = gs?.totalSets ?? TOTAL_SETS;
@@ -190,12 +190,12 @@ function renderMyBooks() {
   const me = state.players.find(p => p.id === state.myId);
   const books = me?.books ?? [];
   if (!books.length) {
-    row.innerHTML = '<p class="books-empty">No sets yet — complete 4 of a kind</p>';
+    row.innerHTML = '<p class="books-empty">No sets yet</p>';
     return;
   }
   row.innerHTML = books.map(scenario => {
     const meta = scenarioMeta(scenario);
-    return `<div class="book-set"><span class="book-set-emoji">${meta.emoji}</span><span class="book-set-name">${scenario}</span></div>`;
+    return `<div class="book-set" title="${scenario.replace(/"/g, '&quot;')}"><span class="book-set-emoji">${meta.emoji}</span><span class="book-set-name">${scenario}</span></div>`;
   }).join('');
 }
 
@@ -323,17 +323,18 @@ function scenarioMeta(scenario) {
   return SCENARIOS.find(s => s.name === scenario) ?? { emoji: '🃏', dare: '' };
 }
 
-function cardHook(scenario, max = 28) {
+/** Short title for hand faces — icon + ~3 words (Hearthstone-style). */
+function cardDisplayTitle(scenario) {
   if (!scenario) return '';
-  const s = scenario.trim();
-  const dot = s.indexOf('.');
-  const short = dot > 8 && dot < max ? s.slice(0, dot) : s;
-  return short.length > max ? `${short.slice(0, max - 1)}…` : short;
+  const name = String(scenario).trim();
+  const words = name.split(/\s+/);
+  const short = words.length > 3 ? words.slice(0, 3).join(' ') : name;
+  return short.length > 24 ? `${short.slice(0, 22)}…` : short;
 }
 
 function renderCard(card, interactive = false, { compact = false } = {}) {
   const s = scenarioMeta(card.scenario);
-  const label = compact ? cardHook(card.scenario) : card.scenario;
+  const label = compact ? cardDisplayTitle(card.scenario) : card.scenario;
   const div = document.createElement('div');
   div.className = 'card card--face';
   div.dataset.rank = card.rank;
@@ -528,6 +529,11 @@ function _onCardTap(wrapper, card) {
   wrapper.style.zIndex = '50';
   _clearHandTransform(wrapper);
   Sfx.playCardSelect();
+  if (gsapReady()) {
+    gsap.fromTo(wrapper,
+      { y: 0, scale: 1 },
+      { y: -32, scale: 1.08, duration: 0.28, ease: 'back.out(1.7)' });
+  }
 
   document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
   updateGameChrome();
@@ -908,16 +914,16 @@ function renderSpecialMovesBar() {
 
   const parts = [];
   if (powers.stealToken > 0) {
-    parts.push(`<button type="button" class="move-pill move-pill--steal" data-move="steal">Steal</button>`);
+    parts.push(`<button type="button" class="move-pill move-pill--steal" data-move="steal">⚡ Steal</button>`);
   }
   if ((powers.wildAskToken ?? 0) > 0) {
-    parts.push(`<button type="button" class="move-pill${powers.activeKickDoor ? ' move-pill--on' : ''}" data-move="kick_door">Wild Ask</button>`);
+    parts.push(`<button type="button" class="move-pill${powers.activeKickDoor ? ' move-pill--on' : ''}" data-move="kick_door">🎲 Wild</button>`);
   }
   if ((powers.comebackToken ?? 0) > 0) {
-    parts.push(`<button type="button" class="move-pill move-pill--comeback" data-move="comeback">Comeback</button>`);
+    parts.push(`<button type="button" class="move-pill move-pill--comeback" data-move="comeback">⚡ Comeback</button>`);
   }
   if (!powers.doubleUsed) {
-    parts.push(`<button type="button" class="move-pill${powers.activeDouble ? ' move-pill--on' : ''}" data-move="double">2× Ask</button>`);
+    parts.push(`<button type="button" class="move-pill${powers.activeDouble ? ' move-pill--on' : ''}" data-move="double">🔥 2×</button>`);
   }
   if (powers.luckyStacks > 0) {
     parts.push(`<span class="move-pill move-pill--disabled">${powers.luckyStacks}🍀</span>`);
@@ -1126,11 +1132,11 @@ function showBullshitOverlay(action) {
 }
 
 // ─── Game chrome — status pill + primary CTA ─────────────────────────────────
-function _setGameStatus(text, variant = 'neutral') {
+function _setGameStatus(text, variant = 'neutral', { visible = true } = {}) {
   const el = $('game-status');
   if (!el) return;
   el.textContent = text;
-  el.className = `game-status game-status--${variant}`;
+  el.className = `game-status-float game-status--${variant}${visible ? '' : ' game-status--hidden'}`;
 }
 
 function _setActionCta(label, { disabled = true, onClick = null } = {}) {
@@ -1188,7 +1194,7 @@ function updateGameChrome() {
   if (_askFlowBlocksPlay()) return;
 
   if (!state.selectedCard) {
-    _setGameStatus(`Your turn — pick a card${heatSuffix}`, 'accent');
+    _setGameStatus(`Pick a card →${heatSuffix}`, 'accent', { visible: true });
     _setActionCta('Pick a card', { disabled: true });
     return;
   }
@@ -1197,7 +1203,7 @@ function updateGameChrome() {
   const canAsk = !!partner;
 
   if (!state.selectedTarget && canAsk) {
-    _setGameStatus(`Throw at ${partnerName} or Pond`, 'accent');
+    _setGameStatus(`Tap ${partnerName} or swipe ↑`, 'accent', { visible: false });
     _setActionCta(`Ask ${partnerName}`, {
       disabled: false,
       onClick: () => {
@@ -1212,7 +1218,7 @@ function updateGameChrome() {
   }
 
   if (state.selectedTarget) {
-    _setGameStatus(`Ask ${state.selectedTarget.name}?`, 'accent');
+    _setGameStatus('', 'accent', { visible: false });
     _setActionCta(`Ask ${state.selectedTarget.name}`, {
       disabled: false,
       onClick: () => sendAsk()
@@ -1220,7 +1226,7 @@ function updateGameChrome() {
     return;
   }
 
-  _setGameStatus('Tap partner to ask', 'accent');
+  _setGameStatus('Tap partner to ask', 'accent', { visible: true });
   _setActionCta('Choose target', { disabled: true });
 }
 
@@ -2504,6 +2510,15 @@ function wireUI() {
     if (state.gameState?.currentTurnPlayerId !== state.myId || _askFlowBlocksPlay()) return;
     if (!state.selectedCard) return;
     _askOpponentWithSelectedCard();
+  });
+
+  $('deck-count')?.addEventListener('click', () => {
+    const code = state.roomCode ?? $('room-code-display')?.textContent?.trim();
+    if (code) {
+      navigator.clipboard?.writeText(code).catch(() => {});
+      showBanner(`Room ${code}`, false);
+      haptic('light');
+    }
   });
 
   $('btn-card-detail-close')?.addEventListener('click', closeCardDetailSheet);

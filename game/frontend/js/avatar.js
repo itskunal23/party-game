@@ -3,7 +3,7 @@
  * Cached in localStorage; moods: neutral | smug | angry | shocked | champion
  */
 
-const CACHE_KEY = 'gfy_avatar_cache_v1';
+const CACHE_KEY = 'gfy_avatar_cache_v2';
 const MOODS = ['neutral', 'smug', 'angry', 'shocked', 'champion'];
 
 const MEDIA_TRAITS = {
@@ -51,9 +51,37 @@ function _hash(str) {
   return Math.abs(h);
 }
 
+/** Named-player archetypes — illustrated portrait DNA from questionnaire vibes. */
+const NAME_ARCHETYPES = {
+  kunal: {
+    primary: 'brooklyn-nine-nine',
+    accent: '#0033A0',
+    hair: 'cap',
+    coat: 'uniform',
+    extra: 'badge',
+    skin: '#D4A574',
+  },
+  nandini: {
+    primary: 'barbie-charm-school',
+    accent: '#FF6EB4',
+    hair: 'bun',
+    coat: 'princess',
+    extra: 'crown',
+    skin: '#F5D0C5',
+  },
+};
+
 /** Build stable visual descriptor from profile. */
 export function buildAvatarDescriptor(profile) {
   const name = profile?.name ?? 'Player';
+  const low = name.toLowerCase();
+  for (const [key, arch] of Object.entries(NAME_ARCHETYPES)) {
+    if (low.includes(key)) {
+      const h = _hash(`${name}|${arch.primary}`);
+      return { name, ...arch, seed: h };
+    }
+  }
+
   const media = (profile?.mediaFaves ?? []).map(_franchiseId).filter(Boolean);
   const primary = media[0] ?? 'mirzapur';
   const secondary = media[1] ?? primary;
@@ -189,16 +217,19 @@ function _generateSvg(desc, mood) {
   const crown = mood === 'champion' ? _extraPath('crown', desc.accent) : '';
   const extra = desc.extra !== 'crown' ? _extraPath(desc.extra, desc.accent) : '';
 
+  const gradId = `glow-${desc.seed ?? 0}-${mood}`;
   return `<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" class="avatar-svg" role="img" aria-hidden="true">
   <defs>
-    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
-      <stop offset="0%" stop-color="${desc.accent}" stop-opacity="0.45"/>
+    <radialGradient id="${gradId}" cx="50%" cy="38%" r="55%">
+      <stop offset="0%" stop-color="${desc.accent}" stop-opacity="0.5"/>
       <stop offset="100%" stop-color="${desc.accent}" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <circle cx="50" cy="58" r="46" fill="url(#glow)"/>
+  <ellipse cx="50" cy="105" rx="34" ry="10" fill="#000" opacity="0.25"/>
+  <circle cx="50" cy="58" r="46" fill="url(#${gradId})"/>
   ${_coatPath(desc.coat, desc.accent)}
-  <circle cx="50" cy="48" r="22" fill="${desc.skin}"/>
+  <ellipse cx="50" cy="52" rx="24" ry="26" fill="${desc.skin}"/>
+  <ellipse cx="50" cy="68" rx="14" ry="8" fill="${desc.skin}" opacity="0.85"/>
   ${_hairPath(desc.hair, desc.accent)}
   ${face.brow}
   ${face.eyes}

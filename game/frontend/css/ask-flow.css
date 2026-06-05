@@ -151,12 +151,14 @@
   box-shadow: 0 0 24px rgba(255, 59, 48, 0.2);
 }
 
-/* Special moves scaffold (future: steal, double, kick door) */
+/* Special moves — compact glass pills (40% weight) */
 .special-moves-bar {
   flex-shrink: 0;
   display: flex;
-  gap: 8px;
-  padding: 0 var(--space-md) var(--space-xs);
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 2px 12px 4px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -164,6 +166,38 @@
 .special-moves-bar.hidden { display: none; }
 
 .special-moves-bar::-webkit-scrollbar { display: none; }
+
+.special-moves-bar .move-pill {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 100px;
+  flex: 0 0 auto;
+  max-width: none;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.78);
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.special-moves-bar .move-pill--on {
+  border-color: rgba(255, 214, 10, 0.45);
+  background: rgba(255, 214, 10, 0.12);
+  color: rgba(255, 214, 10, 0.95);
+}
+
+.special-moves-bar .move-pill--steal {
+  border-color: rgba(91, 141, 239, 0.3);
+  background: rgba(0, 51, 160, 0.18);
+}
+
+.special-moves-bar .move-pill--comeback {
+  border-color: rgba(255, 214, 10, 0.35);
+  background: rgba(255, 214, 10, 0.08);
+}
 
 .move-pill--disabled {
   opacity: 0.38;
