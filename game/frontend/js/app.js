@@ -1835,6 +1835,19 @@ const BARTENDER_PREVIEW_LINES = [
   "Table dead? Toxic relationship simulator. Go Fuck Yourself.",
 ];
 
+function _homeTraitChips(profile) {
+  const chips = [];
+  for (const k of (profile.kinks ?? []).slice(0, 2)) {
+    if (/public/i.test(k)) chips.push('Public risk');
+    else if (/cnc|rpe/i.test(k)) chips.push('CNC chaos');
+    else if (/drunk/i.test(k)) chips.push('Drunk chaos');
+    else if (/humil/i.test(k)) chips.push('Humiliation play');
+    else chips.push(k.split(/[\/·]/)[0].trim().slice(0, 18));
+  }
+  if (!chips.length) chips.push('Ready to play');
+  return chips.map(t => `<span class="home-trait-chip">${t}</span>`).join('');
+}
+
 function updateHomeForProfile(profile) {
   const greeting    = $('home-greeting');
   const nameForm    = $('home-name-form');
@@ -1842,21 +1855,19 @@ function updateHomeForProfile(profile) {
   const previewLine = $('bartender-preview-line');
   const nameEl      = $('home-greeting-name');
   const traitsEl    = $('home-greeting-traits');
+  const settingsBtn = $('btn-edit-profile');
 
   if (profile?.name) {
     greeting?.classList.remove('hidden');
     nameForm?.classList.add('hidden');
-    mountAvatar($('home-avatar'), profile, { size: 'lg', ring: true, mood: 'neutral', animate: true });
-    if (nameEl) nameEl.textContent = `Hey, ${profile.name}`;
-    if (traitsEl) {
-      const bits = [];
-      if (profile.kinks?.length) bits.push(profile.kinks.slice(0, 2).join(' · '));
-      if (profile.limits?.length) bits.push(`${profile.limits.length} hard limit${profile.limits.length !== 1 ? 's' : ''}`);
-      traitsEl.textContent = bits.join(' · ') || 'Filth file ready';
-    }
+    settingsBtn?.classList.remove('hidden');
+    mountAvatar($('home-avatar'), profile, { size: 'md', ring: true, mood: 'neutral', animate: false });
+    if (nameEl) nameEl.textContent = profile.name;
+    if (traitsEl) traitsEl.innerHTML = _homeTraitChips(profile);
     if (preview) preview.classList.remove('hidden');
     if (previewLine) {
-      previewLine.textContent = BARTENDER_PREVIEW_LINES[Math.floor(Math.random() * BARTENDER_PREVIEW_LINES.length)];
+      const line = BARTENDER_PREVIEW_LINES[Math.floor(Math.random() * BARTENDER_PREVIEW_LINES.length)];
+      previewLine.textContent = line;
     }
 
     // Show lifetime stats if the player has history
@@ -1875,6 +1886,7 @@ function updateHomeForProfile(profile) {
     greeting?.classList.add('hidden');
     nameForm?.classList.remove('hidden');
     preview?.classList.add('hidden');
+    settingsBtn?.classList.add('hidden');
   }
 }
 

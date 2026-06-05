@@ -250,86 +250,72 @@
     <div id="profile-wizard"></div>
   </div>
 
-  <!-- ── SCREEN: Home ───────────────────────────────────────────────────── -->
+  <!-- ── SCREEN: Home — play first, profile second ─────────────────────────── -->
   <div id="screen-home" class="screen hidden">
 
     <div class="home-party-bg" aria-hidden="true">
       <div class="home-party-lights"></div>
-      <span class="home-float-emoji home-float-emoji--1">🍸</span>
-      <span class="home-float-emoji home-float-emoji--2">🥃</span>
-      <span class="home-float-emoji home-float-emoji--3">🍺</span>
-      <div class="home-drink-bar">
-        <div class="home-cocktail home-cocktail--left">
-          <div class="home-glass home-glass--tall">
-            <div class="home-liquid"></div>
-            <div class="home-bubbles">
-              <span class="home-bubble"></span>
-              <span class="home-bubble"></span>
-              <span class="home-bubble"></span>
-            </div>
-          </div>
-        </div>
-        <div class="home-cocktail home-cocktail--mid">
-          <div class="home-shaker"></div>
-        </div>
-        <div class="home-cocktail home-cocktail--right">
-          <div class="home-glass home-glass--martini">
-            <div class="home-liquid"></div>
-            <div class="home-bubbles">
-              <span class="home-bubble"></span>
-              <span class="home-bubble"></span>
-              <span class="home-bubble"></span>
-              <span class="home-bubble"></span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <div class="home-hero">
-      <div class="home-logo">GFY</div>
-      <div class="home-wordmark">Go Fuck Yourself!</div>
-    </div>
-
-    <!-- Shown when profile exists -->
-    <div class="home-greeting hidden" id="home-greeting">
-      <div class="home-greeting-row">
-        <div id="home-avatar"></div>
+    <header class="home-header">
+      <div class="home-hero home-hero--compact">
+        <div class="home-logo">GFY</div>
+        <p class="home-tagline">The party game that remembers everything.</p>
       </div>
-      <div class="home-greeting-name" id="home-greeting-name"></div>
-      <div class="home-greeting-traits" id="home-greeting-traits"></div>
-      <div class="bartender-preview hidden" id="bartender-preview">
-        <span class="bartender-preview-icon">🍸</span>
-        <span class="bartender-preview-line" id="bartender-preview-line"></span>
-      </div>
-      <button class="home-edit-profile" id="btn-edit-profile">Edit Profile</button>
-    </div>
+      <button type="button" class="home-settings-btn hidden" id="btn-edit-profile" aria-label="Edit profile">Profile</button>
+    </header>
 
-    <!-- Shown when no profile -->
+    <p class="home-proof" aria-label="How you play">
+      <span>2 phones</span>
+      <span class="home-proof-dot">·</span>
+      <span>10–15 min</span>
+      <span class="home-proof-dot">·</span>
+      <span>Drinks optional</span>
+    </p>
+
     <div class="home-name-form hidden" id="home-name-form">
       <input id="input-name" type="text" placeholder="Your name" maxlength="20"
              autocomplete="off" autocorrect="off" spellcheck="false">
     </div>
 
-    <div class="home-actions">
-      <button class="action-card action-card--create" id="btn-create">
-        <span class="action-card-icon">🔥</span>
-        <span class="action-card-title">Start Chaos</span>
-        <span class="action-card-sub">Create a room · share the code with your partner</span>
+    <div class="home-actions home-actions--primary">
+      <button type="button" class="home-cta home-cta--start" id="btn-create">
+        <span class="home-cta-title">Start Chaos</span>
+        <span class="home-cta-sub">Create a room · get a code · send to your partner</span>
       </button>
 
-      <div class="action-card action-card--join">
-        <div class="action-card-join-top">
-          <span class="action-card-icon">🚪</span>
-          <span class="action-card-title">Join Chaos</span>
-        </div>
-        <div class="action-card-join-row">
-          <input id="input-code" type="text" placeholder="Room code" maxlength="4"
-                 autocomplete="off" autocorrect="off" spellcheck="false">
-          <button id="btn-join">Join</button>
+      <div class="home-cta home-cta--join">
+        <span class="home-cta-join-label">Join Chaos</span>
+        <div class="home-cta-join-row">
+          <input id="input-code" type="text" placeholder="Code" maxlength="4"
+                 autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text"
+                 aria-label="Room code">
+          <button type="button" id="btn-join">Join</button>
         </div>
       </div>
     </div>
+
+    <section class="home-profile-panel hidden" id="home-greeting" aria-label="Your profile">
+      <div class="home-bartender-wrap">
+        <div class="home-bartender-floats" aria-hidden="true">
+          <span class="home-float-orb home-float-orb--1"></span>
+          <span class="home-float-orb home-float-orb--2"></span>
+        </div>
+        <div class="bartender-speech hidden" id="bartender-preview">
+          <p class="bartender-speech-label">Bhenchod Bartender</p>
+          <blockquote class="bartender-speech-quote" id="bartender-preview-line"></blockquote>
+        </div>
+      </div>
+
+      <div class="home-player-row">
+        <div class="home-player-avatar" id="home-avatar"></div>
+        <div class="home-player-meta">
+          <div class="home-greeting-name" id="home-greeting-name"></div>
+          <div class="home-greeting-traits" id="home-greeting-traits"></div>
+          <p class="home-lifetime hidden" id="home-lifetime"></p>
+        </div>
+      </div>
+    </section>
 
   </div>
 
