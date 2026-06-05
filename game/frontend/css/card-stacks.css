@@ -2,7 +2,7 @@
 .hand-card-wrapper {
   position: relative;
   flex: 0 0 auto;
-  width: 132px;
+  width: 112px;
   touch-action: pan-x;
   user-select: none;
   cursor: grab;
@@ -35,13 +35,13 @@
 }
 
 .hand-card-wrapper--stacked {
-  width: 148px;
-  padding-left: 12px;
+  width: 124px;
+  padding-left: 10px;
 }
 
 .hand-card-wrapper.is-selected {
   animation: none;
-  transform: translateY(-40px) scale(1.08);
+  transform: translateY(-24px) scale(1.04);
   z-index: 50;
 }
 
@@ -87,14 +87,14 @@
 /* Duplicate copies sit behind the face card in the same slot */
 .hand-card-stack {
   position: relative;
-  width: 132px;
-  height: 192px;
+  width: 112px;
+  height: 164px;
 }
 
 .hand-card-stack__layer {
   position: absolute;
-  width: 132px;
-  height: 192px;
+  width: 112px;
+  height: 164px;
   border-radius: 20px;
   border: 1px solid rgba(160, 160, 160, 0.22);
   background: linear-gradient(160deg, #FFFEF8 0%, #F7F3EC 100%);
@@ -131,6 +131,12 @@
 }
 
 .hand-card-wrapper:active { cursor: grabbing; }
+
+#hand-zone .card {
+  width: 112px;
+  height: 164px;
+  border-radius: 16px;
+}
 
 /* ── Card base ─────────────────────────────────────────────────────────────── */
 .card {
@@ -195,7 +201,7 @@
 
 .card-name {
   font-family: -apple-system, system-ui, sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   color: #18182E;
   text-align: center;
@@ -205,8 +211,12 @@
   text-transform: none;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+#hand-zone .card-name {
+  -webkit-line-clamp: 2;
 }
 
 .card-dare {
@@ -224,8 +234,10 @@
 
 .card-count-badge {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  bottom: 4px;
+  left: 4px;
+  top: auto;
+  right: auto;
   background: var(--brand-blue);
   color: white;
   font-weight: 800;

@@ -150,34 +150,38 @@ async function runSetupSequence(msg) {
   renderPartnerZone();
   renderMyBooks();
   updateGameHud();
-  updateActionZone();
+  updateGameChrome();
 }
 
 function updateGameHud() {
   const me = state.players.find(p => p.id === state.myId);
   const gs = state.gameState;
   if ($('my-score')) $('my-score').textContent = `📚 ${me?.books?.length ?? 0}`;
-  if ($('deck-count')) $('deck-count').textContent = `🌊 ${gs?.deckCount ?? '—'}`;
+  if ($('deck-count')) $('deck-count').textContent = `🌊 Deck ${gs?.deckCount ?? '—'}`;
   if ($('sets-progress')) {
     const done = gs?.completedSets ?? 0;
     const total = gs?.totalSets ?? TOTAL_SETS;
     $('sets-progress').textContent = `📦 ${done}/${total}`;
   }
-  const pondCount = $('pond-count');
-  if (pondCount) pondCount.textContent = gs?.deckCount > 0 ? String(gs.deckCount) : '';
-
-  const hint = $('turn-hint');
-  const partner = state.players.find(p => p.id !== state.myId);
-  if (hint && gs?.phase === 'playing') {
-    const cur = state.players.find(p => p.id === gs.currentTurnPlayerId);
-    const isMe = gs.currentTurnPlayerId === state.myId;
-    hint.classList.remove('hidden');
-    hint.textContent = isMe
-      ? _askHint(partner?.name)
-      : `${cur?.name ?? '…'} is asking for a set…`;
-  } else if (hint) {
-    hint.classList.add('hidden');
+  const sub = $('pond-sublabel');
+  const pondHint = $('pond-ask-hint');
+  const isMyTurn = gs?.currentTurnPlayerId === state.myId;
+  if (sub) {
+    if (pendingDrawFromPond()) sub.textContent = 'Draw';
+    else if (isMyTurn && state.selectedCard) sub.textContent = 'Ask';
+    else sub.textContent = 'Pond';
   }
+  if (pondHint) {
+    pondHint.textContent = isMyTurn && state.selectedCard
+      ? 'Swipe card here'
+      : 'Draw or ask';
+  }
+  updateGameChrome();
+}
+
+function pendingDrawFromPond() {
+  const p = state.pendingAsk;
+  return p?.phase === 'resolve' && state.gameState?.currentTurnPlayerId === state.myId;
 }
 
 function renderMyBooks() {
@@ -186,7 +190,7 @@ function renderMyBooks() {
   const me = state.players.find(p => p.id === state.myId);
   const books = me?.books ?? [];
   if (!books.length) {
-    row.innerHTML = '<p class="books-empty">Completed sets appear here (4 of a kind)</p>';
+    row.innerHTML = '<p class="books-empty">No sets yet — complete 4 of a kind</p>';
     return;
   }
   row.innerHTML = books.map(scenario => {
@@ -314,20 +318,22 @@ function _isDesktopPointer() {
   return window.matchMedia('(pointer: fine)').matches;
 }
 
-function _askHint(partnerName) {
-  const who = partnerName ?? 'them';
-  return _isDesktopPointer()
-    ? `Your turn — pick a card`
-    : `Your turn — pick a card`;
-}
-
 // ─── Card rendering ───────────────────────────────────────────────────────────
 function scenarioMeta(scenario) {
   return SCENARIOS.find(s => s.name === scenario) ?? { emoji: '🃏', dare: '' };
 }
 
-function renderCard(card, interactive = false) {
+function cardHook(scenario, max = 28) {
+  if (!scenario) return '';
+  const s = scenario.trim();
+  const dot = s.indexOf('.');
+  const short = dot > 8 && dot < max ? s.slice(0, dot) : s;
+  return short.length > max ? `${short.slice(0, max - 1)}…` : short;
+}
+
+function renderCard(card, interactive = false, { compact = false } = {}) {
   const s = scenarioMeta(card.scenario);
+  const label = compact ? cardHook(card.scenario) : card.scenario;
   const div = document.createElement('div');
   div.className = 'card card--face';
   div.dataset.rank = card.rank;
@@ -335,10 +341,30 @@ function renderCard(card, interactive = false) {
   div.innerHTML = `
     <div class="card-rank">${card.rank}</div>
     <div class="card-emoji">${s.emoji}</div>
-    <div class="card-name">${card.scenario}</div>
+    <div class="card-name">${label}</div>
     <div class="card-dare">${s.dare}</div>`;
-  if (interactive) { div.tabIndex = 0; div.setAttribute('role', 'button'); div.setAttribute('aria-label', card.scenario); }
+  if (interactive) {
+    div.tabIndex = 0;
+    div.setAttribute('role', 'button');
+    div.setAttribute('aria-label', card.scenario);
+  }
   return div;
+}
+
+function openCardDetailSheet(card) {
+  const panel = $('card-detail-panel');
+  if (!panel || !card) return;
+  const s = scenarioMeta(card.scenario);
+  if ($('card-detail-rank')) $('card-detail-rank').textContent = card.rank;
+  if ($('card-detail-scenario')) $('card-detail-scenario').textContent = card.scenario;
+  if ($('card-detail-dare')) $('card-detail-dare').textContent = s.dare || '—';
+  if ($('card-detail-title')) $('card-detail-title').textContent = 'Card';
+  panel.classList.remove('hidden');
+  haptic('light');
+}
+
+function closeCardDetailSheet() {
+  $('card-detail-panel')?.classList.add('hidden');
 }
 
 function renderCardBack() {
@@ -365,7 +391,7 @@ function buildHandCardStack(card, count, interactive) {
     stack.appendChild(layer1);
   }
 
-  stack.appendChild(renderCard(card, interactive));
+  stack.appendChild(renderCard(card, interactive, { compact: true }));
 
   if (count > 1) {
     const badge = document.createElement('span');
@@ -454,7 +480,7 @@ function renderHand() {
     }
   }
 
-  updateActionZone();
+  updateGameChrome();
   if (n > 0) Sfx.playDeal();
 }
 
@@ -468,11 +494,7 @@ function _onCardTap(wrapper, card) {
   }
 
   if (state.selectedCard?.rank === card.rank) {
-    state.selectedCard = null;
-    wrapper.classList.remove('is-selected');
-    _clearHandTransform(wrapper);
-    updateActionZone();
-    updatePartnerHints();
+    openCardDetailSheet(card);
     return;
   }
 
@@ -508,7 +530,7 @@ function _onCardTap(wrapper, card) {
   Sfx.playCardSelect();
 
   document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
-  updateActionZone();
+  updateGameChrome();
   updatePartnerHints();
 }
 
@@ -524,6 +546,7 @@ function _onCardPointerDown(e, wrapper, card) {
 
 function _setDragMode(on) {
   $('screen-game')?.classList.toggle('game--dragging', on);
+  $('drag-drop-lane')?.classList.toggle('hidden', !on);
 }
 
 function _hitDropZone(cx, cy) {
@@ -572,7 +595,7 @@ function _onDragMove(e) {
 
   if (_drag.active) {
     e.preventDefault();
-    const baseY = -40;
+    const baseY = -24;
     _drag.wrapper.style.transform =
       `translate(${_drag.dx}px, ${baseY + _drag.dy}px) rotate(${_drag.dx * 0.08}deg) scale(1.1)`;
     _updateDropHover(t.clientX, t.clientY);
@@ -722,17 +745,14 @@ function renderPartnerZone() {
       stack.innerHTML = '<span class="partner-no-cards">No cards left</span>';
     }
 
-    const badge = isMyTurn ? 'THROW A CARD ↑' : (isActive ? '🎯 THEIR TURN' : 'WAITING');
     div.innerHTML = `
-      <span class="partner-drop-badge">${badge}</span>
       <div class="partner-drop-main">
         <div class="partner-avatar-col"></div>
-        <div class="partner-stack-slot"></div>
         <div class="partner-meta">
           <span class="partner-name">${p.name}</span>
-          <span class="partner-stats">🃏 ${p.cardCount} · 📚 ${p.books.length}</span>
-          <span class="partner-hint">${isMyTurn ? 'Swipe card ↑ or tap card → tap name' : (isActive ? 'Asking…' : 'Waiting…')}</span>
+          <span class="partner-stats">${p.cardCount} cards · ${p.books.length} books</span>
         </div>
+        <div class="partner-stack-slot"></div>
       </div>`;
     const avatarSlot = document.createElement('div');
     div.querySelector('.partner-avatar-col')?.appendChild(avatarSlot);
@@ -741,7 +761,7 @@ function renderPartnerZone() {
     let mood = 'neutral';
     if (oppBooks > myBooks + 1) mood = 'smug';
     else if (myBooks > oppBooks + 1) mood = 'angry';
-    mountAvatar(avatarSlot, _profileForPlayer(p), { mood, size: 'xl', ring: true, animate: true });
+    mountAvatar(avatarSlot, _profileForPlayer(p), { mood, size: 'sm', ring: true, animate: false });
     div.querySelector('.partner-stack-slot')?.appendChild(stack);
 
     if (!isMyTurn) div.classList.add('partner-drop--disabled');
@@ -755,20 +775,12 @@ function renderPartnerZone() {
 function updatePartnerHints() {
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
   document.querySelectorAll('.partner-drop').forEach(el => {
-    const hint = el.querySelector('.partner-hint');
-    if (!hint) return;
     if (!isMyTurn) {
-      hint.textContent = 'Waiting for their ask…';
+      el.classList.remove('partner-drop--ready');
       return;
     }
-    if (state.selectedCard) {
-      const short = state.selectedCard.scenario.slice(0, 24);
-      hint.textContent = `Tap → ask for "${short}${state.selectedCard.scenario.length > 24 ? '…' : ''}"`;
-      el.classList.add('partner-drop--ready');
-    } else {
-      hint.textContent = 'Swipe card ↑ or tap card → tap name';
-      el.classList.remove('partner-drop--ready');
-    }
+    if (state.selectedCard) el.classList.add('partner-drop--ready');
+    else el.classList.remove('partner-drop--ready');
   });
 }
 
@@ -777,7 +789,7 @@ function selectPartner(player, el) {
   document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
   if (state.selectedTarget?.id === player.id) {
     state.selectedTarget = null;
-    updateActionZone();
+    updateGameChrome();
     updatePartnerHints();
     return;
   }
@@ -792,7 +804,7 @@ function selectPartner(player, el) {
     showKickDoorRankPicker(player);
     return;
   }
-  updateActionZone();
+  updateGameChrome();
   updatePartnerHints();
 }
 
@@ -824,7 +836,7 @@ function showKickDoorRankPicker(partner) {
       API.send({ type: 'ask', rank: btn.dataset.rank, targetId: partner.id });
       state.selectedTarget = null;
       document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
-      if ($('action-zone')) $('action-zone').innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> Waiting…</p>`;
+      updateGameChrome();
     }, { once: true });
   });
   panel.classList.remove('hidden');
@@ -1054,6 +1066,7 @@ function renderAskFlowUI() {
       actions.appendChild(gfy);
     }
     panel.classList.remove('hidden');
+    updateGameChrome();
 
     if (gsapReady()) {
       gsap.from('.ask-response-sheet', { y: 32, opacity: 0, duration: 0.28, ease: 'back.out(1.6)' });
@@ -1069,10 +1082,12 @@ function renderAskFlowUI() {
       label.textContent = `They said GFY on ${_rankLabel(pending.rank)}. Trust it?`;
     }
     bullBar?.classList.remove('hidden');
+    updateGameChrome();
     return;
   }
 
   bullBar?.classList.add('hidden');
+  updateGameChrome();
 }
 
 function showBullshitOverlay(action) {
@@ -1110,68 +1125,108 @@ function showBullshitOverlay(action) {
   setTimeout(() => overlay.classList.add('hidden'), 2800);
 }
 
-// ─── Action zone ──────────────────────────────────────────────────────────────
-function updateActionZone() {
-  const zone = $('action-zone');
-  if (!zone) return;
+// ─── Game chrome — status pill + primary CTA ─────────────────────────────────
+function _setGameStatus(text, variant = 'neutral') {
+  const el = $('game-status');
+  if (!el) return;
+  el.textContent = text;
+  el.className = `game-status game-status--${variant}`;
+}
+
+function _setActionCta(label, { disabled = true, onClick = null } = {}) {
+  const btn = $('action-cta');
+  if (!btn) return;
+  btn.textContent = label;
+  btn.disabled = disabled;
+  btn.onclick = disabled ? null : onClick;
+}
+
+function updateGameChrome() {
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
   const partner = state.players.find(p => p.id !== state.myId);
   const pending = state.pendingAsk;
+  const heat = state.gameHeat ?? 0;
+  const heatSuffix = heat >= 4 ? ` · 🔥 ${heat >= 6 ? 'Hot' : 'Heating up'}` : '';
 
   if (pending?.phase === 'respond') {
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🎭</span> Give · GFY · or Bluff</p>`;
+    _setGameStatus('Give · GFY · or Bluff', 'accent');
+    _setActionCta('Use buttons above', { disabled: true });
     return;
   }
   if (pending?.phase === 'waiting_bullshit') {
-    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">🐂</span> They're deciding…</p>`;
+    _setGameStatus('They\'re deciding…', 'wait');
+    _setActionCta('Waiting…', { disabled: true });
     return;
   }
   if (pending?.phase === 'resolve') {
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🐂</span> <strong>Accept</strong> → draw from pond · <strong>Bullshit</strong> → call the bluff (wrong = draw 4)</p>`;
+    _setGameStatus('Accept GFY or call bullshit', 'accent');
+    _setActionCta('Use bullshit bar', { disabled: true });
     return;
   }
   if (pending?.phase === 'waiting_target') {
-    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> Waiting…</p>`;
+    _setGameStatus('Waiting…', 'wait');
+    _setActionCta('Waiting…', { disabled: true });
     return;
   }
   if (state.pendingBookPowerup) {
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">📚</span> Choose your book bonus ↓</p>`;
+    _setGameStatus('Choose your book bonus', 'accent');
+    _setActionCta('Pick a bonus below', { disabled: true });
     return;
   }
   if (state.luckyReward) {
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🍀</span> Lucky — pick your reward ↓</p>`;
+    _setGameStatus('Lucky draw — pick a reward', 'accent');
+    _setActionCta('Pick reward below', { disabled: true });
     return;
   }
 
   if (!isMyTurn) {
     const current = state.players.find(p => p.id === state.gameState?.currentTurnPlayerId);
-    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> ${current?.name ?? 'Partner'}'s turn…</p>`;
+    _setGameStatus(`${current?.name ?? 'Partner'}\'s turn${heatSuffix}`, 'wait');
+    _setActionCta('Waiting…', { disabled: true });
     return;
   }
   if (_askFlowBlocksPlay()) return;
+
   if (!state.selectedCard) {
-    const askLine = _isDesktopPointer()
-      ? `Click a card to ask ${partner?.name ?? 'them'}`
-      : `Pick a card · swipe ↑ at ${partner?.name ?? 'them'}`;
-    const heat = state.gameHeat ?? 0;
-    const heatHtml = heat >= 2
-      ? `<p class="action-guide action-guide--heat"><span>${heat >= 5 ? '🚨' : '🔥'}</span> ${heat >= 6 ? 'Somebody do something' : heat >= 4 ? 'Table\'s getting hot' : 'Heat building'} (${heat}/7)</p>`
-      : '';
-    zone.innerHTML = `<p class="action-guide"><span class="action-guide-icon">①</span> ${askLine}</p>${heatHtml}`;
-    return;
-  }
-  if (!state.selectedTarget) {
-    const short = state.selectedCard.scenario.length > 30
-      ? `${state.selectedCard.scenario.slice(0, 30)}…`
-      : state.selectedCard.scenario;
-    const throwLine = _isDesktopPointer()
-      ? `Click ${partner?.name ?? 'them'} or the pond`
-      : `Swipe ↑ at <strong>${partner?.name ?? 'them'}</strong>`;
-    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🃏</span> <strong>${short}</strong> — ${throwLine}</p>`;
+    _setGameStatus(`Your turn — pick a card${heatSuffix}`, 'accent');
+    _setActionCta('Pick a card', { disabled: true });
     return;
   }
 
-  zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">📨</span> Sending…</p>`;
+  const partnerName = partner?.name ?? 'partner';
+  const canAsk = !!partner;
+
+  if (!state.selectedTarget && canAsk) {
+    _setGameStatus(`Throw at ${partnerName} or Pond`, 'accent');
+    _setActionCta(`Ask ${partnerName}`, {
+      disabled: false,
+      onClick: () => {
+        state.selectedTarget = { id: partner.id, name: partner.name };
+        document.querySelectorAll('.partner-drop').forEach(el => {
+          el.classList.toggle('targeted', el.dataset.pid === partner.id);
+        });
+        sendAsk();
+      }
+    });
+    return;
+  }
+
+  if (state.selectedTarget) {
+    _setGameStatus(`Ask ${state.selectedTarget.name}?`, 'accent');
+    _setActionCta(`Ask ${state.selectedTarget.name}`, {
+      disabled: false,
+      onClick: () => sendAsk()
+    });
+    return;
+  }
+
+  _setGameStatus('Tap partner to ask', 'accent');
+  _setActionCta('Choose target', { disabled: true });
+}
+
+/** @deprecated alias */
+function updateActionZone() {
+  updateGameChrome();
 }
 
 function sendAsk() {
@@ -1188,7 +1243,8 @@ function sendAsk() {
   state.selectedCard = null;
   state.selectedTarget = null;
   document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
-  if ($('action-zone')) $('action-zone').innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">📨</span> Asked — waiting…</p>`;
+  _setGameStatus('Asked — waiting…', 'wait');
+  _setActionCta('Waiting…', { disabled: true });
   updatePartnerHints();
 
   if (wrapper && gsapReady()) {
@@ -2214,7 +2270,7 @@ function wireHandlers() {
       renderPeekBanner();
       showMissionIntro();
       checkMissionComplete();
-      updateActionZone();
+      updateGameChrome();
       updatePartnerHints();
     }
 
@@ -2449,6 +2505,9 @@ function wireUI() {
     if (!state.selectedCard) return;
     _askOpponentWithSelectedCard();
   });
+
+  $('btn-card-detail-close')?.addEventListener('click', closeCardDetailSheet);
+  $('card-detail-backdrop')?.addEventListener('click', closeCardDetailSheet);
 
   $('btn-create')?.addEventListener('click', () => {
     const profile = getProfile();

@@ -353,40 +353,42 @@
   </div>
 
   <!-- ── SCREEN: Game ───────────────────────────────────────────────────── -->
-  <div id="screen-game" class="screen hidden">
+  <div id="screen-game" class="screen hidden game-layout">
 
-    <!-- Compact stats -->
+    <div id="game-install-banner" class="game-install-banner hidden" role="region" aria-label="Install hint">
+      <p class="game-install-banner-text">Add to Home Screen for full-screen play.</p>
+      <button type="button" class="game-install-banner-dismiss" id="btn-dismiss-install-banner" aria-label="Dismiss">✕</button>
+    </div>
+
+    <!-- Stats only — no tutorial copy -->
     <div class="game-topbar">
-      <span class="game-topbar-item" id="deck-count">🌊 —</span>
+      <span class="game-topbar-item" id="deck-count">🌊 Deck —</span>
       <span class="game-topbar-item" id="sets-progress">📦 0/13</span>
       <span class="game-topbar-item" id="room-code-display"></span>
       <span class="game-topbar-item" id="my-score">📚 0</span>
     </div>
 
-    <!-- Other player — primary ask target at top -->
     <div id="partner-zone" class="partner-zone"></div>
 
-    <p id="turn-hint" class="turn-hint hidden"></p>
-
-    <!-- Completed sets (face-up books) -->
     <div id="my-books-row" class="my-books-row"></div>
 
-    <!-- Center: draw pile (the pond) — alternate swipe target -->
-    <div id="center-zone">
-      <div class="draw-pile draw-pile--drop" id="draw-pile-el">
-        <div class="draw-pile-label">POND</div>
-        <div class="draw-pile-count" id="pond-count"></div>
-        <div class="pond-ask-hint" id="pond-ask-hint">↑ or drop here to ask</div>
+    <div id="game-table" class="game-table">
+      <div id="drag-drop-lane" class="drag-drop-lane hidden" aria-hidden="true"></div>
+      <div id="center-zone">
+        <div class="draw-pile draw-pile--drop" id="draw-pile-el">
+          <div class="draw-pile-label">POND</div>
+          <div class="draw-pile-sublabel" id="pond-sublabel">Ask</div>
+          <div class="pond-ask-hint" id="pond-ask-hint">Swipe card here</div>
+        </div>
       </div>
     </div>
 
-    <!-- Action banner -->
+    <p id="game-status" class="game-status game-status--neutral" aria-live="polite">Waiting for game…</p>
+
     <div id="action-banner" class="hidden"></div>
 
-    <!-- Special moves (steal / double / kick door — coming online next) -->
     <div id="special-moves-bar" class="special-moves-bar hidden" aria-label="Special moves"></div>
 
-    <!-- Bullshit decision when opponent claims GFY -->
     <div id="bullshit-bar" class="bullshit-bar hidden" role="toolbar" aria-label="Accept or call bullshit">
       <p class="bullshit-bar-label" id="bullshit-bar-label"></p>
       <div class="bullshit-bar-actions">
@@ -395,11 +397,11 @@
       </div>
     </div>
 
-    <!-- Your hand (horizontal row — swipe sideways if you have many) -->
-    <div id="hand-zone"></div>
+    <div id="hand-zone" class="hand-zone-wrap"></div>
 
-    <!-- Action zone — what to do next -->
-    <div id="action-zone"></div>
+    <div id="action-zone" class="action-dock">
+      <button type="button" id="action-cta" class="action-cta" disabled>Pick a card</button>
+    </div>
 
     <!-- Bottom toolbar -->
     <div class="game-toolbar">
@@ -423,6 +425,19 @@
     <!-- Side game panel -->
     <div id="sidegame-panel" class="hidden">
       <div id="sidegame-content"></div>
+    </div>
+
+    <!-- Card detail — full scenario (tap selected card again) -->
+    <div id="card-detail-panel" class="game-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="card-detail-title">
+      <div class="game-sheet-backdrop" id="card-detail-backdrop"></div>
+      <div class="game-sheet-body">
+        <div class="game-sheet-handle" aria-hidden="true"></div>
+        <h2 class="game-sheet-title" id="card-detail-title">Card</h2>
+        <p class="game-sheet-rank" id="card-detail-rank"></p>
+        <p class="game-sheet-scenario" id="card-detail-scenario"></p>
+        <p class="game-sheet-dare" id="card-detail-dare"></p>
+        <button type="button" class="action-cta action-cta--secondary" id="btn-card-detail-close">Close</button>
+      </div>
     </div>
   </div>
 

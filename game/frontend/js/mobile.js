@@ -8,6 +8,13 @@ export function initMobile() {
   root.style.setProperty('--safe-left', 'env(safe-area-inset-left)');
   root.style.setProperty('--safe-right', 'env(safe-area-inset-right)');
 
+  const standalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+  root.classList.toggle('pwa-standalone', standalone);
+  if (!standalone) {
+    root.style.setProperty('--browser-chrome', '52px');
+  }
+
   // Prevent double-tap zoom on game cards only — never block wizard/button taps (breaks iOS click)
   document.addEventListener('touchend', e => {
     if (e.target.closest('.card, .card-btn, .hand-card-wrapper')) e.preventDefault();
@@ -21,10 +28,25 @@ export function initMobile() {
   setVh();
   window.addEventListener('resize', setVh);
 
+  initInstallBanner();
+
   // Prevent input zoom on focus (font-size already 16px from CSS; this is a belt-and-suspenders)
   document.querySelectorAll('input').forEach(inp => {
     inp.addEventListener('focus', () => { document.querySelector('meta[name=viewport]').setAttribute('content', 'width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover'); });
     inp.addEventListener('blur', () => { document.querySelector('meta[name=viewport]').setAttribute('content', 'width=device-width,initial-scale=1,viewport-fit=cover'); });
+  });
+}
+
+function initInstallBanner() {
+  const banner = document.getElementById('game-install-banner');
+  const dismiss = document.getElementById('btn-dismiss-install-banner');
+  if (!banner) return;
+  const standalone = document.documentElement.classList.contains('pwa-standalone');
+  if (standalone || localStorage.getItem('gfy-install-dismissed') === '1') return;
+  banner.classList.remove('hidden');
+  dismiss?.addEventListener('click', () => {
+    banner.classList.add('hidden');
+    localStorage.setItem('gfy-install-dismissed', '1');
   });
 }
 

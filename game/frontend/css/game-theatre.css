@@ -1,11 +1,53 @@
-/* ── Game theatre layout ──────────────────────────────────────────────────── */
-#screen-game {
+/* ── Game theatre layout — phone-first grid ───────────────────────────────── */
+#screen-game.game-layout {
   display: flex;
   flex-direction: column;
+  min-height: 100dvh;
+  min-height: calc(var(--dvh, 1vh) * 100);
+  max-height: 100dvh;
+  max-height: calc(var(--dvh, 1vh) * 100);
   background:
     var(--bg-bar-radial),
     linear-gradient(180deg, #0a0e22 0%, #030818 100%);
-  overflow: visible;
+  overflow: hidden;
+}
+
+html:not(.pwa-standalone) #screen-game.game-layout {
+  padding-bottom: var(--browser-chrome, 0px);
+}
+
+.game-install-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 4px 12px 0;
+  border-radius: 12px;
+  background: rgba(0, 51, 160, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  flex-shrink: 0;
+}
+
+.game-install-banner.hidden { display: none; }
+
+.game-install-banner-text {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.35;
+}
+
+.game-install-banner-dismiss {
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 /* ── Top bar — glass capsules ─────────────────────────────────────────────── */
@@ -43,29 +85,19 @@
   letter-spacing: 0.5px;
 }
 
-.turn-hint {
-  margin: 0 16px 6px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-  color: rgba(255, 214, 10, 0.95);
-  background: rgba(255, 214, 10, 0.08);
-  border: 1px solid rgba(255, 214, 10, 0.22);
-  border-radius: 12px;
-  flex-shrink: 0;
-}
-
-.turn-hint.hidden { display: none; }
-
 .my-books-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
-  padding: 0 14px 8px;
+  padding: 0 14px 6px;
   min-height: 36px;
-  flex-shrink: 0;
+  max-height: 44px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+
+.my-books-row::-webkit-scrollbar { display: none; }
 
 .my-books-row--locked { opacity: 0.35; pointer-events: none; }
 
@@ -127,9 +159,39 @@
   color: rgba(255, 255, 255, 0.72);
 }
 
-/* ── Partner zone — other player at top ───────────────────────────────────── */
+/* ── Game status pill ─────────────────────────────────────────────────────── */
+.game-status {
+  margin: 0 16px 4px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.35;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+
+.game-status--neutral {
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.game-status--accent {
+  color: rgba(255, 214, 10, 0.95);
+  background: rgba(255, 214, 10, 0.1);
+  border: 1px solid rgba(255, 214, 10, 0.28);
+}
+
+.game-status--wait {
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Partner zone — compact strip ─────────────────────────────────────────── */
 .partner-zone {
-  padding: 6px 14px 4px;
+  padding: 4px 14px 2px;
   flex-shrink: 0;
 }
 
@@ -144,16 +206,17 @@
 .partner-drop {
   width: 100%;
   text-align: left;
-  border: 2px dashed rgba(255, 255, 255, 0.14);
-  border-radius: 20px;
-  padding: 12px 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 8px 12px;
+  min-height: 44px;
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   cursor: pointer;
   touch-action: manipulation;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.22);
 }
 
 .partner-drop--disabled {
@@ -162,18 +225,8 @@
   pointer-events: none;
 }
 
-/* Pulse glow when it's the partner's turn — "they're thinking" */
 .partner-drop--active:not(.partner-drop--disabled) {
-  animation: partnerThinking 2.4s ease-in-out infinite alternate;
-}
-
-@keyframes partnerThinking {
-  from { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25); border-color: rgba(91, 141, 239, 0.25); }
-  to   { box-shadow: 0 4px 28px rgba(91, 141, 239, 0.35), 0 0 20px rgba(0, 51, 160, 0.22); border-color: rgba(91, 141, 239, 0.55); }
-}
-
-.partner-drop--active {
-  border-color: rgba(91, 141, 239, 0.45);
+  border-color: rgba(91, 141, 239, 0.4);
 }
 
 .partner-drop--ready,
@@ -181,30 +234,24 @@
   border-color: var(--brand-blue-bright);
   border-style: solid;
   background: rgba(0, 51, 160, 0.22);
-  box-shadow: 0 0 32px rgba(0, 51, 160, 0.4);
-  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(0, 51, 160, 0.35);
 }
 
 .partner-drop.drop-hot {
   border-color: var(--brand-gold);
   background: rgba(255, 214, 10, 0.12);
-  box-shadow: 0 0 36px rgba(255, 214, 10, 0.35);
-  transform: scale(1.02);
+  box-shadow: 0 0 24px rgba(255, 214, 10, 0.3);
 }
 
-.partner-drop-badge {
-  display: block;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.1px;
-  color: rgba(255, 214, 10, 0.9);
-  margin-bottom: 10px;
+.partner-drop-badge,
+.partner-hint {
+  display: none !important;
 }
 
 .partner-drop-main {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .partner-stack-slot { flex-shrink: 0; }
@@ -239,24 +286,17 @@
 }
 
 .partner-name {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 700;
   color: #fff;
-  letter-spacing: -0.3px;
-  line-height: 1.1;
+  letter-spacing: -0.2px;
+  line-height: 1.15;
 }
 
 .partner-stats {
   font-size: 12px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.partner-hint {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(91, 141, 239, 0.95);
-  line-height: 1.35;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.52);
 }
 
 .game--dragging .partner-drop:not(.drop-hot) {
@@ -272,8 +312,18 @@
 }
 
 .draw-pile--drop.drop-hot {
-  box-shadow: 0 0 36px rgba(255, 214, 10, 0.4), 0 10px 28px rgba(0, 0, 0, 0.55);
-  transform: scale(1.06);
+  box-shadow: 0 0 28px rgba(255, 214, 10, 0.38), 0 10px 28px rgba(0, 0, 0, 0.55);
+  transform: scale(1.04);
+}
+
+.draw-pile-sublabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 214, 10, 0.88);
+  z-index: 1;
+  position: relative;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
 }
 
 .pond-ask-hint {
@@ -350,27 +400,82 @@
   opacity: 0.55;
 }
 
-#action-zone {
-  padding: 8px var(--space-md) 4px;
+.action-dock {
+  padding: 6px 16px 4px;
   flex-shrink: 0;
-  min-height: 56px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 0;
 }
 
+.action-cta {
+  width: 100%;
+  min-height: 50px;
+  border: none;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  letter-spacing: -0.2px;
+  color: #fff;
+  background: linear-gradient(180deg, #1a4fd4 0%, var(--brand-blue, #0033A0) 100%);
+  box-shadow: 0 4px 16px rgba(0, 51, 160, 0.45);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity 0.15s, transform 0.12s;
+}
 
-/* ── Center zone (draw pile) ──────────────────────────────────────────────── */
+.action-cta:disabled {
+  opacity: 0.42;
+  cursor: default;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.action-cta:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.action-cta--secondary {
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+/* ── Table row — pond, no flex steal ──────────────────────────────────────── */
+.game-table {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 148px;
+  max-height: 160px;
+  padding: 4px var(--space-md) 2px;
+  flex-shrink: 0;
+}
+
+.drag-drop-lane {
+  position: absolute;
+  inset: 0 12px;
+  border-radius: 16px;
+  border: 2px dashed rgba(255, 214, 10, 0.35);
+  background: rgba(255, 214, 10, 0.06);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.drag-drop-lane.hidden { display: none; }
+
+.game--dragging .drag-drop-lane:not(.hidden) {
+  display: block;
+}
+
 #center-zone {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-lg);
-  padding: var(--space-sm) var(--space-md);
-  flex-shrink: 0;
-  flex: 1;
+  gap: var(--space-md);
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
 }
 
 /* ── Action banner ────────────────────────────────────────────────────────── */
@@ -404,25 +509,33 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* ── Hand zone — horizontal row, scroll when hand is wide ─────────────────── */
+/* ── Hand zone — primary play area ────────────────────────────────────────── */
+.hand-zone-wrap,
 #hand-zone {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: flex-end;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   box-sizing: border-box;
-  flex-shrink: 0;
-  min-height: 220px;
-  padding: var(--space-sm) var(--space-md) var(--space-md);
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 8px 16px 10px;
   overflow-x: auto;
   overflow-y: visible;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   touch-action: pan-x;
+  position: relative;
+  mask-image: linear-gradient(90deg, #000 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent 100%);
+}
+
+#hand-zone .card-dare {
+  display: none;
 }
 
 .hand-card-wrapper {
@@ -539,5 +652,75 @@
   }
 }
 
-/* ── Screen-game flex ─────────────────────────────────────────────────────── */
-#screen-game { display: flex; flex-direction: column; }
+/* ── Card detail sheet ──────────────────────────────────────────────────────── */
+.game-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 550;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.game-sheet.hidden { display: none; }
+
+.game-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.game-sheet-body {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: 70dvh;
+  overflow-y: auto;
+  background: rgba(12, 12, 22, 0.96);
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 12px 20px max(20px, env(safe-area-inset-bottom));
+  z-index: 1;
+}
+
+.game-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 0 auto 14px;
+}
+
+.game-sheet-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.game-sheet-rank {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--brand-blue-bright, #5b8def);
+}
+
+.game-sheet-scenario {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.35;
+}
+
+.game-sheet-dare {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.45;
+}

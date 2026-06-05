@@ -195,31 +195,48 @@ Completed sets appear in **your books row** at the top of your hand area (emoji 
 
 ## Game board — what you can tap and swipe
 
-### Top bar
+Phone-first layout: **stats → partner strip → books → pond → status → hand → primary button → tab bar**.
+
+### Top bar (stats only)
 
 | Element | Meaning |
 |---------|---------|
-| 🌊 | Cards left in the **pond** |
+| 🌊 **Deck** | Cards left in the draw pile |
 | 📦 | Sets completed globally (`0/13`) |
-| Room code | Current room |
+| Room code | Current room (tap to copy from lobby; shown here in play) |
 | 📚 | **Your** completed set count |
 
-### Partner zone (top)
+### Partner strip
 
-- Shows partner name, card count, set count, BAC level indicator
-- **Your turn:** swipe a card **up** onto partner **or** tap a card in your hand → tap partner
-- Drop target highlights when a card is selected
+- Compact row: avatar, name, `cards · books`, mini card backs
+- **Your turn:** tap partner after selecting a card, swipe a card onto them, or use **Ask [name]**
+- Highlights when a card is selected (ready to throw)
 
-### Pond (center)
+### Books row
 
-- Alternate ask target: swipe card up to **POND** (same as asking partner — server resolves against partner's hand)
-- Label shows pond count
+- Horizontal scroll of your completed sets
+- Empty: *No sets yet — complete 4 of a kind*
 
-### Your hand (bottom fan)
+### Pond (table)
 
-- Tap to select a card (rank/scenario)
-- Drag/swipe upward to partner or pond
-- GSAP animations + sound on GFY miss / lucky draw / book
+- Fixed-size **POND** tile — not overlapping the hand
+- Sublabel: **Ask** (your turn + card selected), **Draw** (after GFY accept), or **Pond**
+- Swipe selected card onto pond or tap pond (same ask as partner)
+
+### Status pill
+
+- One line for the current phase: your turn, partner's turn, bullshit, heat, etc.
+
+### Your hand
+
+- Narrower cards: rank, emoji, short **hook** (full scenario in detail sheet)
+- **Tap** to select · **tap again** on selected card for full text sheet
+- Swipe/drag upward to partner or pond
+
+### Primary button (action dock)
+
+- **Pick a card** → **Ask [partner]** when a card is selected (accessible alternative to swipe)
+- Disabled with clear label when waiting
 
 ### Action banner
 
@@ -233,6 +250,10 @@ Completed sets appear in **your books row** at the top of your hand area (emoji 
 | 🍺 **Drinks** | Opens/closes the **BAC drink panel** (see below) |
 | 🎲 **Side Games** | Pass-and-play hub on this device |
 | 🍸 **Roast** | Manual **Bhenchod Bartender** roast (uses your profile + partner context) |
+
+### Install tip
+
+- In Safari, use **Add to Home Screen** for full-screen play (banner shown once if not installed).
 
 ---
 
@@ -438,7 +459,7 @@ Use between rounds or when waiting for partner's turn.
 | Tip | Why |
 |-----|-----|
 | **Add to Home Screen** (iOS Safari) | Full-screen, fewer tap bugs |
-| Hard refresh after deploy | Service worker cache (`gfy-v5`) |
+| Hard refresh after deploy | Service worker cache (`gfy-v31`) |
 | Same HTTPS origin on both phones | WebSocket room sync |
 | Wake lock | Acquired during game so screen stays on |
 | Tap bartender transcript to dismiss | No auto-hide by design |
