@@ -155,10 +155,10 @@
 .special-moves-bar {
   flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  gap: 6px;
-  padding: 2px 12px 4px;
+  gap: 5px;
+  padding: 0 10px 2px;
   overflow-x: auto;
   scrollbar-width: none;
 }

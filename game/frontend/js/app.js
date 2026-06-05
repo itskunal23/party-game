@@ -156,12 +156,12 @@ async function runSetupSequence(msg) {
 function updateGameHud() {
   const me = state.players.find(p => p.id === state.myId);
   const gs = state.gameState;
-  if ($('my-score')) $('my-score').textContent = `📚 ${me?.books?.length ?? 0}`;
-  if ($('deck-count')) $('deck-count').textContent = `🌊 ${gs?.deckCount ?? '—'}`;
+  if ($('my-score')) $('my-score').textContent = `Books ${me?.books?.length ?? 0}`;
+  if ($('deck-count')) $('deck-count').textContent = `Deck ${gs?.deckCount ?? '—'}`;
   if ($('sets-progress')) {
     const done = gs?.completedSets ?? 0;
     const total = gs?.totalSets ?? TOTAL_SETS;
-    $('sets-progress').textContent = `📦 ${done}/${total}`;
+    $('sets-progress').textContent = `Sets ${done}/${total}`;
   }
   const sub = $('pond-sublabel');
   const pondHint = $('pond-ask-hint');
@@ -172,9 +172,9 @@ function updateGameHud() {
     else sub.textContent = 'Pond';
   }
   if (pondHint) {
-    pondHint.textContent = isMyTurn && state.selectedCard
-      ? 'Swipe card here'
-      : 'Draw or ask';
+    const show = isMyTurn && !!state.selectedCard;
+    pondHint.classList.toggle('hidden', !show);
+    if (show) pondHint.textContent = 'Drop here';
   }
   updateGameChrome();
 }
@@ -190,12 +190,15 @@ function renderMyBooks() {
   const me = state.players.find(p => p.id === state.myId);
   const books = me?.books ?? [];
   if (!books.length) {
-    row.innerHTML = '<p class="books-empty">No sets yet</p>';
+    row.innerHTML = '';
+    row.classList.add('my-books-row--empty');
     return;
   }
+  row.classList.remove('my-books-row--empty');
   row.innerHTML = books.map(scenario => {
     const meta = scenarioMeta(scenario);
-    return `<div class="book-set" title="${scenario.replace(/"/g, '&quot;')}"><span class="book-set-emoji">${meta.emoji}</span><span class="book-set-name">${scenario}</span></div>`;
+    const rank = SCENARIOS.find(s => s.name === scenario)?.rank ?? '?';
+    return `<div class="book-set" title="${scenario.replace(/"/g, '&quot;')}"><span class="book-set-rank">${rank}</span><span class="book-set-name">${scenario}</span></div>`;
   }).join('');
 }
 
@@ -914,19 +917,19 @@ function renderSpecialMovesBar() {
 
   const parts = [];
   if (powers.stealToken > 0) {
-    parts.push(`<button type="button" class="move-pill move-pill--steal" data-move="steal">⚡ Steal</button>`);
+    parts.push(`<button type="button" class="move-pill move-pill--steal" data-move="steal">Steal</button>`);
   }
   if ((powers.wildAskToken ?? 0) > 0) {
-    parts.push(`<button type="button" class="move-pill${powers.activeKickDoor ? ' move-pill--on' : ''}" data-move="kick_door">🎲 Wild</button>`);
+    parts.push(`<button type="button" class="move-pill${powers.activeKickDoor ? ' move-pill--on' : ''}" data-move="kick_door">Wild</button>`);
   }
   if ((powers.comebackToken ?? 0) > 0) {
-    parts.push(`<button type="button" class="move-pill move-pill--comeback" data-move="comeback">⚡ Comeback</button>`);
+    parts.push(`<button type="button" class="move-pill move-pill--comeback" data-move="comeback">Comeback</button>`);
   }
   if (!powers.doubleUsed) {
-    parts.push(`<button type="button" class="move-pill${powers.activeDouble ? ' move-pill--on' : ''}" data-move="double">🔥 2×</button>`);
+    parts.push(`<button type="button" class="move-pill${powers.activeDouble ? ' move-pill--on' : ''}" data-move="double">2×</button>`);
   }
   if (powers.luckyStacks > 0) {
-    parts.push(`<span class="move-pill move-pill--disabled">${powers.luckyStacks}🍀</span>`);
+    parts.push(`<span class="move-pill move-pill--disabled">Lucky ×${powers.luckyStacks}</span>`);
   }
 
   if (!parts.length) {
@@ -1152,7 +1155,7 @@ function updateGameChrome() {
   const partner = state.players.find(p => p.id !== state.myId);
   const pending = state.pendingAsk;
   const heat = state.gameHeat ?? 0;
-  const heatSuffix = heat >= 4 ? ` · 🔥 ${heat >= 6 ? 'Hot' : 'Heating up'}` : '';
+  const heatSuffix = heat >= 4 ? ` · ${heat >= 6 ? 'Hot' : 'Heating up'}` : '';
 
   if (pending?.phase === 'respond') {
     _setGameStatus('Give · GFY · or Bluff', 'accent');
@@ -1194,7 +1197,7 @@ function updateGameChrome() {
   if (_askFlowBlocksPlay()) return;
 
   if (!state.selectedCard) {
-    _setGameStatus(`Pick a card →${heatSuffix}`, 'accent', { visible: true });
+    _setGameStatus(heat >= 4 ? heatSuffix.trim().replace(/^ · /, '') : '', 'wait', { visible: heat >= 4 });
     _setActionCta('Pick a card', { disabled: true });
     return;
   }

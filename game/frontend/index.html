@@ -361,9 +361,9 @@
     </div>
 
     <div class="game-topbar game-topbar--minimal">
-      <button type="button" class="game-stat-chip" id="deck-count" aria-label="Deck count. Tap for room code.">🌊 —</button>
-      <span class="game-stat-chip" id="sets-progress">📦 0/13</span>
-      <span class="game-stat-chip" id="my-score">📚 0</span>
+      <button type="button" class="game-stat-chip" id="deck-count" aria-label="Deck. Tap for room code.">Deck —</button>
+      <span class="game-stat-chip" id="sets-progress">Sets 0/13</span>
+      <span class="game-stat-chip" id="my-score">Books 0</span>
       <span id="room-code-display" class="visually-hidden" aria-hidden="true"></span>
     </div>
 
@@ -383,16 +383,13 @@
           <div class="draw-pile draw-pile--drop" id="draw-pile-el">
             <div class="draw-pile-label">POND</div>
             <div class="draw-pile-sublabel" id="pond-sublabel">Ask</div>
-            <div class="pond-ask-hint" id="pond-ask-hint">Swipe card here</div>
+            <div class="pond-ask-hint hidden" id="pond-ask-hint">Drop here</div>
           </div>
         </div>
       </div>
 
-      <div class="board-divider board-divider--soft" aria-hidden="true"></div>
-
-      <div id="my-books-row" class="my-books-row"></div>
+      <div id="my-books-row" class="my-books-row my-books-row--empty"></div>
       <div id="special-moves-bar" class="special-moves-bar hidden" aria-label="Special moves"></div>
-
       <p id="game-status" class="game-status-float game-status--neutral" aria-live="polite">Waiting…</p>
     </div>
 
@@ -402,7 +399,7 @@
       <p class="bullshit-bar-label" id="bullshit-bar-label"></p>
       <div class="bullshit-bar-actions">
         <button type="button" class="move-pill move-pill--accept" id="btn-accept-gfy">Accept GFY</button>
-        <button type="button" class="move-pill move-pill--bullshit" id="btn-call-bullshit">🐂 Bullshit</button>
+        <button type="button" class="move-pill move-pill--bullshit" id="btn-call-bullshit">Bullshit</button>
       </div>
     </div>
 
@@ -414,15 +411,9 @@
 
     <div class="game-dock-wrap">
       <nav class="game-dock" aria-label="Game tools">
-        <button type="button" class="game-dock-btn" id="btn-drink-log" aria-label="Drinks">
-          <span class="game-dock-icon">🍺</span>
-        </button>
-        <button type="button" class="game-dock-btn" id="btn-side-games" aria-label="Side games">
-          <span class="game-dock-icon">🎲</span>
-        </button>
-        <button type="button" class="game-dock-btn game-dock-btn--muted" id="btn-ai-host" aria-label="Bartender roast">
-          <span class="game-dock-icon">🍸</span>
-        </button>
+        <button type="button" class="game-dock-btn" id="btn-drink-log">Drinks</button>
+        <button type="button" class="game-dock-btn" id="btn-side-games">Games</button>
+        <button type="button" class="game-dock-btn game-dock-btn--muted" id="btn-ai-host">Roast</button>
       </nav>
     </div>
 
