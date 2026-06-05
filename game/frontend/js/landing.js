@@ -11,7 +11,7 @@ const STACK_MOMENTS = [
 
 const TRANSCRIPT_LINES = [
   '"Nandini walked into that bluff clean. Farzi-level confidence on the wrong side."',
-  '"Kunal, Mirzapur ke table pe bhi itna obvious GFY nahi bolte the. Three in a row, bhenchod."',
+  '"Kunal, Brooklyn Nine-Nine precinct mein bhi itna obvious GFY nahi bolte. Three in a row, bhenchod."',
   '"3 misses in a row — Pond Goblin title loading. Paatal Lok case still open."',
   '"Bluff landed. They believed every word. Farzi hustle — system wasn\'t scammed."',
   '"That bullshit call was wrong. Sacred Games finale mein bhi aisa devastation nahi tha."',
@@ -19,7 +19,7 @@ const TRANSCRIPT_LINES = [
   '"Book complete. Dare time. Bartender noticed. Everyone\'s fucked now."',
   '"Table pe sirf GFY. Toxic couple simulator. Pond laughed in both their faces."',
   '"Comeback token unlocked. Gully Boy energy — apna time aayega. Use it."',
-  '"Heat level 5. Mirzapur table shake se pehle. Do something, bhenchod."',
+  '"Heat level 5. Paatal Lok case se pehle action chahiye. Do something, bhenchod."',
 ];
 
 export function initLandingMotion() {

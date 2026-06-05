@@ -34,6 +34,16 @@ function bartenderLine(text) {
   return joined.length > 320 ? `${joined.slice(0, 317)}…` : joined;
 }
 
+function _bartenderPayload(picked, line) {
+  return {
+    line,
+    franchise: picked?.franchise ?? null,
+    referenceTitle: picked?.title ?? picked?.ref?.title ?? null,
+    referenceType: picked?.type ?? picked?.ref?.type ?? null,
+    iconicLine: picked?.iconicLine ?? null,
+  };
+}
+
 async function nvidiaChat(model, messages, maxTokens = 55) {
   const res = await fetch(`${NVIDIA_BASE}/chat/completions`, {
     method: 'POST',
@@ -96,7 +106,7 @@ export function createApp() {
         scenario,
         streakInfo,
       });
-      return res.json({ line, franchise: picked?.franchise ?? null });
+      return res.json(_bartenderPayload(picked, line));
     }
 
     try {
@@ -117,7 +127,7 @@ export function createApp() {
         { role: 'system', content: BARTENDER_PERSONA },
         { role: 'user', content: userPrompt }
       ], 140));
-      res.json({ line, franchise: picked?.franchise ?? null });
+      res.json(_bartenderPayload(picked, line));
     } catch {
       const line = offlineLine(mode, profile, _otherFromContext(playersContext, playerName), {
         ...refOpts,
@@ -125,7 +135,7 @@ export function createApp() {
         scenario,
         streakInfo,
       });
-      res.json({ line, franchise: picked?.franchise ?? null });
+      res.json(_bartenderPayload(picked, line));
     }
   });
 
@@ -143,7 +153,7 @@ export function createApp() {
     try {
       const content = await nvidiaChat(HOST_MODEL, [{
         role: 'user',
-        content: `The user likes dark Indian cinema/shows like "${query.trim()}". Suggest 5 similar dark, gritty Bollywood or OTT titles (e.g. Dhurandhar, Paatal Lok, Sacred Games, Gangs of Wasseypur, Mirzapur, Delhi Crime, Animal, Farzi). Reply with JSON only: {"suggestions":["Title 1","Title 2","Title 3","Title 4","Title 5"]}`
+        content: `The user likes dark Indian cinema/shows like "${query.trim()}". Suggest 5 similar titles (e.g. Dhurandhar, Paatal Lok, The Night Manager, Spartacus, Brooklyn Nine-Nine, Kuch Kuch Hota Hai, Sacred Games, Farzi). Reply with JSON only: {"suggestions":["Title 1","Title 2","Title 3","Title 4","Title 5"]}`
       }], 120);
       const parsed = JSON.parse(content.match(/\{[\s\S]*\}/)?.[0] ?? '{}');
       res.json({ suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 5) : [] });

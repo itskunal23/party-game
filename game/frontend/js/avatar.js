@@ -12,6 +12,10 @@ const MEDIA_TRAITS = {
   farzi: { accent: '#1B7A54', hair: 'slick', coat: 'suit', extra: 'shades' },
   'paatal-lok': { accent: '#4A5568', hair: 'messy', coat: 'trench', extra: 'badge' },
   dhurandhar: { accent: '#0033A0', hair: 'wild', coat: 'long-coat', extra: 'aura' },
+  'dhurandhar-p1': { accent: '#0033A0', hair: 'wild', coat: 'long-coat', extra: 'aura' },
+  'dhurandhar-p2': { accent: '#1A4FD6', hair: 'wild', coat: 'long-coat', extra: 'aura' },
+  'night-manager': { accent: '#2D3748', hair: 'slick', coat: 'suit', extra: 'shades' },
+  'kuch-kuch-hota-hai': { accent: '#FF4D8D', hair: 'soft', coat: 'casual', extra: 'basketball' },
   'brooklyn-nine-nine': { accent: '#0033A0', hair: 'neat', coat: 'uniform', extra: 'badge' },
   'modern-family': { accent: '#9B6BFF', hair: 'soft', coat: 'casual', extra: 'none' },
   barbie: { accent: '#FF6EB4', hair: 'long', coat: 'pink', extra: 'crown' },
@@ -33,7 +37,8 @@ const ALIASES = [
   ['mirzapur', 'mirzapur'], ['farzi', 'farzi'], ['barbie', 'barbie'],
   ['masterchef', 'masterchef-india'], ['nailed', 'nailed-it'],
   ['ip man', 'ip-man'], ['sanju', 'sanju'], ['spartacus', 'spartacus'],
-  ['paatal', 'paatal-lok'], ['dhurandhar', 'dhurandhar'], ['evaru', 'evaru'],
+  ['paatal', 'paatal-lok'], ['dhurandhar', 'dhurandhar-p1'], ['night manager', 'night-manager'],
+  ['kuch kuch', 'kuch-kuch-hota-hai'], ['kkhh', 'kuch-kuch-hota-hai'], ['evaru', 'evaru'],
   ['ferris', 'ferris-bueller'], ['agent sai', 'agent-sai'],
 ];
 
@@ -83,9 +88,9 @@ export function buildAvatarDescriptor(profile) {
   }
 
   const media = (profile?.mediaFaves ?? []).map(_franchiseId).filter(Boolean);
-  const primary = media[0] ?? 'mirzapur';
+  const primary = media[0] ?? 'brooklyn-nine-nine';
   const secondary = media[1] ?? primary;
-  const t1 = MEDIA_TRAITS[primary] ?? MEDIA_TRAITS.mirzapur;
+  const t1 = MEDIA_TRAITS[primary] ?? MEDIA_TRAITS['brooklyn-nine-nine'];
   const t2 = MEDIA_TRAITS[secondary] ?? t1;
   const h = _hash(`${name}|${media.join(',')}|${(profile?.kinks ?? []).slice(0, 2).join(',')}`);
 

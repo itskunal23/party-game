@@ -3,7 +3,9 @@ import {
   FRANCHISE_ALIASES,
   NANDINI_REFERENCES,
   KUNAL_REFERENCES,
+  PRIMARY_BARTENDER_FRANCHISES,
 } from './bartender-refs.js';
+import { resolveIconicLine } from './bartender-iconic-lines.js';
 
 const ANTI_REPEAT_WINDOW = 5;
 
@@ -84,6 +86,9 @@ export function pickReference(opts) {
     return true;
   });
 
+  const primaryPool = pool.filter(ref => PRIMARY_BARTENDER_FRANCHISES.has(ref.franchise));
+  if (primaryPool.length) pool = primaryPool;
+
   const scoreRef = (ref) => {
     let score = 0;
     if (!blocked.has(ref.franchise)) score += 10;
@@ -113,11 +118,15 @@ export function pickReference(opts) {
   const tier = candidates.filter(r => scoreRef(r) >= topScore - 2);
   const ref = tier[Math.floor(Math.random() * tier.length)];
   const exampleLine = _exampleForRef(ref, normalizedMode, playerName);
+  const iconicLine = resolveIconicLine(ref, normalizedMode);
 
   return {
     ref,
     mode: normalizedMode,
     franchise: ref.franchise,
+    title: ref.title,
+    type: ref.type,
+    iconicLine,
     exampleLine,
     score: topScore,
   };
@@ -127,16 +136,17 @@ export function pickReference(opts) {
 export function formatReferenceBlock(picked) {
   if (!picked?.ref) return '';
   const r = picked.ref;
+  const iconic = picked.iconicLine ?? resolveIconicLine(r, picked.mode);
   return `
-ASSIGNED REFERENCE (MANDATORY — do NOT swap for Mirzapur/Paatal Lok unless this is the title):
+ASSIGNED REFERENCE (MANDATORY — use THIS title/beat):
 - Title: ${r.title} (${r.type})
 - Franchise: ${r.franchise}
 - Famous moment / character beat: ${r.famousMoment}
-- Vibe (not verbatim quote): ${r.quoteEnergy}
 - Tone: ${r.tone}
 - WHY it's funny here: tie "${picked.mode}" game event to this specific beat.
-- DO NOT name-drop the title only — use the moment, character trait, or situation.
-${picked.exampleLine ? `- Shape like (adapt, do not copy verbatim): ${picked.exampleLine}` : ''}
+${iconic ? `- ICONIC LINE (MUST weave into roast in correct context — quote or tight paraphrase): "${iconic}"` : `- Vibe: ${r.quoteEnergy}`}
+${picked.exampleLine ? `- Shape the roast like: ${picked.exampleLine}` : ''}
+- Tie the iconic line to what JUST happened on the table — not random name-drop.
 - Anti-repeat: this franchise was chosen because others were used recently.`;
 }
 

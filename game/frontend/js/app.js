@@ -2049,15 +2049,27 @@ function dismissBartenderTranscript() {
   $('bartender-transcript')?.classList.add('hidden');
 }
 
-function showBartenderTranscript(line, targetName = null) {
+function showBartenderTranscript(line, targetName = null, referenceTitle = null, referenceType = null) {
   const overlay = $('bartender-transcript');
   const textEl = $('bartender-transcript-line');
+  const sourceEl = $('bartender-transcript-source');
   const row = $('bartender-transcript-avatar-row');
   const avatarHost = $('bartender-transcript-avatar');
   const targetEl = $('bartender-transcript-target');
   if (!overlay || !textEl) return;
-  const one = (line ?? '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+/)[0] ?? '';
-  textEl.textContent = one.length > 140 ? `${one.slice(0, 137)}…` : one;
+  const flat = (line ?? '').replace(/\s+/g, ' ').trim();
+  textEl.textContent = flat.length > 300 ? `${flat.slice(0, 297)}…` : flat;
+
+  if (sourceEl) {
+    if (referenceTitle) {
+      const kind = referenceType === 'movie' ? 'Movie' : referenceType === 'show' ? 'Show' : 'Ref';
+      sourceEl.textContent = `${kind} · ${referenceTitle}`;
+      sourceEl.classList.remove('hidden');
+    } else {
+      sourceEl.textContent = '';
+      sourceEl.classList.add('hidden');
+    }
+  }
 
   if (targetName && row && avatarHost) {
     row.classList.remove('hidden');
@@ -2131,7 +2143,12 @@ async function triggerBartender(mode, opts = {}) {
       scenario: opts.scenario ?? null,
       summary: result.line.slice(0, 140)
     });
-    showBartenderTranscript(result.line, playerName);
+    showBartenderTranscript(
+      result.line,
+      playerName,
+      result.referenceTitle ?? null,
+      result.referenceType ?? null
+    );
   }
 }
 

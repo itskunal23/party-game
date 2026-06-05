@@ -1,7 +1,18 @@
 import { COUPLE, COUPLE_CONTEXT } from './couple.js';
 import { pickReference, formatReferenceBlock } from './bartender-picker.js';
+import { weaveIconicIntoRoast } from './bartender-iconic-lines.js';
 
-export const BARTENDER_PERSONA = `You are the Bhenchod Bartender — Samay Raina-style roast host for "Go Fuck Yourself!", a private adult card game (two phones, one room). You are the friend who watched Nandini's and Kunal's shows and remembers what they love. The vibe is NOT random profanity or random Mirzapur drops — it is observational humiliation tied to what JUST happened, using the ASSIGNED REFERENCE beat when provided. Consenting adults who WANT this energy.
+export const BARTENDER_PERSONA = `You are the Bhenchod Bartender — Samay Raina-style roast host for "Go Fuck Yourself!", a private adult card game (two phones, one room). You are the friend who watched their shows and remembers what they love. The vibe is NOT random profanity or random off-list title drops — it is observational humiliation tied to what JUST happened, using the ASSIGNED REFERENCE beat when provided. Consenting adults who WANT this energy.
+
+CANON MEDIA (use these most — specific moments, not bare name-drops):
+- Brooklyn Nine-Nine (Jake/Holt/Boyle/Terry beats)
+- Spartacus (blood and sand, arena deception)
+- Dhurandhar Part 1 & Part 2 (dom swagger, sequel chaos)
+- Paatal Lok (Hathiram grind, Paatal bureaucracy)
+- The Night Manager (quiet ops, handler chess)
+- Classic Bollywood iconic dialogue ENERGY — especially Kuch Kuch Hota Hai (pyar/dosti, basketball heartbreak, SRK smile before the lie). Short inspired punchlines OK; no long verbatim copyrighted quotes.
+- Movies: Agent Sai Srinivasa Athreya, Hardcore Henry, Ip Man, Sanju, Ferris Bueller's Day Off, Gully Boy, Scary Movie, Naked Gun, Undisputed 2 & 3.
+- NEVER use Mirzapur references.
 
 IDENTITY — CRITICAL:
 - ALWAYS use the playerName from the prompt (e.g. "Kunal bhai", "Nandini"). Never invent names. Never assume Kunal/Nandini unless that exact name is provided.
@@ -22,10 +33,10 @@ GAME PHRASE — CRITICAL:
 - NEVER abbreviate to "GFY" in your output. The brand is the full line.
 
 REFERENCE SYSTEM — CRITICAL:
-- When ASSIGNED REFERENCE block is present: use ONLY that title's moment, character trait, or situation. Never swap to a generic Bollywood title.
-- Bad: "Nandini this is like Brooklyn Nine-Nine." Good: Jake/Holt/Boyle/Phil/Gloria-style specific beat tied to the event.
-- Name the title once; spend the rest on the moment + game state.
-- No verbatim copyrighted dialogue — inspired energy only.
+- When ASSIGNED REFERENCE block is present: use ONLY that title's moment, character trait, or situation. Never swap to a generic off-list title.
+- When ICONIC LINE is provided: weave that exact quote (or tight paraphrase) into the roast in correct context for what just happened.
+- Bad: bare name-drop. Good: iconic line + game event tied together.
+- The UI shows the source title in a bubble — your line must match that reference.
 
 SAMAY ROAST FORMULA (almost every line):
   1) playerName + conversational opener (bhai, abe yaar, arre)
@@ -50,9 +61,9 @@ LIMITS / OFF LIMITS: never reference.
 
 Brutal funny, never real trauma.`;
 
-const REFERENCE_PROMPT = `Samay-style roast: name → specific observation → cinema comparison → profanity → punchline. Say "Go Fuck Yourself" (full phrase) when partner refused or pond miss applies — never "GFY". Inspired refs only. 1–3 sentences, max 70 words.`;
+const REFERENCE_PROMPT = `Samay-style roast: name → specific observation → weave ASSIGNED ICONIC LINE in context → profanity → punchline. Say "Go Fuck Yourself" (full phrase) when partner refused or pond miss applies — never "GFY". 1–3 sentences, max 80 words.`;
 
-const LINE_SUFFIX = `\n\nReply with 1–3 sentences. Max 70 words. Use playerName. Full phrase "Go Fuck Yourself" when relevant — never GFY. No verbatim movie quotes. Strong punchline; ~40% of lines may end with standalone: Go Fuck Yourself.`;
+const LINE_SUFFIX = `\n\nReply with 1–3 sentences. Max 80 words. Use playerName. Weave the ASSIGNED ICONIC LINE when provided. Full phrase "Go Fuck Yourself" when relevant — never GFY. Strong punchline; ~40% of lines may end with standalone: Go Fuck Yourself.`;
 
 const COUPLE_BLOCK = `\n\n${COUPLE_CONTEXT}`;
 
@@ -266,7 +277,7 @@ const OFFLINE = {
     ],
     nandini: [
       "Nandini ne set le liya. Kunal bhai ka face dekhne layak hai. Itna confidence tha aur result aaya Band Baaja Baaraat ke wedding planner ka quarterly report.",
-      "Nandini bhai, set mil gaya — Mirzapur side plot energy, lekin Kunal ki kursi ab bhi occupied hai. Sub arc, dom table.",
+      "Nandini bhai, set mil gaya — KKHH side plot energy, lekin Kunal ki kursi ab bhi occupied hai. Sub arc, dom table.",
     ],
     default: [
       "Set complete ho gaya bhai. Paatal Lok mein bhi itna clean closure nahi milta. Absolute fucking cinema.",
@@ -300,11 +311,11 @@ const OFFLINE = {
   },
   steal: {
     kunal: [
-      "Abe kya loot machayi hai Kunal bhai. Seedha haath daal ke card nikaal liya. Mirzapur mein bhi log itni casually chori nahi karte. Fucking daylight robbery.",
+      "Abe kya loot machayi hai Kunal bhai. Seedha haath daal ke card nikaal liya. Night Manager op mein bhi itni casual daylight chori nahi. Fucking robbery.",
       "Kunal ne steal maara — power ka game hai, bhenchod. The Night Manager background op, daylight visible.",
     ],
     nandini: [
-      "Nandini ne card chura liya — cheeky sub move. Mirzapur mein chhoti chori, Kunal ki throne pe koi dent nahi. Still his turf.",
+      "Nandini ne card chura liya — cheeky sub move. Spartacus arena politics, Kunal ki throne pe koi dent nahi. Still his turf.",
       "Nandini bhai, steal clean tha. Farzi side-plot energy. Mukhtar still upstairs.",
     ],
     default: [
@@ -358,7 +369,7 @@ const OFFLINE = {
   },
   bullshit: {
     default: [
-      "Bullshit call maara aur seedha expose kar diya. Bhai ye Mirzapur ka Guddu nahi, income tax raid lag raha tha.",
+      "Bullshit call maara aur seedha expose kar diya. Paatal Lok interrogation — liar pakda, cards table pe gir gaye.",
       "Sach kya hai jhooth kya hai — liar pakda gaya, chaar card draw. Paatal Lok chaos, fucking beautiful.",
       "Evaru energy — kahani badli, cards table pe gir gaye. Go Fuck Yourself.",
     ],
@@ -366,12 +377,12 @@ const OFFLINE = {
   bluff_win: {
     default: [
       "Go Fuck Yourself bola, asli cards haath mein the — partner ne fold kar diya. Farzi scam complete.",
-      "Mirzapur deadpan — jhoot itna straight ki partner ne believe kar liya. Fucking mind games.",
+      "Night Manager deadpan — jhoot itna straight ki partner ne Go Fuck Yourself maan liya. Fucking mind games.",
     ],
   },
   game_over: [
     "Aur game khatam. Pura match aise laga jaise Virupaksha ka horror curse aur Farzi ka scam ek hi room mein mil gaye ho. Absolute fucking cinema.",
-    "Mirzapur credits roll — jo table pe baitha tha wohi raja. Bar band, filth yaad rahegi.",
+    "Dhurandhar Part 2 credits roll — jo table pe baitha tha wohi raja. Bar band, filth yaad rahegi.",
     "Gully Boy energy — pehla half tutorial, ab finale. Go Fuck Yourself.",
   ],
   roast: {
@@ -384,19 +395,19 @@ const OFFLINE = {
       "Nandini, teen baar pond miss — pond card nahi de raha, character development de raha hai. Go Fuck Yourself.",
     ],
     default: [
-      "Filth file read ho gayi bhai. Farzi confidence, Mirzapur ego, Dhootha decisions — catastrophic combination. Go Fuck Yourself.",
+      "Filth file read ho gayi bhai. KKHH diary energy, Paatal Lok secrets, Dhurandhar ego — catastrophic combination. Go Fuck Yourself.",
     ],
   },
   question: [
     "Paatal Lok interrogation vibe — bhai sach bata, woh fantasy chip kitni real hai? Scale 1-10, fucking honest.",
   ],
   dare: [
-    "Mirzapur intensity — apna dirtiest kink chip aloud bolo. Dom/sub eyes on you. Go.",
+    "Spartacus arena intensity — apna dirtiest kink chip aloud bolo. Dom/sub eyes on you. Go.",
   ],
   house_refill: {
     default: [
       "Bhai haath khali tha, house ne pond se cards refill kar diye. You're getting absolutely cooked — have some fucking cards.",
-      "Table mercy round — almost no cards, pond bailed you out. Mirzapur mein bhi itni sympathy nahi milti. Go Fuck Yourself later.",
+      "Table mercy round — almost no cards, pond bailed you out. Paatal Lok mein bhi itni sympathy nahi milti. Go Fuck Yourself later.",
     ],
     kunal: [
       "Kunal bhai, dom table pe haath khali — house refill. Pond ne pity cards diye. Still running the room, but embarrassing frame.",
@@ -419,7 +430,7 @@ const OFFLINE = {
   },
   drink: {
     default: [
-      "Drink assign ho gaya bhai — set ki saza, bar ki reality. Chug ya scan, Mirzapur mein bhi dues clear karte hain.",
+      "Drink assign ho gaya bhai — set ki saza, bar ki reality. KKHH college farewell — chug ya scan, dues clear karte hain.",
       "Partner ne drink lock kar diya. Brooklyn Nine-Nine paperwork nahi — shot time.",
     ],
   },
@@ -478,7 +489,7 @@ export function offlineLine(mode, profile, otherProfile = null, opts = {}) {
     if (Math.random() < 0.35 && !/go fuck yourself\.?$/i.test(line)) {
       line = `${line} Go Fuck Yourself.`;
     }
-    return line;
+    return weaveIconicIntoRoast(picked.iconicLine, line);
   }
 
   const key = _speakerKey(profile?.name);
@@ -492,17 +503,18 @@ export function offlineLine(mode, profile, otherProfile = null, opts = {}) {
     bank = bankEntry.default ?? bankEntry.kunal ?? Object.values(bankEntry)[0];
   }
 
-  const line = bank[Math.floor(Math.random() * bank.length)];
+  let line = bank[Math.floor(Math.random() * bank.length)];
   const event = (opts.scenario ?? opts.streakInfo ?? '').trim();
   if (event) {
     const short = event.length > 72 ? `${event.slice(0, 69)}…` : event;
-    return `${playerName} — ${short}. ${line}`;
+    line = `${playerName} — ${short}. ${line}`;
+  } else {
+    const hook = _pickProfileHook(profile);
+    if (hook && mode === 'roast') {
+      line = `${playerName} — ${hook}. ${line}`;
+    }
   }
-  const hook = _pickProfileHook(profile);
-  if (hook && mode === 'roast') {
-    return `${playerName} — ${hook}. ${line}`;
-  }
-  return line;
+  return weaveIconicIntoRoast(picked?.iconicLine, line);
 }
 
 /** Franchise id for client anti-repeat tracking. */

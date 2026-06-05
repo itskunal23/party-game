@@ -278,10 +278,11 @@ Phone-first **bar-table** layout: minimal stats → connected playfield (opponen
 | Length | **1–3 sentences**, max ~70 words; **1–2 swear words** (vary — don't spam madarchod) |
 | Game phrase | Say full **Go Fuck Yourself** when partner refuses or pond punishes — **never abbreviate "GFY"** in roast lines |
 | Copyright | **No verbatim dialogue** — inspired situations, catchphrase *energy*, named titles |
-| Format | **Name → what just happened → movie comparison → profanity → punchline** (often ends with standalone *Go Fuck Yourself.*) |
+| Format | **Name → what happened → iconic movie/show line in context → profanity → punchline** (often ends with standalone *Go Fuck Yourself.*) |
+| Source bubble | Transcript shows **Show · Title** or **Movie · Title** for the reference used |
 | Never | Generic "you're bad", corporate AI tone, long paragraphs, **random quotes with no table event** |
 | Event anchor | Every line must cite what just happened (set, GFY, drink, stall, steal, etc.) — client skips calls with no scenario |
-| References | **Assigned reference bank** per player (Nandini: Brooklyn Nine-Nine, Modern Family, Nailed It, etc.; Kunal: his mediaFaves + OTT beats) — specific moments, not title name-drops |
+| References | **Canon pool first:** Brooklyn Nine-Nine, Spartacus, Dhurandhar P1/P2, Paatal Lok, Night Manager, KKHH, Agent Sai Srinivasa Athreya, Hardcore Henry, Ip Man, Sanju, Ferris Bueller, Gully Boy, Scary Movie, Naked Gun, Undisputed 2/3 — then player-specific extras. No Mirzapur. Specific moments, not bare name-drops |
 | Anti-repeat | Same **franchise** not reused within the last **5** bartender lines in a session |
 | mediaFaves | Questionnaire picks boost matching franchises in the bank |
 
