@@ -646,6 +646,26 @@ button.game-stat-chip:active {
 }
 
 #action-banner.hidden { opacity: 0; pointer-events: none; }
+#action-banner.action-banner--explain {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 12px var(--space-md);
+}
+#action-banner .move-explain-headline {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  display: block;
+}
+#action-banner .move-explain-detail {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.72);
+  display: block;
+}
 #action-banner.banner--error { border-left-color: var(--brand-red); }
 #action-banner.banner--recovery {
   border-left-color: #ffb347;

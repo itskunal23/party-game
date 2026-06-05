@@ -285,17 +285,111 @@ function renderMyBooks() {
   }).join('');
 }
 
+function _nextPlayerName(afterPlayerId) {
+  const ids = state.players.map(p => p.id);
+  const idx = ids.indexOf(afterPlayerId);
+  if (idx < 0) return 'partner';
+  return state.players[(idx + 1) % ids.length]?.name ?? 'partner';
+}
+
+/** Plain-language what just happened + what it means. */
+function buildMoveExplanation(action) {
+  const fromP = state.players.find(p => p.id === action.fromId);
+  const toP = state.players.find(p => p.id === action.targetId);
+  const fromName = fromP?.name ?? 'Player';
+  const toName = toP?.name ?? 'partner';
+  const rank = _rankLabel(action.rank);
+  const nextName = _nextPlayerName(action.fromId ?? action.targetId);
+
+  switch (action.type) {
+    case 'ask_pending':
+      return {
+        headline: `${fromName} asks for ${rank}`,
+        detail: `${toName}: check your hand — Give if you have it, GFY if you don't, Bluff if you have it but want to lie.`
+      };
+    case 'got':
+      return {
+        headline: `${fromName} got ${action.count ?? 1}× ${rank}`,
+        detail: `${toName} gave the card(s). Turn passes to ${nextName}.`
+      };
+    case 'gfy_claim':
+      if (action.bluff) {
+        return {
+          headline: `${fromName} claims GFY on ${rank}`,
+          detail: `They might be lying. ${toName}: Accept (you draw from pond) or Bullshit if they actually have ${rank}.`
+        };
+      }
+      return {
+        headline: `${fromName} said Go Fuck Yourself`,
+        detail: `${fromName} says they don't have ${rank}. ${toName}: Accept — you draw from the pond. Bullshit only if you think they're lying.`
+      };
+    case 'gfy':
+      if (action.bluffSucceeded) {
+        return {
+          headline: `${toName} bluffed on ${rank}`,
+          detail: `${toName} had the card but lied. ${fromName} drew from the pond believing GFY. Turn passes to ${nextName}.`
+        };
+      }
+      if (action.continueTurn) {
+        return {
+          headline: `🍀 Lucky pond draw for ${fromName}`,
+          detail: `Drew a matching ${rank} from the pond — extra luck, but turn still passes to ${nextName}.`
+        };
+      }
+      if (action.closeToPond) {
+        return {
+          headline: `${fromName} missed the pond`,
+          detail: `Had 3 of ${rank}, needed 1 more — pond didn't have it. Drew ${action.drawCount ?? 1} card(s). Turn passes to ${nextName}.`
+        };
+      }
+      return {
+        headline: `${toName} refused with GFY`,
+        detail: `${fromName} draws ${action.drawCount ?? 1} from the pond (no ${rank} match). Turn passes to ${nextName}.`
+      };
+    case 'bullshit_caught':
+      return {
+        headline: `Bullshit! ${toName} was lying`,
+        detail: `${fromName} caught the bluff on ${rank}. ${toName} draws ${action.count ?? 4} from the pond. Turn passes to ${nextName}.`
+      };
+    case 'bullshit_wrong':
+      return {
+        headline: `Wrong bullshit call`,
+        detail: `${toName} called bullshit, but ${fromName} was honest — no ${rank} in hand. ${toName} draws ${action.count ?? 2} from the pond. Turn passes to ${nextName}.`
+      };
+    default:
+      return null;
+  }
+}
+
+function showMoveExplainer(action, duration = 4800) {
+  const copy = buildMoveExplanation(action);
+  if (!copy) return false;
+  const banner = $('action-banner');
+  if (!banner) return false;
+  banner.innerHTML =
+    `<span class="move-explain-headline">${copy.headline}</span>` +
+    `<span class="move-explain-detail">${copy.detail}</span>`;
+  banner.classList.add('action-banner--explain');
+  banner.classList.remove('hidden', 'banner--error', 'banner--recovery');
+  setTimeout(() => {
+    banner.classList.add('hidden');
+    banner.classList.remove('action-banner--explain');
+  }, duration);
+  return true;
+}
+
 function flashLuckyDraw(action) {
   const drawn = action.drawnCard;
   const banner = $('action-banner');
   if (!banner) return;
   const fromP = state.players.find(p => p.id === action.fromId);
   const s = drawn ? scenarioMeta(drawn.scenario) : { emoji: '🍀', scenario: '' };
+  const nextName = _nextPlayerName(action.fromId);
   banner.innerHTML = `
     <div class="lucky-draw-flash">
       <div class="lucky-draw-label">🍀 Lucky draw from the pond!</div>
       ${drawn ? `<div class="lucky-draw-card">${s.emoji} ${drawn.scenario}</div>` : ''}
-      <div class="lucky-draw-sub">${fromP?.name ?? 'Player'} — turn continues!</div>
+      <div class="lucky-draw-sub">${fromP?.name ?? 'Player'} — turn passes to ${nextName}</div>
     </div>`;
   banner.classList.remove('hidden');
   setTimeout(() => banner.classList.add('hidden'), 4200);
@@ -1219,7 +1313,10 @@ function renderAskFlowUI() {
   if (pending.phase === 'resolve') {
     const label = $('bullshit-bar-label');
     if (label) {
-      label.textContent = `They said GFY on ${_rankLabel(pending.rank)}. Trust it?`;
+      const rank = _rankLabel(pending.rank);
+      label.textContent =
+        `${pending.targetName ?? 'They'} said GFY on ${rank} — claims no ${rank}. ` +
+        'Accept: you draw from pond. Bullshit: only if you think they\'re lying.';
     }
     bullBar?.classList.remove('hidden');
     updateGameChrome();
@@ -1241,13 +1338,14 @@ function showBullshitOverlay(action) {
   const caller = state.players.find(p => p.id === action.fromId);
   const loser = state.players.find(p => p.id === action.targetId);
   const caught = action.type === 'bullshit_caught';
-  const facePlayer = caught ? loser : caller;
+  const facePlayer = loser;
+  const copy = buildMoveExplanation(action);
 
   if (kicker) kicker.textContent = caught ? 'CAUGHT RED HANDED' : 'WRONG CALL';
   title.textContent = caught ? 'BULLSHIT!' : 'WRONG CALL';
-  sub.textContent = caught
-    ? `${loser?.name ?? 'They'} draws ${action.count ?? 4}. Turn passes.`
-    : `${caller?.name ?? 'You'} draws ${action.count ?? 4}. Turn passes.`;
+  sub.textContent = copy?.detail ?? (caught
+    ? `${loser?.name ?? 'They'} lied — draws ${action.count ?? 4}. Turn passes.`
+    : `${loser?.name ?? 'They'} called bullshit wrong — draws ${action.count ?? 2}. ${caller?.name ?? 'Partner'} was honest. Turn passes.`);
   mountAvatar(avatarHost, _profileForPlayer(facePlayer), {
     mood: 'shocked',
     size: 'xl',
@@ -1642,20 +1740,23 @@ function showActionBanner(action) {
   let text = '';
 
   if (action.type === 'got') {
-    text = `${fromP?.name ?? '?'} got ${action.count} "${sName}" — turn continues!`;
-    // Flash hand zone when I receive cards
     if (action.fromId === state.myId && gsapReady()) {
       const hz = $('hand-zone');
       if (hz) gsap.fromTo(hz, { filter: 'brightness(1)' }, { filter: 'brightness(1.4)', duration: 0.14, yoyo: true, repeat: 1 });
     }
     Sfx.playCardReceive();
+    showMoveExplainer(action);
+    return;
   } else if (action.type === 'ask_pending') {
-    text = `${fromP?.name ?? '?'} asks for "${sName}"…`;
+    showMoveExplainer(action, 4000);
+    return;
   } else if (action.type === 'gfy_claim') {
-    text = `${fromP?.name ?? '?'}: "GFY" on "${sName}" — accept or call bullshit.`;
     Sfx.playGFY();
+    showMoveExplainer(action, 5000);
+    return;
   } else if (action.type === 'bullshit_caught' || action.type === 'bullshit_wrong') {
     showBullshitOverlay(action);
+    showMoveExplainer(action, 5200);
     return;
   } else if (action.type === 'steal') {
     if (action.targetId === state.myId) {
@@ -1675,31 +1776,14 @@ function showActionBanner(action) {
     const lucky = action.continueTurn;
 
     if (lucky) {
-      text = `🍀 ${fromP?.name ?? '?'} drew a match from the pond!`;
       flashLuckyDraw(action);
       return;
     }
 
-    // Differentiate honest GFY vs successful bluff
-    if (action.bluffSucceeded) {
-      if (action.fromId === state.myId) {
-        // I was the asker — I got fooled by a bluff
-        text = `😤 ${toP?.name ?? 'They'} had it all along. You got played.`;
-        showBluffOverlay(toP?.name ?? '?');
-        return;
-      } else if (action.targetId === state.myId) {
-        // I was the target — my bluff worked
-        text = `🎭 Bluff worked — they took the bait.`;
-        banner.innerHTML = text;
-        banner.classList.remove('hidden');
-        setTimeout(() => banner.classList.add('hidden'), 3500);
-        return;
-      } else {
-        text = `🎭 ${toP?.name ?? '?'} bluffed ${fromP?.name ?? '?'} — bluff worked.`;
-      }
-    } else {
-      text = `${toP?.name ?? '?'}: "GFY!" — ${fromP?.name ?? '?'} draws from the pond.`;
+    if (action.bluffSucceeded && action.fromId === state.myId) {
+      showBluffOverlay(toP?.name ?? '?');
     }
+    showMoveExplainer(action);
 
     if (action.fromId === state.myId) {
       const gfyMood = action.closeToPond ? 'shocked' : 'angry';
@@ -1714,6 +1798,7 @@ function showActionBanner(action) {
           onComplete: () => gsap.set('#screen-game', { x: 0 }) });
       }
     }
+    return;
   }
 
   if (text) {
@@ -2447,10 +2532,11 @@ function _processAction(session, action, players) {
       summary: `${fromP?.name ?? '?'} caught ${players?.find(p => p.id === action.targetId)?.name ?? 'them'} lying`
     });
   } else if (action.type === 'bullshit_wrong') {
+    const wrongCaller = players?.find(p => p.id === action.targetId);
     recordEvent(session, {
       type: 'bullshit',
-      playerName: fromP?.name,
-      summary: `${fromP?.name ?? '?'} wrong bullshit call — draws 4`
+      playerName: wrongCaller?.name,
+      summary: `${wrongCaller?.name ?? '?'} wrong bullshit call — draws 2`
     });
   }
 }
