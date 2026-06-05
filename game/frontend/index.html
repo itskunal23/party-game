@@ -355,51 +355,53 @@
   <!-- ── SCREEN: Game ───────────────────────────────────────────────────── -->
   <div id="screen-game" class="screen hidden">
 
+    <!-- Compact stats -->
     <div class="game-topbar">
-      <div class="game-topbar-stats">
-        <span class="game-topbar-stat" id="deck-count">🌊 —</span>
-        <span class="game-topbar-stat" id="my-score">📚 0</span>
-      </div>
-      <div class="game-topbar-room" id="room-code-display">ROOM —</div>
-      <span class="game-topbar-sets hidden" id="sets-progress" aria-hidden="true">0/13</span>
+      <span class="game-topbar-item" id="deck-count">🌊 —</span>
+      <span class="game-topbar-item" id="sets-progress">📦 0/13</span>
+      <span class="game-topbar-item" id="room-code-display"></span>
+      <span class="game-topbar-item" id="my-score">📚 0</span>
     </div>
 
-    <div id="my-books-row" class="my-books-row"></div>
-
+    <!-- Other player — primary ask target at top -->
     <div id="partner-zone" class="partner-zone"></div>
 
-    <div id="battlefield" class="battlefield" aria-hidden="true">
-      <div class="battlefield-line"></div>
-      <div id="battlefield-fx" class="battlefield-fx"></div>
-    </div>
+    <p id="turn-hint" class="turn-hint hidden"></p>
 
+    <!-- Completed sets (face-up books) -->
+    <div id="my-books-row" class="my-books-row"></div>
+
+    <!-- Center: draw pile (the pond) — alternate swipe target -->
     <div id="center-zone">
       <div class="draw-pile draw-pile--drop" id="draw-pile-el">
         <div class="draw-pile-label">POND</div>
-        <div class="draw-pile-count" id="pond-count">—</div>
-        <div class="pond-ask-hint" id="pond-ask-hint">Draw or ask</div>
+        <div class="draw-pile-count" id="pond-count"></div>
+        <div class="pond-ask-hint" id="pond-ask-hint">↑ or drop here to ask</div>
       </div>
     </div>
 
+    <!-- Action banner -->
     <div id="action-banner" class="hidden"></div>
 
+    <!-- Special moves (steal / double / kick door — coming online next) -->
+    <div id="special-moves-bar" class="special-moves-bar hidden" aria-label="Special moves"></div>
+
+    <!-- Bullshit decision when opponent claims GFY -->
     <div id="bullshit-bar" class="bullshit-bar hidden" role="toolbar" aria-label="Accept or call bullshit">
       <p class="bullshit-bar-label" id="bullshit-bar-label"></p>
       <div class="bullshit-bar-actions">
-        <button type="button" class="move-pill move-pill--accept" id="btn-accept-gfy">Accept</button>
-        <button type="button" class="move-pill move-pill--bullshit" id="btn-call-bullshit">Bullshit</button>
+        <button type="button" class="move-pill move-pill--accept" id="btn-accept-gfy">Accept GFY</button>
+        <button type="button" class="move-pill move-pill--bullshit" id="btn-call-bullshit">🐂 Bullshit</button>
       </div>
     </div>
 
-    <div class="game-play-column">
-      <div id="hand-zone"></div>
-      <div id="special-moves-bar" class="special-moves-bar hidden" aria-label="Special moves"></div>
-    </div>
+    <!-- Your hand (horizontal row — swipe sideways if you have many) -->
+    <div id="hand-zone"></div>
 
-    <div id="action-zone" class="action-zone" role="status" aria-live="polite"></div>
+    <!-- Action zone — what to do next -->
+    <div id="action-zone"></div>
 
-    <button type="button" class="bartender-fab" id="btn-bartender-fab" aria-label="Bartender roast" title="Bartender">🍸</button>
-
+    <!-- Bottom toolbar -->
     <div class="game-toolbar">
       <button type="button" class="toolbar-btn" id="btn-drink-log">
         <span class="toolbar-icon">🍺</span>
@@ -407,7 +409,11 @@
       </button>
       <button type="button" class="toolbar-btn" id="btn-side-games">
         <span class="toolbar-icon">🎲</span>
-        <span>Side</span>
+        <span>Side Games</span>
+      </button>
+      <button type="button" class="toolbar-btn toolbar-btn--muted" id="btn-ai-host">
+        <span class="toolbar-icon">🍸</span>
+        <span>Roast</span>
       </button>
     </div>
 

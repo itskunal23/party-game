@@ -47,25 +47,6 @@ let _bartenderRecentFranchises = [];
 let _drag = null;
 let _skipNextCardClick = false;
 let _dealingLocked = false;
-let _battlefieldTimer = null;
-
-const PARTNER_DISPLAY_ROLES = {
-  Kunal: '🥊 Fighter',
-  Nandini: '🎂 Baking Queen',
-  'Chaos goblin': '😈 Chaos Goblin',
-  Anonymous: '🎭 Mystery'
-};
-
-const MEDIA_ROLE_CHIPS = {
-  mirzapur: '⚔️ Kingpin',
-  'gully-boy': '🎤 Rapper',
-  farzi: '💰 Scammer',
-  'paatal-lok': '👮 Detective',
-  barbie: '👑 Queen',
-  'masterchef-india': '🎤 Judge',
-  spartacus: '⚔️ Gladiator',
-  'brooklyn-nine-nine': '👮 Cop',
-};
 
 const RANK_ORDER = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
@@ -172,47 +153,6 @@ async function runSetupSequence(msg) {
   updateActionZone();
 }
 
-function _partnerRoleChip(profile, name) {
-  if (PARTNER_DISPLAY_ROLES[name]) return PARTNER_DISPLAY_ROLES[name];
-  const primary = profile?.mediaFaves?.[0];
-  if (primary && MEDIA_ROLE_CHIPS[primary]) return MEDIA_ROLE_CHIPS[primary];
-  return '🎭 Player';
-}
-
-function _applyHeatGlow(level) {
-  const el = $('screen-game');
-  if (!el) return;
-  el.classList.remove('game--heat-3', 'game--heat-5', 'game--heat-7');
-  if (level >= 7) el.classList.add('game--heat-7');
-  else if (level >= 5) el.classList.add('game--heat-5');
-  else if (level >= 3) el.classList.add('game--heat-3');
-}
-
-function _setActionCta(primary, { tone = 'default', sub = '' } = {}) {
-  const zone = $('action-zone');
-  if (!zone) return;
-  const toneCls = tone === 'wait' ? 'action-cta--wait' : tone === 'on' ? 'action-cta--on' : '';
-  zone.innerHTML = `
-    <p class="action-cta ${toneCls}">${primary}</p>
-    ${sub ? `<p class="action-cta--sub">${sub}</p>` : ''}`;
-}
-
-function _battlefieldPing(text, ms = 1400) {
-  const el = $('battlefield-fx');
-  if (!el || !text) return;
-  el.textContent = text;
-  clearTimeout(_battlefieldTimer);
-  _battlefieldTimer = setTimeout(() => { if (el) el.textContent = ''; }, ms);
-}
-
-function _flashPartnerHero(kind = 'orange') {
-  const hero = document.querySelector('.partner-hero');
-  if (!hero) return;
-  hero.classList.remove('partner-hero--flash-orange', 'partner-hero--flash-gold');
-  hero.classList.add(kind === 'gold' ? 'partner-hero--flash-gold' : 'partner-hero--flash-orange');
-  setTimeout(() => hero.classList.remove('partner-hero--flash-orange', 'partner-hero--flash-gold'), 650);
-}
-
 function updateGameHud() {
   const me = state.players.find(p => p.id === state.myId);
   const gs = state.gameState;
@@ -221,15 +161,23 @@ function updateGameHud() {
   if ($('sets-progress')) {
     const done = gs?.completedSets ?? 0;
     const total = gs?.totalSets ?? TOTAL_SETS;
-    $('sets-progress').textContent = `${done}/${total}`;
+    $('sets-progress').textContent = `📦 ${done}/${total}`;
   }
   const pondCount = $('pond-count');
   if (pondCount) pondCount.textContent = gs?.deckCount > 0 ? String(gs.deckCount) : '';
-  const code = state.roomCode ?? gs?.roomCode;
-  if ($('room-code-display') && code) {
-    $('room-code-display').textContent = `ROOM ${String(code).toUpperCase()}`;
+
+  const hint = $('turn-hint');
+  const partner = state.players.find(p => p.id !== state.myId);
+  if (hint && gs?.phase === 'playing') {
+    const cur = state.players.find(p => p.id === gs.currentTurnPlayerId);
+    const isMe = gs.currentTurnPlayerId === state.myId;
+    hint.classList.remove('hidden');
+    hint.textContent = isMe
+      ? _askHint(partner?.name)
+      : `${cur?.name ?? '…'} is asking for a set…`;
+  } else if (hint) {
+    hint.classList.add('hidden');
   }
-  _applyHeatGlow(state.gameHeat ?? 0);
 }
 
 function renderMyBooks() {
@@ -313,7 +261,6 @@ function showBluffLandedToast() {
   el.classList.remove('achievement-toast--close-call');
   el.classList.add('is-visible', 'achievement-toast--bluff');
   Sfx.playBluffLanded();
-  _flashPartnerHero('orange');
   setTimeout(() => el.classList.remove('is-visible', 'achievement-toast--bluff'), 3000);
 }
 
@@ -333,7 +280,6 @@ function showBluffOverlay(liarName) {
 
   overlay.classList.remove('hidden');
   Sfx.playBluffLanded();
-  _flashPartnerHero('orange');
   if (gsapReady()) {
     gsap.from('.bluff-overlay-inner', { scale: 0.85, opacity: 0, duration: 0.35, ease: 'back.out(1.5)' });
   }
@@ -368,6 +314,12 @@ function _isDesktopPointer() {
   return window.matchMedia('(pointer: fine)').matches;
 }
 
+function _askHint(partnerName) {
+  const who = partnerName ?? 'them';
+  return _isDesktopPointer()
+    ? `Your turn — pick a card`
+    : `Your turn — pick a card`;
+}
 
 // ─── Card rendering ───────────────────────────────────────────────────────────
 function scenarioMeta(scenario) {
@@ -572,12 +524,6 @@ function _onCardPointerDown(e, wrapper, card) {
 
 function _setDragMode(on) {
   $('screen-game')?.classList.toggle('game--dragging', on);
-  if (on) {
-    const partner = state.players.find(p => p.id !== state.myId);
-    _setActionCta('Release to ask', { tone: 'on' });
-  } else if (state.screen === 'game') {
-    updateActionZone();
-  }
 }
 
 function _hitDropZone(cx, cy) {
@@ -756,80 +702,71 @@ function renderPartnerZone() {
     const isActive = p.isCurrentTurn;
     const isTargeted = state.selectedTarget?.id === p.id;
     const hasCardSelected = !!state.selectedCard;
-    const profile = _profileForPlayer(p);
-    const bookCount = p.books?.length ?? 0;
 
     const div = document.createElement('div');
-    div.className = `partner-hero partner-drop${isActive ? ' partner-drop--active' : ''}${isTargeted ? ' targeted' : ''}${hasCardSelected && isMyTurn ? ' partner-drop--ready' : ''}`;
+    div.className = `partner-drop${isActive ? ' partner-drop--active' : ''}${isTargeted ? ' targeted' : ''}${hasCardSelected && isMyTurn ? ' partner-drop--ready' : ''}`;
     div.dataset.pid = p.id;
     div.dataset.name = p.name;
     div.setAttribute('role', 'button');
     div.tabIndex = isMyTurn ? 0 : -1;
 
-    let ctaText = 'WAITING';
-    let ctaClass = 'partner-hero-cta partner-hero-cta--wait';
-    if (isMyTurn) {
-      if (hasCardSelected) {
-        ctaText = `ASK ${p.name.toUpperCase()}`;
-        ctaClass = 'partner-hero-cta partner-hero-cta--hot';
-      } else {
-        ctaText = 'THROW CARD ↑';
-        ctaClass = 'partner-hero-cta';
-      }
-    } else if (isActive) {
-      ctaText = 'THEIR TURN';
-    }
-
-    div.innerHTML = `
-      <div class="partner-hero-avatar"></div>
-      <h2 class="partner-hero-name">${p.name}</h2>
-      <p class="partner-hero-stats">${bookCount} BOOK${bookCount !== 1 ? 'S' : ''} · ${p.cardCount} CARD${p.cardCount !== 1 ? 'S' : ''}</p>
-      <div class="partner-hero-role">${_partnerRoleChip(profile, p.name)}</div>
-      <div class="${ctaClass}">${ctaText}</div>
-      <div class="partner-hero-mini-stack"></div>`;
-
-    const avatarSlot = div.querySelector('.partner-hero-avatar');
-    const myBooks = state.players.find(pl => pl.id === state.myId)?.books?.length ?? 0;
-    const oppBooks = bookCount;
-    let mood = 'neutral';
-    if (oppBooks > myBooks + 1) mood = 'smug';
-    else if (myBooks > oppBooks + 1) mood = 'angry';
-    mountAvatar(avatarSlot, profile, { mood, size: 'hero', ring: true, animate: true });
-
-    const mini = div.querySelector('.partner-hero-mini-stack');
-    const show = Math.min(p.cardCount, 4);
+    const stack = document.createElement('div');
+    stack.className = 'partner-stack';
+    const show = Math.min(p.cardCount, 5);
     for (let i = 0; i < show; i++) {
       const b = renderCardBack();
       b.classList.add('partner-card-mini');
-      mini?.appendChild(b);
+      stack.appendChild(b);
+    }
+    if (p.cardCount === 0) {
+      stack.innerHTML = '<span class="partner-no-cards">No cards left</span>';
     }
 
+    const badge = isMyTurn ? 'THROW A CARD ↑' : (isActive ? '🎯 THEIR TURN' : 'WAITING');
+    div.innerHTML = `
+      <span class="partner-drop-badge">${badge}</span>
+      <div class="partner-drop-main">
+        <div class="partner-avatar-col"></div>
+        <div class="partner-stack-slot"></div>
+        <div class="partner-meta">
+          <span class="partner-name">${p.name}</span>
+          <span class="partner-stats">🃏 ${p.cardCount} · 📚 ${p.books.length}</span>
+          <span class="partner-hint">${isMyTurn ? 'Swipe card ↑ or tap card → tap name' : (isActive ? 'Asking…' : 'Waiting…')}</span>
+        </div>
+      </div>`;
+    const avatarSlot = document.createElement('div');
+    div.querySelector('.partner-avatar-col')?.appendChild(avatarSlot);
+    const myBooks = state.players.find(pl => pl.id === state.myId)?.books?.length ?? 0;
+    const oppBooks = p.books?.length ?? 0;
+    let mood = 'neutral';
+    if (oppBooks > myBooks + 1) mood = 'smug';
+    else if (myBooks > oppBooks + 1) mood = 'angry';
+    mountAvatar(avatarSlot, _profileForPlayer(p), { mood, size: 'xl', ring: true, animate: true });
+    div.querySelector('.partner-stack-slot')?.appendChild(stack);
+
     if (!isMyTurn) div.classList.add('partner-drop--disabled');
-    if (isMyTurn) div.addEventListener('click', () => selectPartner(p, div));
+    if (isMyTurn) {
+      div.addEventListener('click', () => selectPartner(p, div));
+    }
     zone.appendChild(div);
   });
 }
 
 function updatePartnerHints() {
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
-  document.querySelectorAll('.partner-hero').forEach(el => {
-    const cta = el.querySelector('.partner-hero-cta');
-    if (!cta) return;
-    const name = el.dataset.name ?? 'THEM';
+  document.querySelectorAll('.partner-drop').forEach(el => {
+    const hint = el.querySelector('.partner-hint');
+    if (!hint) return;
     if (!isMyTurn) {
-      const isActive = el.classList.contains('partner-drop--active');
-      cta.textContent = isActive ? 'THEIR TURN' : 'WAITING';
-      cta.className = 'partner-hero-cta partner-hero-cta--wait';
-      el.classList.remove('partner-drop--ready');
+      hint.textContent = 'Waiting for their ask…';
       return;
     }
     if (state.selectedCard) {
-      cta.textContent = `ASK ${name.toUpperCase()}`;
-      cta.className = 'partner-hero-cta partner-hero-cta--hot';
+      const short = state.selectedCard.scenario.slice(0, 24);
+      hint.textContent = `Tap → ask for "${short}${state.selectedCard.scenario.length > 24 ? '…' : ''}"`;
       el.classList.add('partner-drop--ready');
     } else {
-      cta.textContent = 'THROW CARD ↑';
-      cta.className = 'partner-hero-cta';
+      hint.textContent = 'Swipe card ↑ or tap card → tap name';
       el.classList.remove('partner-drop--ready');
     }
   });
@@ -1164,7 +1101,6 @@ function showBullshitOverlay(action) {
   });
 
   overlay.classList.remove('hidden');
-  _flashPartnerHero('orange');
   Sfx.playBullshitCalled();
   setTimeout(() => {
     if (caught) Sfx.playBullshitSuccess();
@@ -1176,56 +1112,66 @@ function showBullshitOverlay(action) {
 
 // ─── Action zone ──────────────────────────────────────────────────────────────
 function updateActionZone() {
+  const zone = $('action-zone');
+  if (!zone) return;
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
   const partner = state.players.find(p => p.id !== state.myId);
   const pending = state.pendingAsk;
-  const heat = state.gameHeat ?? 0;
-  const heatSub = heat >= 3 ? `Heat ${heat}/7` : '';
 
   if (pending?.phase === 'respond') {
-    _setActionCta('Give · GFY · or Bluff', { tone: 'on' });
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🎭</span> Give · GFY · or Bluff</p>`;
     return;
   }
   if (pending?.phase === 'waiting_bullshit') {
-    _setActionCta('They\'re deciding…', { tone: 'wait' });
+    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">🐂</span> They're deciding…</p>`;
     return;
   }
   if (pending?.phase === 'resolve') {
-    _setActionCta('Accept or Bullshit', { tone: 'on' });
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🐂</span> <strong>Accept</strong> → draw from pond · <strong>Bullshit</strong> → call the bluff (wrong = draw 4)</p>`;
     return;
   }
   if (pending?.phase === 'waiting_target') {
-    _setActionCta('Waiting…', { tone: 'wait' });
+    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> Waiting…</p>`;
     return;
   }
   if (state.pendingBookPowerup) {
-    _setActionCta('Pick book bonus', { tone: 'on' });
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">📚</span> Choose your book bonus ↓</p>`;
     return;
   }
   if (state.luckyReward) {
-    _setActionCta('Pick lucky reward', { tone: 'on' });
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🍀</span> Lucky — pick your reward ↓</p>`;
     return;
   }
 
   if (!isMyTurn) {
     const current = state.players.find(p => p.id === state.gameState?.currentTurnPlayerId);
-    _setActionCta(`${current?.name ?? 'Partner'}'s turn`, { tone: 'wait', sub: heatSub });
+    zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">⏳</span> ${current?.name ?? 'Partner'}'s turn…</p>`;
     return;
   }
   if (_askFlowBlocksPlay()) return;
-  if ($('screen-game')?.classList.contains('game--dragging')) return;
-
   if (!state.selectedCard) {
-    _setActionCta('Pick a card', { tone: 'default', sub: heatSub });
+    const askLine = _isDesktopPointer()
+      ? `Click a card to ask ${partner?.name ?? 'them'}`
+      : `Pick a card · swipe ↑ at ${partner?.name ?? 'them'}`;
+    const heat = state.gameHeat ?? 0;
+    const heatHtml = heat >= 2
+      ? `<p class="action-guide action-guide--heat"><span>${heat >= 5 ? '🚨' : '🔥'}</span> ${heat >= 6 ? 'Somebody do something' : heat >= 4 ? 'Table\'s getting hot' : 'Heat building'} (${heat}/7)</p>`
+      : '';
+    zone.innerHTML = `<p class="action-guide"><span class="action-guide-icon">①</span> ${askLine}</p>${heatHtml}`;
     return;
   }
   if (!state.selectedTarget) {
-    const rank = SCENARIOS.find(s => s.rank === state.selectedCard.rank)?.name ?? state.selectedCard.rank;
-    _setActionCta(`Ask ${partner?.name ?? 'them'} for ${rank}`, { tone: 'on', sub: heatSub });
+    const short = state.selectedCard.scenario.length > 30
+      ? `${state.selectedCard.scenario.slice(0, 30)}…`
+      : state.selectedCard.scenario;
+    const throwLine = _isDesktopPointer()
+      ? `Click ${partner?.name ?? 'them'} or the pond`
+      : `Swipe ↑ at <strong>${partner?.name ?? 'them'}</strong>`;
+    zone.innerHTML = `<p class="action-guide action-guide--on"><span class="action-guide-icon">🃏</span> <strong>${short}</strong> — ${throwLine}</p>`;
     return;
   }
 
-  _setActionCta('Sending…', { tone: 'wait' });
+  zone.innerHTML = `<p class="action-guide action-guide--wait"><span class="action-guide-icon">📨</span> Sending…</p>`;
 }
 
 function sendAsk() {
@@ -1236,10 +1182,8 @@ function sendAsk() {
   const wrapper = document.querySelector(`.hand-card-wrapper[data-rank="${rank}"]`);
   const partnerEl = document.querySelector(`.partner-drop[data-pid="${targetId}"]`);
 
-  const rankName = SCENARIOS.find(s => s.rank === rank)?.name ?? rank;
   Sfx.playCardThrow();
   haptic('medium');
-  _battlefieldPing(`→ ${state.selectedTarget.name} · ${rankName}`);
   API.send({ type: 'ask', rank, targetId });
   state.selectedCard = null;
   state.selectedTarget = null;
@@ -2226,7 +2170,6 @@ function wireHandlers() {
     _aiCooldownUntil = 0;
     _prevHandRanks = new Set();
     state.gameHeat = 0;
-    _applyHeatGlow(0);
     state._lastBonusDrawSig = null;
     state._lastHouseRefillSig = null;
     showScreen('game');
@@ -2289,7 +2232,6 @@ function wireHandlers() {
     Sfx.setHeatLevel(newHeat);
     if (newHeat >= 5 && (state.gameHeat ?? 0) < 5) Sfx.playHeatWarning();
     state.gameHeat = newHeat;
-    _applyHeatGlow(newHeat);
 
     // ── House refill (< 3 cards at turn end → draw to 5) ─────────────────────
     if (msg.gameState.houseRefill && !_dealingLocked) {
@@ -2545,7 +2487,7 @@ function wireUI() {
     startProfileFlow();
   });
 
-  $('btn-bartender-fab')?.addEventListener('click', async () => {
+  $('btn-ai-host')?.addEventListener('click', async () => {
     haptic('light');
     const me = state.players.find(p => p.id === state.myId);
     if (!me) return;

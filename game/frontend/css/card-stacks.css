@@ -41,9 +41,8 @@
 
 .hand-card-wrapper.is-selected {
   animation: none;
-  transform: translateY(-52px) scale(1.15);
+  transform: translateY(-40px) scale(1.08);
   z-index: 50;
-  filter: drop-shadow(0 24px 48px rgba(0, 51, 160, 0.45));
 }
 
 .hand-card-wrapper.is-dragging {
@@ -332,9 +331,9 @@
 
 /* ── Draw pile ─────────────────────────────────────────────────────────────── */
 .draw-pile {
-  width: 128px;
-  height: 184px;
-  border-radius: 22px;
+  width: 92px;
+  height: 132px;
+  border-radius: 18px;
   background: linear-gradient(145deg, #2A1540 0%, #180A28 55%, #0E0820 100%);
   border: 1px solid rgba(255,255,255,0.13);
   display: flex;
@@ -373,7 +372,7 @@
 
 .draw-pile-label {
   font-family: var(--font-brand);
-  font-size: 26px;
+  font-size: 20px;
   color: white;
   text-shadow:
     0 0 18px rgba(0, 51, 160, 0.75),
@@ -387,14 +386,12 @@
 }
 
 .draw-pile-count {
-  font-size: 28px;
-  font-weight: 800;
-  color: rgba(255, 214, 10, 0.95);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 214, 10, 0.9);
   z-index: 1;
   position: relative;
-  margin-top: 2px;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
 }
 
 /* ── Book stack animation ──────────────────────────────────────────────────── */
