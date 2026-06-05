@@ -50,3 +50,20 @@ export function haptic(type = 'light') {
   const patterns = { light: [10], medium: [30], heavy: [50, 30, 50] };
   navigator.vibrate(patterns[type] ?? [10]);
 }
+
+/** Matched to major game audio beats (GFY audio direction). */
+export function gameHaptic(event) {
+  if (!('vibrate' in navigator)) return;
+  const patterns = {
+    bookComplete: [60, 40, 80, 40, 100],
+    luckyDraw: [25, 35, 55],
+    bullshitSuccess: [40, 25, 45],
+    gfy: [90, 50, 90],
+    chaos: [35, 70, 35],
+    closeCall: [50, 80, 40],
+    light: [10],
+    medium: [30],
+    heavy: [50, 30, 50]
+  };
+  navigator.vibrate(patterns[event] ?? patterns.medium);
+}

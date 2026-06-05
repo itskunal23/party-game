@@ -1,4 +1,4 @@
-const CACHE = 'gfy-v28';
+const CACHE = 'gfy-v29';
 
 const STATIC_SHELL = [
   '/',
@@ -21,6 +21,7 @@ const STATIC_SHELL = [
   '/js/game.js',
   '/js/bac.js',
   '/js/mobile.js',
+  '/js/audio.js',
   '/js/profile.js',
   '/js/session-memory.js',
   '/js/chaos-events.js',

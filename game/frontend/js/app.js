@@ -1,5 +1,6 @@
 import * as API from './api.js';
 import { initMobile, acquireWakeLock, releaseWakeLock, haptic } from './mobile.js';
+import * as Sfx from './audio.js';
 import { initBac, openDrinkScan } from './bac.js';
 import { SCENARIOS, TOTAL_SETS } from './game.js';
 import { apiPost } from './api.js';
@@ -91,11 +92,14 @@ function _syncHandSelectionClass(wrapper) {
 const SCREENS = ['landing', 'profile', 'home', 'lobby', 'game', 'toast', 'results'];
 
 function showScreen(name) {
+  const prev = state.screen;
   SCREENS.forEach(s => {
     const el = document.getElementById(`screen-${s}`);
     if (el) el.classList.toggle('hidden', s !== name);
   });
   state.screen = name;
+  if (name === 'game' && prev !== 'game') Sfx.startAmbient();
+  if (prev === 'game' && name !== 'game' && name !== 'toast') Sfx.stopAmbient();
 }
 
 function $(id) { return document.getElementById(id); }
@@ -215,102 +219,16 @@ function flashLuckyDraw(action) {
         .to(pond, { scale: 1.0, duration: 0.32, ease: 'back.out(2.8)' });
     }
   }
-  haptic('medium');
-}
-
-// ─── Audio (Web Audio API) ────────────────────────────────────────────────────
-let _audioCtx = null;
-function getAudioCtx() {
-  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return _audioCtx;
-}
-
-function playTone(freq, type, duration, vol = 0.22) {
-  try {
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type; osc.frequency.value = freq; gain.gain.value = vol;
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start();
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.stop(ctx.currentTime + duration);
-  } catch { /* AudioContext unavailable */ }
-}
-
-function playDeal() { playTone(440, 'sine', 0.08, 0.15); }
-
-/** Subtle swoosh + soft tap — card thrown to partner / pond */
-function playCardSlide() {
-  try {
-    const ctx = getAudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-
-    const swooshDur = 0.11;
-    const samples = Math.floor(ctx.sampleRate * swooshDur);
-    const buf = ctx.createBuffer(1, samples, ctx.sampleRate);
-    const ch = buf.getChannelData(0);
-    for (let i = 0; i < samples; i++) {
-      const t = i / samples;
-      ch[i] = (Math.random() * 2 - 1) * (1 - t) * (1 - t);
-    }
-    const noise = ctx.createBufferSource();
-    noise.buffer = buf;
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 2800;
-    bp.Q.value = 0.7;
-    const swooshGain = ctx.createGain();
-    const t0 = ctx.currentTime;
-    swooshGain.gain.setValueAtTime(0.035, t0);
-    swooshGain.gain.exponentialRampToValueAtTime(0.001, t0 + swooshDur);
-    noise.connect(bp);
-    bp.connect(swooshGain);
-    swooshGain.connect(ctx.destination);
-    noise.start(t0);
-
-    const tap = ctx.createOscillator();
-    const tapGain = ctx.createGain();
-    tap.type = 'sine';
-    tap.frequency.setValueAtTime(220, t0 + 0.07);
-    tap.frequency.exponentialRampToValueAtTime(110, t0 + 0.13);
-    tapGain.gain.setValueAtTime(0.055, t0 + 0.07);
-    tapGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
-    tap.connect(tapGain);
-    tapGain.connect(ctx.destination);
-    tap.start(t0 + 0.07);
-    tap.stop(t0 + 0.15);
-  } catch { /* AudioContext unavailable */ }
-}
-
-function playGFY()  { [220, 196, 165].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.15), i * 70)); }
-
-function playBluffLanded() {
-  [[392,'sine',0.12],[523,'sine',0.15],[659,'sine',0.18]]
-    .forEach(([f, t, d], i) => setTimeout(() => playTone(f, t, d, 0.16), i * 85));
-}
-
-function playAchievementSound() {
-  [[523,'sine',0.1],[659,'sine',0.1],[784,'sine',0.1],[1046,'sine',0.18]]
-    .forEach(([f, t, d], i) => setTimeout(() => playTone(f, t, d, 0.18), i * 65));
-}
-
-function playHeatWarning() {
-  [[220,'sawtooth',0.09],[247,'sawtooth',0.09],[262,'sawtooth',0.14]]
-    .forEach(([f, t, d], i) => setTimeout(() => playTone(f, t, d, 0.14), i * 115));
-}
-
-function playChaosEvent() {
-  [[330,'square',0.07],[415,'square',0.07],[523,'sine',0.1],[880,'sine',0.08]]
-    .forEach(([f, t, d], i) => setTimeout(() => playTone(f, t, d, 0.11), i * 48));
-}
-function playBook() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.28), i * 90)); }
-function playBookSlam() {
-  [180, 220, 280, 440].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.12, 0.28), i * 55));
-  setTimeout(playBook, 400);
+  Sfx.playLuckyDraw();
 }
 
 function _wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function _bootAudioOnce() {
+  Sfx.initAudio();
+  document.removeEventListener('pointerdown', _bootAudioOnce);
+  document.removeEventListener('click', _bootAudioOnce);
+}
 
 function showAchievementToast(ach) {
   const el = $('achievement-toast');
@@ -318,8 +236,7 @@ function showAchievementToast(ach) {
   el.textContent = `${ach.emoji} ${ach.label} unlocked!`;
   el.classList.remove('achievement-toast--close-call', 'achievement-toast--bluff');
   el.classList.add('is-visible');
-  haptic('heavy');
-  playAchievementSound();
+  Sfx.playAchievementSound();
   setTimeout(() => el.classList.remove('is-visible'), 3200);
 }
 
@@ -329,7 +246,7 @@ function showCloseCallMoment() {
   el.textContent = '💀 SO CLOSE — had 3, pond said no';
   el.classList.remove('achievement-toast--bluff');
   el.classList.add('is-visible', 'achievement-toast--close-call');
-  haptic('heavy');
+  Sfx.playCloseCall();
   if (gsapReady()) {
     gsap.fromTo(el, { x: -8 }, { x: 8, duration: 0.07, ease: 'power1.inOut', yoyo: true, repeat: 5,
       onComplete: () => gsap.set(el, { x: 0 }) });
@@ -343,8 +260,7 @@ function showBluffLandedToast() {
   el.textContent = '🎭 Bluff landed — they took the bait';
   el.classList.remove('achievement-toast--close-call');
   el.classList.add('is-visible', 'achievement-toast--bluff');
-  haptic('heavy');
-  playBluffLanded();
+  Sfx.playBluffLanded();
   setTimeout(() => el.classList.remove('is-visible', 'achievement-toast--bluff'), 3000);
 }
 
@@ -363,8 +279,7 @@ function showBluffOverlay(liarName) {
   mountAvatar(avatarHost, profile, { mood: 'smug', size: 'xl', ring: true, animate: true });
 
   overlay.classList.remove('hidden');
-  haptic('heavy');
-  playBluffLanded();
+  Sfx.playBluffLanded();
   if (gsapReady()) {
     gsap.from('.bluff-overlay-inner', { scale: 0.85, opacity: 0, duration: 0.35, ease: 'back.out(1.5)' });
   }
@@ -380,7 +295,7 @@ function showChaosBanner(event) {
   el.classList.remove('hidden');
   el.classList.add('is-visible');
   haptic('heavy');
-  playChaosEvent();
+  Sfx.playChaosEvent(event.id);
   recordEvent(state.session, {
     type: 'chaos',
     playerName: 'Room',
@@ -513,6 +428,15 @@ function renderHand() {
     wrapper.addEventListener('touchstart', e => _onCardPointerDown(e, wrapper, card), { passive: true });
     wrapper.addEventListener('mousedown', e => _onCardPointerDown(e, wrapper, card));
     wrapper.addEventListener('click', e => { e.stopPropagation(); _onCardTap(wrapper, card); });
+    if (_isDesktopPointer()) {
+      let hoverLast = 0;
+      wrapper.addEventListener('pointerenter', () => {
+        const now = performance.now();
+        if (now - hoverLast < 120) return;
+        hoverLast = now;
+        Sfx.playCardHover();
+      });
+    }
   });
 
   // Hearthstone lean — apply lean classes to neighbors of selected card
@@ -531,7 +455,7 @@ function renderHand() {
   }
 
   updateActionZone();
-  if (n > 0) playDeal();
+  if (n > 0) Sfx.playDeal();
 }
 
 // ─── Card tap — select / deselect with spring ─────────────────────────────────
@@ -542,8 +466,6 @@ function _onCardTap(wrapper, card) {
     _skipNextCardClick = false;
     return;
   }
-
-  haptic('light');
 
   if (state.selectedCard?.rank === card.rank) {
     state.selectedCard = null;
@@ -583,6 +505,7 @@ function _onCardTap(wrapper, card) {
   wrapper.classList.add('is-selected');
   wrapper.style.zIndex = '50';
   _clearHandTransform(wrapper);
+  Sfx.playCardSelect();
 
   document.querySelectorAll('.partner-drop.targeted').forEach(e => e.classList.remove('targeted'));
   updateActionZone();
@@ -715,8 +638,6 @@ function showGFYOverlay(askerName, targetName, wasBluffed = false, moodOverride 
     ? `${targetName} lied. You got played.`
     : `${targetName} didn't have it.`;
   overlay.classList.remove('hidden');
-  playGFY();
-  haptic('heavy');
 
   if (gsapReady()) {
     // Screen flash + shake — physical rejection
@@ -898,7 +819,7 @@ function showKickDoorRankPicker(partner) {
   actions.querySelectorAll('[data-rank]').forEach(btn => {
     btn.addEventListener('click', () => {
       panel.classList.add('hidden');
-      playCardSlide();
+      Sfx.playCardThrow();
       haptic('medium');
       API.send({ type: 'ask', rank: btn.dataset.rank, targetId: partner.id });
       state.selectedTarget = null;
@@ -947,13 +868,15 @@ function _askFlowBlocksPlay() {
 }
 
 function sendRespondAsk(response) {
-  haptic('medium');
+  if (response === 'gfy') Sfx.playGFY();
+  else haptic('medium');
   API.send({ type: 'respondAsk', response });
   $('ask-response-panel')?.classList.add('hidden');
 }
 
 function sendResolveAsk(action) {
-  haptic(action === 'bullshit' ? 'heavy' : 'medium');
+  if (action === 'bullshit') Sfx.playBullshitCalled();
+  else haptic('medium');
   API.send({ type: 'resolveAsk', action });
   $('bullshit-bar')?.classList.add('hidden');
 }
@@ -1178,8 +1101,11 @@ function showBullshitOverlay(action) {
   });
 
   overlay.classList.remove('hidden');
-  haptic('heavy');
-  playGFY();
+  Sfx.playBullshitCalled();
+  setTimeout(() => {
+    if (caught) Sfx.playBullshitSuccess();
+    else Sfx.playBullshitFailed();
+  }, 520);
 
   setTimeout(() => overlay.classList.add('hidden'), 2800);
 }
@@ -1256,7 +1182,7 @@ function sendAsk() {
   const wrapper = document.querySelector(`.hand-card-wrapper[data-rank="${rank}"]`);
   const partnerEl = document.querySelector(`.partner-drop[data-pid="${targetId}"]`);
 
-  playCardSlide();
+  Sfx.playCardThrow();
   haptic('medium');
   API.send({ type: 'ask', rank, targetId });
   state.selectedCard = null;
@@ -1338,7 +1264,7 @@ async function showBookCelebration(playerName, scenario, playerId) {
       </div>
       <div class="book-stage-label">SET LOCKED</div>
     </div>`;
-  playBookSlam();
+  Sfx.playBookCelebrationAudio();
   await _wait(900);
 
   // Stage 2 — screen shake
@@ -1501,12 +1427,12 @@ function showActionBanner(action) {
       const hz = $('hand-zone');
       if (hz) gsap.fromTo(hz, { filter: 'brightness(1)' }, { filter: 'brightness(1.4)', duration: 0.14, yoyo: true, repeat: 1 });
     }
-    haptic('medium');
+    Sfx.playCardReceive();
   } else if (action.type === 'ask_pending') {
     text = `${fromP?.name ?? '?'} asks for "${sName}"…`;
   } else if (action.type === 'gfy_claim') {
     text = `${fromP?.name ?? '?'}: "GFY" on "${sName}" — accept or call bullshit.`;
-    playGFY();
+    Sfx.playGFY();
   } else if (action.type === 'bullshit_caught' || action.type === 'bullshit_wrong') {
     showBullshitOverlay(action);
     return;
@@ -1529,7 +1455,6 @@ function showActionBanner(action) {
 
     if (lucky) {
       text = `🍀 ${fromP?.name ?? '?'} drew a match from the pond!`;
-      playBook();
       flashLuckyDraw(action);
       return;
     }
@@ -1556,16 +1481,19 @@ function showActionBanner(action) {
       text = `${toP?.name ?? '?'}: "GFY!" — ${fromP?.name ?? '?'} draws from the pond.`;
     }
 
-    playGFY();
     if (action.fromId === state.myId) {
       const gfyMood = action.closeToPond ? 'shocked' : 'angry';
+      Sfx.playGFY();
       showGFYOverlay(fromP?.name ?? 'You', toP?.name ?? '?', false, gfyMood);
       if (action.closeToPond) showCloseCallMoment();
-    } else if (gsapReady()) {
+    } else {
+      Sfx.playGFY();
+      if (gsapReady()) {
       gsap.fromTo('#screen-game',
         { x: -8 },
         { x: 8, duration: 0.05, ease: 'power1.inOut', yoyo: true, repeat: 7,
           onComplete: () => gsap.set('#screen-game', { x: 0 }) });
+      }
     }
   }
 
@@ -1775,6 +1703,8 @@ function showResults(data) {
     launchConfetti($('screen-results'));
   }
   showScreen('results');
+  Sfx.stopAmbient();
+  Sfx.playResultsAmbience();
 
   const winner = data.winner;
   const loser = sorted.find(s => s.name !== winner.name);
@@ -2003,7 +1933,7 @@ function showBartenderTranscript(line, targetName = null) {
   }
 
   overlay.classList.remove('hidden');
-  haptic('light');
+  Sfx.playBartenderEnter();
   if (gsapReady()) {
     gsap.from('.bartender-transcript-inner', {
       scale: 0.88,
@@ -2243,6 +2173,7 @@ function wireHandlers() {
     state._lastBonusDrawSig = null;
     state._lastHouseRefillSig = null;
     showScreen('game');
+    Sfx.startAmbient();
     runSetupSequence(msg);
   });
 
@@ -2298,7 +2229,8 @@ function wireHandlers() {
         otherPlayer: _partnerName(state.myId)
       }), 1400);
     }
-    if (newHeat >= 5 && (state.gameHeat ?? 0) < 5) { haptic('heavy'); playHeatWarning(); }
+    Sfx.setHeatLevel(newHeat);
+    if (newHeat >= 5 && (state.gameHeat ?? 0) < 5) Sfx.playHeatWarning();
     state.gameHeat = newHeat;
 
     // ── House refill (< 3 cards at turn end → draw to 5) ─────────────────────
@@ -2676,6 +2608,8 @@ function showBanner(text, isError = false) {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 export function init() {
   initMobile();
+  document.addEventListener('pointerdown', _bootAudioOnce, { once: true });
+  document.addEventListener('click', _bootAudioOnce, { once: true });
   API.init();
   wireHandlers();
   wireUI();

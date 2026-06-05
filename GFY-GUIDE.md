@@ -479,6 +479,31 @@ Check: `GET /api/health` → `"aiEnabled": true`
 
 ---
 
+## Audio system (`game/frontend/js/audio.js`)
+
+Procedural Web Audio (no MP3s yet). Mix tiers: **ambient 10%** · **UI 35%** · **celebrations 70%** · **major 100%**. Celebrations queue — no overlapping book/lucky/chaos stings.
+
+| Moment | Sound |
+|--------|--------|
+| Match start | Looping bar room (rumble + soft chatter + glass clinks) |
+| Card tap / hover / throw / receive | Paper flick, glass click, whoosh, pop |
+| **Go Fuck Yourself** | Whoosh → low impact → reverb tail |
+| Bluff landed | Sneaky upward sting |
+| Bullshit called | Sting → pause → success or fail tone |
+| Book complete | Lock → jackpot ding → sparkle → flourish |
+| Lucky pond draw | Splash → rise → pop |
+| Close call (3 cards, pond miss) | Heartbeat → crack → fail sting |
+| Chaos events | Bar bell + per-event tail (`power_hour`, `pond_tax`, …) |
+| Heat 3 / 5 / 7 | Rumble → pulse → alarm |
+| Bartender | Pour + bell + crowd murmur |
+| Results | Warm piano victory (not EDM hype) |
+
+Haptics (`mobile.js` `gameHaptic`): paired on book, lucky, GFY, bullshit success, chaos, close call.
+
+First tap anywhere unlocks `AudioContext`. Ambient starts on `game` screen; stops on results.
+
+---
+
 ## One-screen cheat sheet
 
 ```
