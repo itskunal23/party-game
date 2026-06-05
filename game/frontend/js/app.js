@@ -912,24 +912,11 @@ function sendResolveAsk(action) {
   $('bullshit-bar')?.classList.add('hidden');
 }
 
-const SPECIAL_MOVE_HELP = {
-  steal: {
-    title: 'Steal',
-    body: '<strong>Right now:</strong> grab 1 random card from your partner\'s hand. They won\'t see which one.<br><br><strong>Cost:</strong> uses your 1 steal token for this game (gone after). Your turn continues — you can still ask or play cards.',
-    confirm: 'Steal a card'
-  },
-  kick_door: {
-    title: 'Wild Ask',
-    arm: '<strong>Next ask only:</strong> you can request a rank you <em>don\'t</em> hold — tap your partner, then pick the rank.<br><br><strong>If they say Go Fuck Yourself:</strong> you draw from the pond; a miss costs <strong>2 cards</strong> (not 1).<br><br><strong>Cost:</strong> 1 Wild token when you make that ask.',
-    disarm: 'Wild Ask turned off. Next ask must be a rank you actually hold.',
-    confirm: 'Arm Wild Ask'
-  },
-  double: {
-    title: '2× (double or nothing)',
-    arm: '<strong>Next ask only:</strong> high risk on the Go Fuck Yourself path.<br><br><strong>If they give you the cards:</strong> you keep your turn.<br><strong>If they Go Fuck Yourself and you luck the pond:</strong> you get the card but <em>turn ends</em>.<br><strong>If you miss the pond:</strong> draw <strong>2</strong> and your turn ends.<br><br><strong>Cost:</strong> one use per game.',
-    disarm: '2× turned off — normal ask rules.',
-    confirm: 'Arm 2×'
-  }
+const WILD_ASK_HELP = {
+  title: '⚡ Wild Ask',
+  arm: '<strong>One use per game.</strong> Your next ask can be any rank — even one you don\'t hold. Tap your partner, then pick the rank.<br><br><strong>If they Go Fuck Yourself:</strong> pond miss costs <strong>2 cards</strong> (not 1).',
+  disarm: 'Wild Ask off — only ask ranks you actually hold.',
+  confirm: '⚡ Use Wild Ask'
 };
 
 function dismissMoveTipPanel() {
@@ -962,71 +949,27 @@ function showMoveTipPanel({ title, body, confirmLabel, onConfirm }) {
   panel.classList.remove('hidden');
 }
 
-function _executeSpecialMove(move) {
-  if (move === 'steal') {
-    const opp = state.players.find(p => p.id !== state.myId);
-    if (!opp) return;
-    API.send({ type: 'useMove', move: 'steal', targetId: opp.id });
-    return;
-  }
-  API.send({ type: 'activateMove', move });
-}
-
-function _handleSpecialMoveClick(move) {
+function _handleWildAskClick() {
   const powers = state.myPowers;
-  if (!powers) return;
+  if (!powers || (powers.wildAskToken ?? 0) < 1) return;
 
-  if (move === 'steal') {
-    const opp = state.players.find(p => p.id !== state.myId);
-    if (!opp) return;
-    const help = SPECIAL_MOVE_HELP.steal;
-    showMoveTipPanel({
-      title: help.title,
-      body: help.body,
-      confirmLabel: help.confirm,
-      onConfirm: () => _executeSpecialMove('steal')
-    });
+  if (powers.activeKickDoor) {
+    API.send({ type: 'activateMove', move: 'kick_door' });
+    showBanner(WILD_ASK_HELP.disarm);
+    haptic('light');
     return;
   }
 
-  if (move === 'kick_door') {
-    const help = SPECIAL_MOVE_HELP.kick_door;
-    if (powers.activeKickDoor) {
-      _executeSpecialMove('kick_door');
-      showBanner(help.disarm);
-      haptic('light');
-      return;
+  showMoveTipPanel({
+    title: WILD_ASK_HELP.title,
+    body: WILD_ASK_HELP.arm,
+    confirmLabel: WILD_ASK_HELP.confirm,
+    onConfirm: () => {
+      API.send({ type: 'activateMove', move: 'kick_door' });
+      showBanner('⚡ Wild Ask armed — tap partner, pick any rank.');
+      updateGameChrome();
     }
-    showMoveTipPanel({
-      title: help.title,
-      body: help.arm,
-      confirmLabel: help.confirm,
-      onConfirm: () => {
-        _executeSpecialMove('kick_door');
-        showBanner('Wild Ask armed — tap partner, then pick a rank you don\'t hold.');
-      }
-    });
-    return;
-  }
-
-  if (move === 'double') {
-    const help = SPECIAL_MOVE_HELP.double;
-    if (powers.activeDouble) {
-      _executeSpecialMove('double');
-      showBanner(help.disarm);
-      haptic('light');
-      return;
-    }
-    showMoveTipPanel({
-      title: help.title,
-      body: help.arm,
-      confirmLabel: help.confirm,
-      onConfirm: () => {
-        _executeSpecialMove('double');
-        showBanner('2× armed — next ask is double or nothing on Go Fuck Yourself.');
-      }
-    });
-  }
+  });
 }
 
 function renderSpecialMovesBar() {
@@ -1042,45 +985,14 @@ function renderSpecialMovesBar() {
     return;
   }
 
-  const parts = [];
-  if (powers.stealToken > 0) {
-    parts.push(`<button type="button" class="move-pill move-pill--steal" data-move="steal">Steal</button>`);
-  }
-  if ((powers.wildAskToken ?? 0) > 0) {
-    parts.push(`<button type="button" class="move-pill${powers.activeKickDoor ? ' move-pill--on' : ''}" data-move="kick_door">Wild</button>`);
-  }
-  if ((powers.comebackToken ?? 0) > 0) {
-    parts.push(`<button type="button" class="move-pill move-pill--comeback" data-move="comeback">Comeback</button>`);
-  }
-  if (!powers.doubleUsed) {
-    parts.push(`<button type="button" class="move-pill${powers.activeDouble ? ' move-pill--on' : ''}" data-move="double">2×</button>`);
-  }
-  if (powers.luckyStacks > 0) {
-    parts.push(`<span class="move-pill move-pill--disabled">Lucky ×${powers.luckyStacks}</span>`);
-  }
-
-  if (!parts.length) {
+  if ((powers.wildAskToken ?? 0) < 1 && !powers.activeKickDoor) {
     bar.classList.add('hidden');
     return;
   }
 
-  bar.innerHTML = parts.join('');
-  bar.querySelectorAll('[data-move]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const move = btn.dataset.move;
-      if (move === 'comeback') {
-        const opp = state.players.find(p => p.id !== state.myId);
-        if (opp) showComebackPicker(opp);
-        haptic('light');
-        return;
-      }
-      if (move === 'steal' || move === 'kick_door' || move === 'double') {
-        _handleSpecialMoveClick(move);
-        return;
-      }
-      haptic('light');
-    });
-  });
+  const armed = powers.activeKickDoor;
+  bar.innerHTML = `<button type="button" class="move-pill move-pill--wild${armed ? ' move-pill--on' : ''}" data-move="wild-ask" aria-label="Wild Ask — one use per game">⚡ Wild Ask</button>`;
+  bar.querySelector('[data-move="wild-ask"]')?.addEventListener('click', () => _handleWildAskClick());
   bar.classList.remove('hidden');
 }
 
@@ -1137,18 +1049,13 @@ function renderPeekBanner() {
 }
 
 function showMissionIntro() {
-  const m = state.myPowers?.mission;
-  if (!m || state._missionShown) return;
-  state._missionShown = true;
-  showBanner(`🎯 Your secret mission: ${m.text}`);
+  /* Missions tracked server-side; revealed on results screen only. */
 }
 
 function checkMissionComplete() {
   const m = state.myPowers?.mission;
   if (!m?.done || state._missionDoneShown) return;
   state._missionDoneShown = true;
-  showAchievementToast({ label: 'Mission complete', emoji: '🎯' });
-  haptic('heavy');
 }
 
 function renderAskFlowUI() {
@@ -1282,9 +1189,6 @@ function updateGameChrome() {
   const isMyTurn = state.gameState?.currentTurnPlayerId === state.myId;
   const partner = state.players.find(p => p.id !== state.myId);
   const pending = state.pendingAsk;
-  const heat = state.gameHeat ?? 0;
-  const heatSuffix = heat >= 4 ? ` · ${heat >= 6 ? 'Hot' : 'Heating up'}` : '';
-
   if (pending?.phase === 'respond') {
     _setGameStatus('Give · GFY · or Bluff', 'accent');
     _setActionCta('Use buttons above', { disabled: true });
@@ -1318,7 +1222,7 @@ function updateGameChrome() {
 
   if (!isMyTurn) {
     const current = state.players.find(p => p.id === state.gameState?.currentTurnPlayerId);
-    _setGameStatus(`${current?.name ?? 'Partner'}\'s turn${heatSuffix}`, 'wait');
+    _setGameStatus(`${current?.name ?? 'Partner'}\'s turn`, 'wait');
     _setActionCta('Waiting…', { disabled: true });
     return;
   }
@@ -1330,12 +1234,7 @@ function updateGameChrome() {
       _setActionCta('Pick a card or Wild Ask', { disabled: true });
       return;
     }
-    if (state.myPowers?.activeDouble && !state.myPowers.doubleUsed) {
-      _setGameStatus('2× armed — next ask is high stakes', 'accent');
-      _setActionCta('Pick a card', { disabled: true });
-      return;
-    }
-    _setGameStatus(heat >= 4 ? heatSuffix.trim().replace(/^ · /, '') : '', 'wait', { visible: heat >= 4 });
+    _setGameStatus('', 'wait', { visible: false });
     _setActionCta('Pick a card', { disabled: true });
     return;
   }
@@ -1706,7 +1605,6 @@ function showActionBanner(action) {
       } else if (action.targetId === state.myId) {
         // I was the target — my bluff worked
         text = `🎭 Bluff worked — they took the bait.`;
-        showBluffLandedToast();
         banner.innerHTML = text;
         banner.classList.remove('hidden');
         setTimeout(() => banner.classList.add('hidden'), 3500);
@@ -1722,7 +1620,6 @@ function showActionBanner(action) {
       const gfyMood = action.closeToPond ? 'shocked' : 'angry';
       Sfx.playGFY();
       showGFYOverlay(fromP?.name ?? 'You', toP?.name ?? '?', false, gfyMood);
-      if (action.closeToPond) showCloseCallMoment();
     } else {
       Sfx.playGFY();
       if (gsapReady()) {
@@ -1881,6 +1778,12 @@ function showResults(data) {
     ? `<div class="results-night-story">${nightStory}</div>`
     : '';
 
+  const mission = state.myPowers?.mission;
+  const missionHtml = mission ? `
+    <div class="results-mission${mission.done ? '' : ' results-mission--miss'}">
+      🎯 ${mission.done ? 'Mission complete' : 'Mission missed'}: ${mission.text}
+    </div>` : '';
+
   const awards = _computeAwards(sorted, state.playerStats);
   const awardsHtml = awards.length ? `
     <div class="results-awards">
@@ -1916,6 +1819,7 @@ function showResults(data) {
       ${sorted.map((s, i) => `<li class="score-item">${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'} ${s.name} — ${s.books} set${s.books !== 1 ? 's' : ''}</li>`).join('')}
     </ul>
     ${storyHtml}
+    ${missionHtml}
     ${awardsHtml}
     ${statsHtml}`;
 
@@ -2378,8 +2282,7 @@ function _processAction(session, action, players) {
   clearExpiredChaos(session);
 
   const fromStats = state.playerStats[action.fromId] ?? _ensureStats(action.fromId);
-  const earned = updateStatsFromAction(fromStats, action);
-  earned.forEach(a => showAchievementToast(a));
+  updateStatsFromAction(fromStats, action);
 
   // Client-side chaos events (Power Hour, Pond Tax, Bollywood Twist, etc.)
   const clientChaos = maybeTriggerChaos(session);
@@ -2431,20 +2334,6 @@ function _processAction(session, action, players) {
       summary: `${_nameOf(action.fromId)} got lucky draw #${fromStats.luckyDraws} on "${_rankName(action.rank)}"`,
       type: 'lucky', turn: _turn
     });
-  }
-
-  // Rivalry pattern detection — streak-based toasts (fire once per streak crossing)
-  if (action.fromId === state.myId) {
-    const my = fromStats;
-    if (action.type === 'gfy' && !action.continueTurn && my.consecutiveMisses === 4) {
-      showAchievementToast({ label: 'Miss King', emoji: '🎣' });
-    }
-    if (action.type === 'gfy' && action.bluffSucceeded && my.bluffsSurvived === 2) {
-      showAchievementToast({ label: 'Smooth Criminal', emoji: '🎭' });
-    }
-    if ((action.type === 'bullshit_caught') && my.bullshitCalls === 2) {
-      showAchievementToast({ label: 'Lie Detector', emoji: '🔍' });
-    }
   }
 
   const fromP = players?.find(p => p.id === action.fromId);
@@ -2552,21 +2441,8 @@ function wireHandlers() {
     state.gameState = msg.gameState;
     state.pendingDrinks = msg.pendingDrinks;
     state.pendingAsk = msg.gameState.pendingAsk ?? null;
-    const prevComeback = state.myPowers?.comebackToken ?? 0;
     state.myPowers = msg.gameState.myPowers ?? null;
     state.pendingBookPowerup = msg.gameState.pendingBookPowerup ?? null;
-
-    // Newly granted comeback token — you're down 2+ books, this is your lifeline
-    if ((state.myPowers?.comebackToken ?? 0) > prevComeback && !_dealingLocked) {
-      showAchievementToast({ emoji: '⚡', label: 'Comeback token unlocked — use it!' });
-      if (state.session) {
-        const myName = state.players.find(p => p.id === state.myId)?.name ?? 'Player';
-        recordHighlight(state.session, {
-          summary: `${myName} was down, earned comeback token — still fighting`,
-          type: 'comeback', turn: state.session.actionCount
-        });
-      }
-    }
     state.luckyReward = msg.gameState.luckyReward ?? null;
     if (msg.gameState.peekReveal) state.peekReveal = msg.gameState.peekReveal;
     if (msg.pendingDrinks?.length) showDrinkAssignedModal(msg.pendingDrinks);

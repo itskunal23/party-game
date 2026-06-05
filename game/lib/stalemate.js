@@ -275,26 +275,8 @@ export function smartDrawFromPond(room, player, count) {
   return drawFromDeckWeighted(state, player, count, preferred, getDrawBias(state));
 }
 
-export function updateComebackTokens(room) {
-  const state = room.gameState;
-  const ids = [...room.players.keys()];
-  if (ids.length < 2) return;
-
-  const scored = ids.map(id => ({
-    id,
-    books: (state.books.get(id) ?? []).length
-  }));
-  scored.sort((a, b) => b.books - a.books);
-  const leaderBooks = scored[0].books;
-
-  for (const { id, books } of scored) {
-    const powers = getPlayerPowers(state, id);
-    if (!powers || powers.comebackGranted) continue;
-    if (leaderBooks - books >= 2) {
-      powers.comebackToken = (powers.comebackToken ?? 0) + 1;
-      powers.comebackGranted = true;
-    }
-  }
+export function updateComebackTokens(_room) {
+  /* Comeback tokens removed — pacing handled by pond/chaos only. */
 }
 
 export function postTurnHooks(room, outcomeKind) {

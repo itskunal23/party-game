@@ -189,14 +189,22 @@
   color: rgba(255, 214, 10, 0.95);
 }
 
-.special-moves-bar .move-pill--steal {
-  border-color: rgba(91, 141, 239, 0.3);
-  background: rgba(0, 51, 160, 0.18);
+.special-moves-bar .move-pill--wild {
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-color: rgba(255, 214, 10, 0.55);
+  background: rgba(255, 214, 10, 0.14);
+  color: rgba(255, 230, 120, 0.98);
+  box-shadow: 0 0 20px rgba(255, 214, 10, 0.22);
 }
 
-.special-moves-bar .move-pill--comeback {
-  border-color: rgba(255, 214, 10, 0.35);
-  background: rgba(255, 214, 10, 0.08);
+.special-moves-bar .move-pill--wild.move-pill--on {
+  border-color: rgba(255, 214, 10, 0.85);
+  background: rgba(255, 214, 10, 0.28);
+  box-shadow: 0 0 28px rgba(255, 214, 10, 0.38);
 }
 
 .move-pill--disabled {

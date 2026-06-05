@@ -654,8 +654,6 @@ export function handleIntent(room, intent) {
     else if (choice === 'opp_draw1') {
       const opp = [...room.players.values()].find(p => p.id !== fromId && !p.isBot);
       if (opp) drawFromDeck(state, opp, 1);
-    } else if (choice === 'steal_back' && powers) {
-      powers.stealToken = (powers.stealToken ?? 0) + 1;
     }
 
     state.pendingBookPowerup.delete(fromId);

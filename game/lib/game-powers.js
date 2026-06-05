@@ -27,11 +27,11 @@ export function initPlayerPowers(playerIds) {
   playerIds.forEach((id, i) => {
     const mission = shuffled[i % shuffled.length];
     map.set(id, {
-      stealToken: 1,
+      stealToken: 0,
       wildAskToken: 1,
       comebackToken: 0,
       comebackGranted: false,
-      doubleUsed: false,
+      doubleUsed: true,
       luckyStacks: 0,
       luckyRewardPending: false,
       mission: { id: mission.id, text: mission.text, done: false, progress: 0, target: mission.target ?? 1 },
@@ -183,8 +183,7 @@ export function buildBookPowerupView(state, forPlayerId) {
     scenario: pending.scenario,
     choices: [
       { id: 'draw1', label: 'Draw 1 card' },
-      { id: 'opp_draw1', label: 'They draw 1' },
-      { id: 'steal_back', label: 'Get steal back' }
+      { id: 'opp_draw1', label: 'They draw 1' }
     ]
   };
 }

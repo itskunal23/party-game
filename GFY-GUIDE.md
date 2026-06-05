@@ -23,13 +23,12 @@ Everything you can do in **GFY**, what **Bhenchod Bartender** does, and how **dr
 
 **Pacing:** Opening hands share ~75% rank overlap (instant asks). House refill when you drop below 3 cards (back to 5). Pond draws bias toward near-books when heat ≥ 3.
 
-**Once per game (tap the pills on your turn):**
+**One special move (only when you still have it):**
 | Move | What it does |
 |------|----------------|
-| **Steal** | Take 1 random card from them (they don't see which). |
-| **Wild Ask** | Ask for any rank — even one you don't hold. Miss = draw **2**. (1 token per game; recovery events can grant more.) |
-| **2×** | Win = keep going. Lose = draw **2** and lose turn. |
-| **Comeback** | If you're down 2+ books, you get one token: steal · reveal a rank · keep turn · or earn Wild Ask. |
+| **⚡ Wild Ask** | One use per game. Ask for any rank — even one you don't hold. Tap partner → pick rank. GFY miss = draw **2**. |
+
+No Steal, no 2×, no comeback tokens — keep the loop: pick card → ask → give / bluff / Go Fuck Yourself.
 
 **Stalemate recovery (automatic):** If the game loops on GFY misses with no real progress, the server injects a chaos event — Pond Surge, Rank Reveal, Wild Ask tokens, Card Swap, or Chaos Draw. You'll see a gold banner; it should feel like the bartender shaking things up, not a bug patch.
 
