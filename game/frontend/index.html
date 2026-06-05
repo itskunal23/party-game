@@ -352,6 +352,7 @@
       <span class="game-stat-chip" id="my-score">Books 0</span>
       <span id="room-code-display" class="visually-hidden" aria-hidden="true"></span>
     </div>
+    <div class="turn-indicator-bar turn-indicator-bar--hidden" id="turn-indicator" aria-live="polite"></div>
 
     <div class="game-playfield">
       <div class="game-board-atmosphere" aria-hidden="true">
@@ -387,6 +388,12 @@
         <button type="button" class="move-pill move-pill--accept" id="btn-accept-gfy">Accept GFY</button>
         <button type="button" class="move-pill move-pill--bullshit" id="btn-call-bullshit">Bullshit</button>
       </div>
+    </div>
+
+    <div id="ask-respond-bar" class="ask-respond-bar hidden" role="toolbar" aria-label="Respond to card ask">
+      <p class="ask-respond-bar-label" id="ask-respond-bar-label"></p>
+      <p class="ask-respond-bar-hint" id="ask-respond-bar-hint">Tap your cards below to check your hand</p>
+      <div class="ask-respond-bar-actions" id="ask-respond-bar-actions"></div>
     </div>
 
     <div id="hand-zone" class="hand-zone-wrap"></div>

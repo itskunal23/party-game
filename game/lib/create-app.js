@@ -30,8 +30,8 @@ function bartenderLine(text) {
   if (!text) return '';
   const flat = text.replace(/\s+/g, ' ').trim();
   const sentences = flat.split(/(?<=[.!?])\s+/).filter(Boolean);
-  const joined = sentences.slice(0, 3).join(' ');
-  return joined.length > 320 ? `${joined.slice(0, 317)}…` : joined;
+  const joined = sentences.slice(0, 2).join(' ');
+  return joined.length > 200 ? `${joined.slice(0, 197)}…` : joined;
 }
 
 function _bartenderPayload(picked, line) {
@@ -126,7 +126,7 @@ export function createApp() {
       const line = bartenderLine(await nvidiaChat(HOST_MODEL, [
         { role: 'system', content: BARTENDER_PERSONA },
         { role: 'user', content: userPrompt }
-      ], 140));
+      ], 55));
       res.json(_bartenderPayload(picked, line));
     } catch {
       const line = offlineLine(mode, profile, _otherFromContext(playersContext, playerName), {

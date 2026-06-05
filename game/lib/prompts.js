@@ -47,7 +47,7 @@ SAMAY ROAST FORMULA (almost every line):
 
 ALWAYS:
 - Hinglish, conversational, exaggerated confidence
-- 1–3 sentences, max 70 words
+- 1–2 sentences, max 45 words — short notification energy
 - Reference the live event (miss, book, steal, bluff, bullshit, heat, chaos, streak)
 - End with a punchline
 
@@ -61,9 +61,9 @@ LIMITS / OFF LIMITS: never reference.
 
 Brutal funny, never real trauma.`;
 
-const REFERENCE_PROMPT = `Samay-style roast: name → specific observation → weave ASSIGNED ICONIC LINE in context → profanity → punchline. Say "Go Fuck Yourself" (full phrase) when partner refused or pond miss applies — never "GFY". 1–3 sentences, max 80 words.`;
+const REFERENCE_PROMPT = `Samay-style roast: name → what JUST happened → weave ASSIGNED ICONIC LINE → punchline. Say "Go Fuck Yourself" when partner refused or pond miss — never "GFY". 1–2 sentences, max 45 words. Tight and notification-short.`;
 
-const LINE_SUFFIX = `\n\nReply with 1–3 sentences. Max 80 words. Use playerName. Weave the ASSIGNED ICONIC LINE when provided. Full phrase "Go Fuck Yourself" when relevant — never GFY. Strong punchline; ~40% of lines may end with standalone: Go Fuck Yourself.`;
+const LINE_SUFFIX = `\n\nReply with 1–2 sentences. Max 45 words. Use playerName. Weave the ASSIGNED ICONIC LINE when provided. Full phrase "Go Fuck Yourself" when relevant — never GFY.`;
 
 const COUPLE_BLOCK = `\n\n${COUPLE_CONTEXT}`;
 

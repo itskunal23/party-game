@@ -53,6 +53,7 @@ function sendTo(player, msg) {
 function buildSnapshot(room, forPlayerId) {
   const state = room.gameState;
   const me = room.players.get(forPlayerId);
+  const turnFocus = getTurnFocus(state);
 
   const players = [...room.players.values()].map(p => ({
     id: p.id,
@@ -60,7 +61,7 @@ function buildSnapshot(room, forPlayerId) {
     cardCount: p.hand.length,
     books: state.books.get(p.id) ?? [],
     bacLevel: p.bacLevel ?? 0,
-    isCurrentTurn: state.currentTurnPlayerId === p.id,
+    isCurrentTurn: turnFocus.activePlayerId === p.id,
     isBot: p.isBot,
     profile: p.profile ? _safeProfile(p.profile) : null
   }));
@@ -92,7 +93,9 @@ function buildSnapshot(room, forPlayerId) {
       },
       bonusDraw: state.bonusDraw ?? null,
       houseRefill: state.houseRefill ?? null,
-      pacing: buildPacingSnapshot(state)
+      pacing: buildPacingSnapshot(state),
+      moveCount: state.moveCount ?? 0,
+      turnFocus
     },
     pendingDrinks: state.pendingDrinks.get(forPlayerId) ?? [],
     hostMessage: null
@@ -221,19 +224,28 @@ function _tryBonusDraws(room) {
   }
 }
 
+function getTurnFocus(state) {
+  const pending = state.pendingAsk;
+  if (!pending) {
+    return { activePlayerId: state.currentTurnPlayerId, role: 'ask' };
+  }
+  if (pending.phase === 'awaiting_response') {
+    return { activePlayerId: pending.targetId, role: 'respond' };
+  }
+  if (pending.phase === 'awaiting_resolution') {
+    return { activePlayerId: pending.askerId, role: 'resolve' };
+  }
+  return { activePlayerId: state.currentTurnPlayerId, role: 'ask' };
+}
+
+function _recordMove(state) {
+  state.moveCount = (state.moveCount ?? 0) + 1;
+}
+
 function advanceTurn(room) {
   const state = room.gameState;
   const currentId = state.currentTurnPlayerId;
-
-  if (state.pendingExtraTurn === currentId) {
-    state.pendingExtraTurn = null;
-    state.houseRefill = null;
-    _tryBonusDraws(room);
-    broadcastSnapshots(room);
-    const keeper = room.players.get(currentId);
-    if (keeper?.isBot) scheduleBotTurn(room, keeper, i => handleIntent(room, i));
-    return;
-  }
+  state.pendingExtraTurn = null;
 
   // House refill — player whose turn is ending gets refilled if < 3 cards
   state.houseRefill = null;
@@ -293,16 +305,9 @@ function _postTurnEffects(room, outcomeKind) {
   return recovery;
 }
 
-function _afterAskOutcome(room, askerId, continueTurn) {
+function _afterAskOutcome(room, askerId) {
   if (checkGameOver(room)) { finalizeGame(room); return; }
-
-  const asker = room.players.get(askerId);
-  if (continueTurn) {
-    broadcastSnapshots(room);
-    if (asker?.isBot) scheduleBotTurn(room, asker, i => handleIntent(room, i));
-  } else {
-    advanceTurn(room);
-  }
+  advanceTurn(room);
 }
 
 function _completeGot(room, askerId, targetId, rank, count) {
@@ -333,10 +338,11 @@ function _completeGot(room, askerId, targetId, rank, count) {
   }
 
   state.lastAction = { type: 'got', fromId: askerId, targetId, rank, count: actualCount };
+  _recordMove(state);
   resolveBooks(room, askerId);
   if (checkGameOver(room)) { finalizeGame(room); return; }
   _postTurnEffects(room, 'transfer');
-  _afterAskOutcome(room, askerId, true);
+  _afterAskOutcome(room, askerId);
 }
 
 function _executeGfyDraw(room, askerId, targetId, rank, extra = {}) {
@@ -401,9 +407,10 @@ function _executeGfyDraw(room, askerId, targetId, rank, extra = {}) {
     closeToPond: hadThreeBeforeDraw && !continueTurn && !isDouble,
     ...extra
   };
+  _recordMove(state);
   resolveBooks(room, askerId);
   _postTurnEffects(room, continueTurn ? 'gfy_lucky' : 'gfy_miss');
-  _afterAskOutcome(room, askerId, continueTurn);
+  _afterAskOutcome(room, askerId);
 }
 
 function _applyBullshitPenalty(room, loserId, winnerId, rank, caughtBluffer) {
@@ -440,17 +447,11 @@ function _applyBullshitPenalty(room, loserId, winnerId, rank, caughtBluffer) {
     turnContinues: caughtBluffer
   };
 
+  _recordMove(state);
   resolveBooks(room, winnerId);
   if (checkGameOver(room)) { finalizeGame(room); return; }
   _postTurnEffects(room, 'transfer');
-  broadcastSnapshots(room);
-
-  if (caughtBluffer) {
-    const asker = room.players.get(winnerId);
-    if (asker?.isBot) scheduleBotTurn(room, asker, i => handleIntent(room, i));
-  } else {
-    advanceTurn(room);
-  }
+  advanceTurn(room);
 }
 
 export function handleIntent(room, intent) {
@@ -831,6 +832,7 @@ export function startGame(roomCode, requesterId) {
   room.gameState.pendingBookPowerup = new Map();
   room.gameState.peekReveal = new Map();
   room.gameState.actionCount = 0;
+  room.gameState.moveCount = 0;
   room.gameState.lastChaosAt = 0;
   room.gameState.lastChaos = null;
   room.gameState.cardTax = false;

@@ -91,6 +91,64 @@
   box-shadow: 0 4px 16px rgba(255, 149, 0, 0.35);
 }
 
+/* Respond bar — above hand; hand stays visible and tappable */
+.ask-respond-bar {
+  flex-shrink: 0;
+  padding: 8px var(--space-md) var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(12, 16, 36, 0.72);
+  border-top: 1px solid rgba(91, 141, 239, 0.22);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ask-respond-bar.hidden { display: none; }
+
+.ask-respond-bar-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+  text-align: center;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.ask-respond-bar-hint {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(168, 212, 255, 0.72);
+  text-align: center;
+  margin: 0;
+}
+
+.ask-respond-bar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.ask-respond-bar-actions .ask-response-btn {
+  min-height: 48px;
+}
+
+.hand-card-wrapper--requested {
+  z-index: 12 !important;
+}
+
+.hand-card-wrapper--requested .card {
+  box-shadow:
+    0 0 0 2px rgba(255, 214, 10, 0.95),
+    0 0 24px rgba(255, 214, 10, 0.45);
+}
+
+.hand-zone--respond-turn {
+  z-index: 3;
+}
+
 /* Bullshit bar — floating pills above hand */
 .bullshit-bar {
   flex-shrink: 0;

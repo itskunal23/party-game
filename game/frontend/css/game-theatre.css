@@ -116,6 +116,61 @@ button.game-stat-chip:active {
 
 #deck-count { font-variant-numeric: tabular-nums; }
 
+.turn-indicator-bar {
+  text-align: center;
+  padding: 10px 16px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  transition: background 0.25s, color 0.25s, box-shadow 0.25s;
+}
+
+.turn-indicator-bar--you {
+  background: rgba(48, 209, 88, 0.14);
+  color: #6ee78a;
+  box-shadow: inset 0 -1px 0 rgba(48, 209, 88, 0.25);
+}
+
+.turn-indicator-bar--partner {
+  background: rgba(91, 141, 239, 0.12);
+  color: rgba(168, 212, 255, 0.92);
+  box-shadow: inset 0 -1px 0 rgba(91, 141, 239, 0.2);
+}
+
+.turn-indicator-bar--hidden {
+  display: none;
+}
+
+.hand-zone--your-turn {
+  box-shadow: inset 0 4px 24px rgba(48, 209, 88, 0.12);
+  border-radius: 16px 16px 0 0;
+}
+
+.partner-zone--active-turn .partner-drop--active {
+  background: rgba(91, 141, 239, 0.14);
+  box-shadow: 0 0 28px rgba(91, 141, 239, 0.22);
+}
+
+.partner-turn-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(91, 141, 239, 0.35);
+  color: #d4e6ff;
+  vertical-align: middle;
+}
+
+.game-playfield--waiting {
+  opacity: 0.92;
+}
+
 /* ── Connected playfield (table) ──────────────────────────────────────────── */
 .game-playfield {
   position: relative;
