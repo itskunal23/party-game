@@ -25,144 +25,144 @@ const QUESTIONS = [
     id: 'name',
     type: 'pick-one-other',
     tier: 'core',
-    question: 'Who the fuck\nare you?',
-    hint: 'Tap your name — or Other',
+    question: "Alright —\nwho's playing?",
+    hint: "We're not doing attendance. Just pick.",
     required: false,
     autoAdvance: true,
-    otherPlaceholder: 'Type your name…',
+    otherPlaceholder: 'your actual name',
     otherMaxLength: 20,
     options: [
-      { label: 'Kunal', sub: 'Dom energy', value: 'Kunal' },
-      { label: 'Nandini', sub: 'Sub chaos', value: 'Nandini' },
-      { label: 'Chaos goblin', sub: 'No fixed identity', value: 'Chaos goblin' },
-      { label: 'Anonymous degenerate', sub: 'Mystery filth', value: 'Anonymous' }
+      { label: 'Kunal', sub: 'yeah that guy', value: 'Kunal' },
+      { label: 'Nandini', sub: 'yeah that one', value: 'Nandini' },
+      { label: 'Mystery menace', sub: 'no questions asked', value: 'Chaos goblin' },
+      { label: 'Guest degenerate', sub: 'walk-in chaos', value: 'Anonymous' }
     ]
   },
   {
     id: 'weight',
     type: 'pick-one',
     tier: 'core',
-    question: 'How much do\nyou weigh?',
-    hint: 'Calibrates drunk meter · tap one',
+    question: 'How hard will\nshots hit you?',
+    hint: 'BAC math later. Ballpark it.',
     required: false,
     autoAdvance: true,
     options: [
-      { label: 'Under 130 lbs', sub: 'Lightweight', value: 120 },
-      { label: '130 – 170 lbs', sub: 'Middleweight', value: 150 },
-      { label: '171 – 210 lbs', sub: 'Heavy hitter', value: 190 },
-      { label: '211+ lbs', sub: 'Absolute unit', value: 230 }
+      { label: 'Under 130', sub: 'two beers = storyline', value: 120 },
+      { label: '130 – 170', sub: 'normal drunk human', value: 150 },
+      { label: '171 – 210', sub: 'can take a punch', value: 190 },
+      { label: '211+', sub: 'the table shakes', value: 230 }
     ]
   },
   {
     id: 'grandparentGrief',
     type: 'pick-one-other',
     tier: 'core',
-    question: 'Grandparents\ndying turn you on?',
-    hint: 'Funeral horniness · grief kink · be fucking honest',
+    question: "Grandma dies —\nyou're turned on?",
+    hint: 'Wrong answer club still welcomes you.',
     required: false,
     autoAdvance: true,
-    otherPlaceholder: 'Your unhinged truth…',
+    otherPlaceholder: 'spill the unhinged truth',
     otherMaxLength: 80,
     options: [
-      { label: 'Yes — hard', sub: 'Loss gets me wet', value: 'grief_yes' },
-      { label: 'Sometimes', sub: 'Only when drunk / destroyed', value: 'grief_sometimes' },
-      { label: 'No — sacred line', sub: 'Death is off limits', value: 'grief_never' },
-      { label: 'Only the fantasy', sub: 'Thought not action', value: 'grief_fantasy_only' }
+      { label: 'Yeah unfortunately', sub: 'funeral me is different', value: 'grief_yes' },
+      { label: 'Only when hammered', sub: 'grief + tequila', value: 'grief_sometimes' },
+      { label: 'God no', sub: 'I have a soul', value: 'grief_never' },
+      { label: 'Brain only', sub: 'would never act', value: 'grief_fantasy_only' }
     ]
   },
   {
     id: 'shittyDriver',
     type: 'pick-one-other',
     tier: 'core',
-    question: 'Shitty fucking\ndriver?',
-    hint: 'How you behave behind the wheel',
+    question: 'Shitty driver\nor lying?',
+    hint: 'Your partner already knows. Tell us.',
     required: false,
     autoAdvance: true,
-    otherPlaceholder: 'Describe your driving sins…',
+    otherPlaceholder: 'worst thing you did in a car',
     otherMaxLength: 60,
     options: [
-      { label: 'Elite — never', sub: 'Lane discipline king', value: 'driver_elite' },
-      { label: 'Average chaos', sub: 'Speeding + vibes', value: 'driver_avg' },
-      { label: 'Shitty driver', sub: 'Should not have a license', value: 'driver_shitty' },
-      { label: 'Mobile weapon', sub: 'Curbs, horns, rage', value: 'driver_weapon' }
+      { label: 'Actually decent', sub: 'rare W', value: 'driver_elite' },
+      { label: 'Mid — horn a lot', sub: 'average menace', value: 'driver_avg' },
+      { label: 'Yeah I suck', sub: 'curbs are suggestions', value: 'driver_shitty' },
+      { label: 'Weapon on wheels', sub: 'Uber 1-star energy', value: 'driver_weapon' }
     ]
   },
   {
     id: 'fucksPerDay',
     type: 'pick-one',
     tier: 'core',
-    question: 'Fucks per day\n(out loud)?',
-    hint: 'How often you say fuck — tap your tier',
+    question: 'How many fucks\ntoday — out loud?',
+    hint: 'Count the ones people heard.',
     required: false,
     autoAdvance: true,
     options: [
-      { label: '0 – 10', sub: 'Suspiciously polite', value: 'fuck_rare' },
-      { label: '11 – 30', sub: 'Normal degenerate', value: 'fuck_normal' },
-      { label: '31 – 60', sub: 'Fuck is punctuation', value: 'fuck_heavy' },
-      { label: '61 – 100', sub: 'Violence against English', value: 'fuck_machine' },
-      { label: '100+', sub: 'Should be fined per syllable', value: 'fuck_god' }
+      { label: 'Like… ten?', sub: 'liar but okay', value: 'fuck_rare' },
+      { label: 'A normal amount', sub: '20–30 easy', value: 'fuck_normal' },
+      { label: 'All day', sub: 'verb and noun', value: 'fuck_heavy' },
+      { label: 'Nonstop', sub: 'sentence punctuation', value: 'fuck_machine' },
+      { label: 'I AM the fuck', sub: '100+ minimum', value: 'fuck_god' }
     ]
   },
   {
     id: 'happyTrigger',
     type: 'pick-one-other',
     tier: 'core',
-    question: 'Really fucking\nhappy when…',
-    hint: 'What actually lights you up',
+    question: 'What gets you\nstupid happy?',
+    hint: 'Drunk-you grinning — what caused it?',
     required: false,
     autoAdvance: true,
-    otherPlaceholder: 'What makes you grin like a psycho…',
+    otherPlaceholder: 'the real reason you lit up',
     otherMaxLength: 80,
     options: [
-      { label: 'Partner submitting', sub: 'Power + praise', value: 'happy_power' },
-      { label: 'Almost caught', sub: 'Risk + adrenaline', value: 'happy_risk' },
-      { label: 'Winning / dominating', sub: 'Cards, bed, life', value: 'happy_win' },
-      { label: 'Being degraded', sub: 'Trash talk hits', value: 'happy_degrade' },
-      { label: 'Drunk & loud', sub: 'BAC + chaos', value: 'happy_drunk' }
+      { label: 'Partner folds', sub: 'finally listens', value: 'happy_power' },
+      { label: 'Almost caught', sub: 'door + heartbeat', value: 'happy_risk' },
+      { label: 'Winning something', sub: 'cards, argument, bed', value: 'happy_win' },
+      { label: 'Got roasted good', sub: 'humiliation hits', value: 'happy_degrade' },
+      { label: 'Free drinks', sub: 'BAC climbing', value: 'happy_drunk' }
     ]
   },
   {
     id: 'angryTrigger',
     type: 'pick-one-other',
     tier: 'core',
-    question: 'Really fucking\nangry when…',
-    hint: 'What snaps you — bartender will poke this',
+    question: 'What makes you\nsnap fast?',
+    hint: 'Bartender will poke this. Fair warning.',
     required: false,
     autoAdvance: true,
-    otherPlaceholder: 'What makes you see red…',
+    otherPlaceholder: 'what ruins your mood instantly',
     otherMaxLength: 80,
     options: [
-      { label: 'Lied to / bluffed', sub: 'GFY bullshit energy', value: 'angry_lied' },
-      { label: 'Disrespected', sub: 'Tone, eye-roll, brat', value: 'angry_disrespect' },
-      { label: 'Losing control', sub: 'Cards or dynamic', value: 'angry_control' },
-      { label: 'Ignored sexually', sub: 'Cold shoulder', value: 'angry_ignored' },
-      { label: 'Bad drivers', sub: 'Road rage soul', value: 'angry_drivers' }
+      { label: 'Caught lying', sub: 'bluff / GFY bullshit', value: 'angry_lied' },
+      { label: 'Disrespected', sub: 'tone, eye-roll', value: 'angry_disrespect' },
+      { label: 'Losing control', sub: 'game or relationship', value: 'angry_control' },
+      { label: 'Left on read', sub: 'sexually ignored', value: 'angry_ignored' },
+      { label: 'Slow drivers', sub: 'road rage hours', value: 'angry_drivers' }
     ]
   },
   {
     id: 'tabooRisk',
     type: 'pick-one-other',
     tier: 'core',
-    question: 'Filthiest risk\nthat works?',
-    hint: 'What actually gets you going',
+    question: "What's the wildest\nshit that works?",
+    hint: 'Not your Instagram bio. Real life.',
     required: false,
     autoAdvance: true,
-    otherPlaceholder: 'Your real risk kink…',
+    otherPlaceholder: 'the thing that actually works',
     otherMaxLength: 80,
     options: [
-      { label: 'Almost caught', sub: 'Panic fuck energy', value: 'caught_rush' },
-      { label: 'Family taboo', sub: 'Wrong bloodline', value: 'family_taboo' },
-      { label: 'Strangers / public', sub: 'No names, all eyes', value: 'public_stranger' },
-      { label: 'Pain & fear', sub: 'Hurt me, scare me', value: 'pain_fear' },
-      { label: 'CNC / force', sub: 'Taken, not asked', value: 'cnc_risk' }
+      { label: 'Parents upstairs', sub: 'silent panic fuck', value: 'caught_rush' },
+      { label: 'Wrong person vibe', sub: 'taboo brain', value: 'family_taboo' },
+      { label: 'Strangers watching', sub: 'no names', value: 'public_stranger' },
+      { label: 'Scared + turned on', sub: 'pain/play-fight', value: 'pain_fear' },
+      { label: 'Taken by surprise', sub: 'CNC brain', value: 'cnc_risk' }
     ]
   },
   {
     id: 'quickKinks',
     type: 'quick-picks',
     tier: 'core',
-    question: 'Pick 3\nfilth kinks',
-    hint: 'Tap chips only — up to 3',
+    question: 'Pick 3\nyes please',
+    hint: "Three chips. We're already judging.",
     max: 3,
     options: KINKS.slice(0, 18),
     required: false
@@ -170,30 +170,30 @@ const QUESTIONS = [
   {
     id: '_gate',
     type: 'gate',
-    question: 'Core file\nlocked.',
-    hint: 'Tap-only filth done · play or stack more'
+    question: "You're in.\nNow what?",
+    hint: 'play now or keep oversharing'
   },
   {
     id: 'age',
     type: 'pick-one',
     tier: 'extended',
-    question: 'How old are\nyou, fucker?',
-    hint: '18+ only · tap your range',
+    question: 'Age check\n(no kids)',
+    hint: '18+ or leave the app',
     required: false,
     autoAdvance: true,
     options: [
-      { label: '18 – 21', sub: 'Young & reckless', value: 20 },
-      { label: '22 – 28', sub: 'Prime chaos years', value: 26 },
-      { label: '29 – 35', sub: 'Seasoned degenerate', value: 32 },
-      { label: '36+', sub: 'Vintage filth', value: 40 }
+      { label: '18 – 21', sub: 'still recovering from college', value: 20 },
+      { label: '22 – 28', sub: 'peak bad decisions', value: 26 },
+      { label: '29 – 35', sub: 'knows what they did', value: 32 },
+      { label: '36+', sub: 'vintage trouble', value: 40 }
     ]
   },
   {
     id: '_kinksLimits',
     type: 'kinks-limits',
     tier: 'extended',
-    question: 'Kinks &\nHard Limits',
-    hint: 'Tap chips · add custom only if you must',
+    question: 'Into vs\nhell no',
+    hint: 'green = yes · red = never ask',
     kinkOptions: KINKS,
     limitOptions: LIMITS,
     required: false
@@ -202,55 +202,55 @@ const QUESTIONS = [
     id: 'fantasyPick',
     type: 'pick-one-other',
     tier: 'extended',
-    question: "Fantasy you'd\nactually do?",
-    hint: 'Tap a scenario — or Other',
+    question: '3am fantasy\nyou mean it?',
+    hint: 'the one you\'d actually try drunk',
     required: false,
     autoAdvance: true,
-    otherPlaceholder: 'Your real scenario…',
+    otherPlaceholder: 'describe the scene',
     otherMaxLength: 100,
     options: [
-      { label: 'CNC at a funeral', sub: 'Grief + force', value: 'fantasy_funeral_cnc' },
-      { label: 'Public almost-caught', sub: 'Door unlocked', value: 'fantasy_public' },
-      { label: 'Free use weekend', sub: 'No asking', value: 'fantasy_freeuse' },
-      { label: 'Humiliation roast', sub: 'Room watches', value: 'fantasy_humiliation' },
-      { label: 'Drunk raw chaos', sub: 'No memory', value: 'fantasy_drunk' }
+      { label: 'Funeral + force', sub: 'worst timeline', value: 'fantasy_funeral_cnc' },
+      { label: 'Door unlocked', sub: 'footsteps outside', value: 'fantasy_public' },
+      { label: 'Whole weekend', sub: 'no asking just use', value: 'fantasy_freeuse' },
+      { label: 'Roasted in public', sub: 'room watching', value: 'fantasy_humiliation' },
+      { label: 'Blackout sex', sub: 'no receipts', value: 'fantasy_drunk' }
     ]
   },
   {
     id: 'favDrink',
     type: 'pick-one-other',
     tier: 'extended',
-    question: "What's your\nfucking poison?",
-    hint: 'Tap drink — scan later in-game',
+    question: "What's in your\ncup right now?",
+    hint: 'scan it later in-game if you want',
     required: false,
     autoAdvance: true,
-    otherPlaceholder: 'Name your drink…',
+    otherPlaceholder: 'brand or chaos mix',
     otherMaxLength: 40,
     options: [
-      { label: 'Beer', sub: 'Pint life', value: 'Beer' },
-      { label: 'Wine', sub: 'Classy filth', value: 'Wine' },
-      { label: 'Whiskey / shot', sub: 'Punishment pour', value: 'Whiskey' },
-      { label: 'Cocktail', sub: 'Sugar + sin', value: 'Cocktail' },
-      { label: 'Tequila', sub: 'Bad decisions', value: 'Tequila' },
-      { label: 'Seltzer / light', sub: 'Fake innocence', value: 'Seltzer' }
+      { label: 'Beer', sub: 'piss but cold', value: 'Beer' },
+      { label: 'Wine', sub: 'pretending to be classy', value: 'Wine' },
+      { label: 'Whiskey', sub: 'punishment pour', value: 'Whiskey' },
+      { label: 'Cocktail', sub: 'sugar hides sins', value: 'Cocktail' },
+      { label: 'Tequila', sub: 'regret accelerator', value: 'Tequila' },
+      { label: 'Hard seltzer', sub: 'lying to yourself', value: 'Seltzer' }
     ]
   },
   {
     id: 'swearPick',
     type: 'pick-one-other',
     tier: 'extended',
-    question: 'Go-to fucking\nswear?',
-    hint: 'What slips out when you cum or crash',
+    question: 'First word out\nwhen shit breaks?',
+    hint: 'stubbed toe · bad card · orgasm',
     required: false,
     autoAdvance: true,
-    otherPlaceholder: 'Your signature curse…',
+    otherPlaceholder: 'your signature curse',
     otherMaxLength: 30,
     options: [
-      { label: 'Fuck', sub: 'Classic', value: 'fuck' },
-      { label: 'Bhenchod', sub: 'Desi destruction', value: 'bhenchod' },
-      { label: 'Madarchod', sub: 'Nuclear', value: 'madarchod' },
-      { label: 'Cunt / bitch', sub: 'English blade', value: 'cunt' },
-      { label: 'Shit + fuck combo', sub: 'Stacked profanity', value: 'shit_fuck' }
+      { label: 'Fuck', sub: 'universal', value: 'fuck' },
+      { label: 'Bhenchod', sub: 'desi missile', value: 'bhenchod' },
+      { label: 'Madarchod', sub: 'nuclear option', value: 'madarchod' },
+      { label: 'Cunt', sub: 'english blade', value: 'cunt' },
+      { label: 'Shit fuck shit', sub: 'combo hitter', value: 'shit_fuck' }
     ]
   }
 ];
@@ -378,12 +378,12 @@ export function initProfile(el, onComplete) {
     </div>
     <nav class="pf-steps" id="pf-steps" aria-label="Question steps"></nav>
     <div class="pf-intro">
-      <div class="pf-intro-label">Your Filth File</div>
-      <div class="pf-intro-sub">Tap answers only · Other if you must type · Skip anytime</div>
+      <div class="pf-intro-label">Pre-game shots</div>
+      <div class="pf-intro-sub">Drunk Q&amp;A · tap an answer · skip if you're scared</div>
     </div>
     <div class="pf-area" id="pf-area"></div>
     <div class="pf-bottom" id="pf-bottom">
-      <button type="button" class="pf-skip" id="pf-skip">Skip this question</button>
+      <button type="button" class="pf-skip" id="pf-skip">nah skip</button>
       <button type="button" class="pf-continue" id="pf-continue">Continue</button>
     </div>`;
 
@@ -542,7 +542,7 @@ function _chipsHTML(options, selected, onClass = 'pf-chip--on') {
 function _optionsWithOther(q) {
   const opts = [...(q.options ?? [])];
   if (q.type === 'pick-one-other' && !opts.some(o => o.value === '__other__')) {
-    opts.push({ label: 'Other…', value: '__other__', sub: q.otherSub ?? 'Type your own answer' });
+    opts.push({ label: 'Other…', value: '__other__', sub: q.otherSub ?? 'fine type it' });
   }
   return opts;
 }
@@ -590,7 +590,7 @@ function _pickListHTML(q) {
         maxlength="${q.otherMaxLength ?? 80}"
         autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false"
         value="${_ea(otherText)}">
-      <p class="pf-other-hint">Tap <strong>Continue</strong> when done</p>
+      <p class="pf-other-hint">hit <strong>Continue</strong> when you're done</p>
     </div>` : '';
 
   return `<div class="pf-pick-list" role="listbox">${rows}</div>${otherBlock}`;
@@ -748,8 +748,8 @@ function _inputHTML(q) {
   if (q.type === 'gate') {
     return `
       <div class="pf-gate">
-        <button type="button" class="pf-gate-btn pf-gate-btn--play" id="pf-gate-play">🔥 Play now</button>
-        <button type="button" class="pf-gate-btn pf-gate-btn--more" id="pf-gate-more">Add more filth</button>
+        <button type="button" class="pf-gate-btn pf-gate-btn--play" id="pf-gate-play">🔥 Cards. Now.</button>
+        <button type="button" class="pf-gate-btn pf-gate-btn--more" id="pf-gate-more">Nah — more tea</button>
       </div>`;
   }
 
@@ -853,7 +853,7 @@ function _render(idx, dir) {
     skip.classList.toggle('pf-skip--solo', hideContinue);
   }
   if (cont) {
-    cont.textContent = idx >= QUESTIONS.length - 1 ? "Let's fucking go" : 'Continue';
+    cont.textContent = idx >= QUESTIONS.length - 1 ? 'deal — let\'s go' : 'continue';
     cont.style.display = hideContinue ? 'none' : '';
     cont.disabled = false;
     cont.classList.remove('pf-continue--busy');
@@ -1349,8 +1349,8 @@ function _complete() {
   card.className = 'pf-card pf-card--complete';
   card.innerHTML = `
     <div class="pf-complete-icon">🔥</div>
-    <h2 class="pf-complete-title">Let's fucking go, ${displayName}.</h2>
-    <p class="pf-complete-sub">Bhenchod Bartender has your kinks,<br>limits, and filth. You're fucked tonight.</p>`;
+    <h2 class="pf-complete-title">You're in, ${displayName}.</h2>
+    <p class="pf-complete-sub">Bartender's got your number.<br>Go ruin someone's night.</p>`;
 
   if (area) {
     if (old && typeof gsap !== 'undefined') {
