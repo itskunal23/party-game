@@ -1,4 +1,4 @@
-const CACHE = 'gfy-v24';
+const CACHE = 'gfy-v25';
 
 const STATIC_SHELL = [
   '/',
@@ -43,6 +43,10 @@ self.addEventListener('activate', e => {
   );
 });
 
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('fetch', e => {
   const { request } = e;
   const url = new URL(request.url);
@@ -60,7 +64,25 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Cache-first for static shell; network fallback → offline page
+  const isAsset = url.pathname.startsWith('/js/') || url.pathname.startsWith('/css/');
+
+  // JS/CSS: network-first so profile & game updates ship without stale PWA cache
+  if (isAsset) {
+    e.respondWith(
+      fetch(request)
+        .then(res => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request).then(cached => cached ?? new Response('', { status: 408 })))
+    );
+    return;
+  }
+
+  // HTML + rest: cache-first; network fallback → offline page
   e.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;

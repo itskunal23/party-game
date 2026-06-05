@@ -518,7 +518,23 @@
   <!-- Service worker registration -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      let refreshedForUpdate = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshedForUpdate) return;
+        refreshedForUpdate = true;
+        window.location.reload();
+      });
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        reg.update();
+        reg.addEventListener('updatefound', () => {
+          const installing = reg.installing;
+          installing?.addEventListener('statechange', () => {
+            if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+              installing.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+      }).catch(() => {});
     }
   </script>
 </body>
