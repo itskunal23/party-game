@@ -275,6 +275,38 @@
   transform: scale(1);
 }
 
+.pf-other-wrap {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.25s ease;
+  margin-top: 0;
+}
+
+.pf-other-wrap--open {
+  max-height: 140px;
+  opacity: 1;
+  margin-top: 12px;
+}
+
+.pf-other-input {
+  font-size: 17px;
+  min-height: 56px;
+  padding: 16px 18px;
+}
+
+.pf-other-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.42);
+  text-align: center;
+  margin: 8px 0 0;
+}
+
+.pf-other-hint strong {
+  color: rgba(255, 213, 74, 0.9);
+  font-weight: 700;
+}
+
 /* ── Input wrap ─────────────────────────────────────────────────────────────── */
 .pf-input-wrap {
   display: flex;

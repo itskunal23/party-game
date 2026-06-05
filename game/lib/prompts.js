@@ -40,7 +40,7 @@ NEVER:
 - Repetitive madarchod every sentence
 - Output "GFY" instead of "Go Fuck Yourself"
 
-QUESTIONNAIRE: partnerRoast first; fav swear word; kinks/mediaFaves confirm taste — but ASSIGNED REFERENCE overrides random picks.
+QUESTIONNAIRE: partnerRoast, filthAdmit, tabooGrief, tabooRisk, kinks — sexual/wild only, no movie questions — ASSIGNED REFERENCE overrides random picks.
 LIMITS / OFF LIMITS: never reference.
 
 Brutal funny, never real trauma.`;
@@ -214,7 +214,17 @@ function _formatProfile(p) {
     p.kinks?.length                     ? `Kinks (ROAST AMMO): ${p.kinks.join(', ')}`                                  : null,
     p.fantasyConfess                    ? `Admitted fantasy: ${p.fantasyConfess}`                                      : null,
     p.partnerRoast                      ? `Wants roasted for: ${p.partnerRoast}`                                     : null,
-    p.mediaFaves?.length                ? `Dark cinema: ${p.mediaFaves.join(', ')}`                                    : null,
+    p.grandparentGrief                  ? `Grandparents/grief: ${p.grandparentGrief}`                                  : null,
+    p.shittyDriver                      ? `Driver energy: ${p.shittyDriver}`                                           : null,
+    p.fucksPerDay                       ? `Fucks per day tier: ${p.fucksPerDay}`                                       : null,
+    p.happyTrigger                      ? `Happy when: ${p.happyTrigger}`                                              : null,
+    p.angryTrigger                      ? `Angry when: ${p.angryTrigger}`                                              : null,
+    p.filthAdmit                        ? `Admitted filth: ${p.filthAdmit}`                                            : null,
+    p.tabooGrief                        ? `Grief/death arousal: ${p.tabooGrief}`                                       : null,
+    p.tabooRisk                         ? `Risk turn-on: ${p.tabooRisk}`                                               : null,
+    p.fantasyPick                       ? `Fantasy: ${p.fantasyPick}`                                                  : null,
+    p.swearPick                         ? `Swear: ${p.swearPick}`                                                      : null,
+    p.mediaFaves?.length                ? `Legacy media: ${p.mediaFaves.join(', ')}`                                   : null,
     p.favDrink                          ? `Drink of choice: ${p.favDrink}`                                             : null,
     p.drinkWhy                          ? `Why they drink it: ${p.drinkWhy}`                                           : null,
     p.swearWord                         ? `Fav swear word (USE IT): ${p.swearWord}`                                    : null,
@@ -394,6 +404,19 @@ function _pickProfileHook(profile) {
   if (profile?.fantasyConfess) hooks.push(`admitted "${profile.fantasyConfess.slice(0, 40)}..."`);
   if (profile?.partnerRoast) hooks.push(`wanted roasts for "${profile.partnerRoast.slice(0, 40)}..."`);
   if (profile?.swearWord) hooks.push(`fav swear "${profile.swearWord}"`);
+  if (profile?.grandparentGrief === 'grief_yes' || profile?.tabooGrief === 'grief_yes') {
+    hooks.push('gets turned on when grandparents die / grief');
+  }
+  if (profile?.shittyDriver === 'driver_shitty' || profile?.shittyDriver === 'driver_weapon') {
+    hooks.push('shitty fucking driver');
+  }
+  if (profile?.fucksPerDay === 'fuck_god' || profile?.fucksPerDay === 'fuck_machine') {
+    hooks.push('says fuck constantly');
+  }
+  if (profile?.happyTrigger) hooks.push(`happy when: ${profile.happyTrigger}`);
+  if (profile?.angryTrigger) hooks.push(`angry when: ${profile.angryTrigger}`);
+  if (profile?.filthAdmit) hooks.push(`admitted "${String(profile.filthAdmit).slice(0, 50)}"`);
+  if (profile?.tabooRisk) hooks.push(`risk kink: ${profile.tabooRisk}`);
   if (profile?.mediaFaves?.length) hooks.push(`${profile.mediaFaves[0]} energy`);
   if (profile?.favDrink) hooks.push(`drinks ${profile.favDrink}`);
   return hooks.length ? hooks[Math.floor(Math.random() * hooks.length)] : null;

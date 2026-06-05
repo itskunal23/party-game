@@ -139,7 +139,7 @@ export function createApp() {
     try {
       const content = await nvidiaChat(HOST_MODEL, [{
         role: 'user',
-        content: `The user likes dark Indian cinema/shows like "${query.trim()}". Suggest 5 similar dark, gritty Bollywood or OTT titles (e.g. Dhurandhar, Paatal Lok, Sacred Games, Gangs of Wasseypur, Mirzapur, Delhi Crime, Animal, Scam 1992). Reply with JSON only: {"suggestions":["Title 1","Title 2","Title 3","Title 4","Title 5"]}`
+        content: `The user likes dark Indian cinema/shows like "${query.trim()}". Suggest 5 similar dark, gritty Bollywood or OTT titles (e.g. Dhurandhar, Paatal Lok, Sacred Games, Gangs of Wasseypur, Mirzapur, Delhi Crime, Animal, Farzi). Reply with JSON only: {"suggestions":["Title 1","Title 2","Title 3","Title 4","Title 5"]}`
       }], 120);
       const parsed = JSON.parse(content.match(/\{[\s\S]*\}/)?.[0] ?? '{}');
       res.json({ suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 5) : [] });

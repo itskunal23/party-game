@@ -13,7 +13,7 @@ const TRANSCRIPT_LINES = [
   '"Nandini walked into that bluff clean. Farzi-level confidence on the wrong side."',
   '"Kunal, Mirzapur ke table pe bhi itna obvious GFY nahi bolte the. Three in a row, bhenchod."',
   '"3 misses in a row — Pond Goblin title loading. Paatal Lok case still open."',
-  '"Bluff landed. They believed every word. Scam 1992 hustle but the system wasn\'t scammed."',
+  '"Bluff landed. They believed every word. Farzi hustle — system wasn\'t scammed."',
   '"That bullshit call was wrong. Sacred Games finale mein bhi aisa devastation nahi tha."',
   '"Lucky draw again. System rigged in your favor. Absolute cinema."',
   '"Book complete. Dare time. Bartender noticed. Everyone\'s fucked now."',

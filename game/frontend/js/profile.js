@@ -23,19 +23,27 @@ const LIMITS = [
 const QUESTIONS = [
   {
     id: 'name',
-    type: 'text',
+    type: 'pick-one-other',
     tier: 'core',
-    question: 'What the fuck\nshould we call you?',
-    placeholder: 'Your name',
+    question: 'Who the fuck\nare you?',
+    hint: 'Tap your name — or Other',
     required: false,
-    maxLength: 20
+    autoAdvance: true,
+    otherPlaceholder: 'Type your name…',
+    otherMaxLength: 20,
+    options: [
+      { label: 'Kunal', sub: 'Dom energy', value: 'Kunal' },
+      { label: 'Nandini', sub: 'Sub chaos', value: 'Nandini' },
+      { label: 'Chaos goblin', sub: 'No fixed identity', value: 'Chaos goblin' },
+      { label: 'Anonymous degenerate', sub: 'Mystery filth', value: 'Anonymous' }
+    ]
   },
   {
     id: 'weight',
     type: 'pick-one',
     tier: 'core',
     question: 'How much do\nyou weigh?',
-    hint: 'US lbs — calibrates drunk meter · tap one',
+    hint: 'Calibrates drunk meter · tap one',
     required: false,
     autoAdvance: true,
     options: [
@@ -46,30 +54,115 @@ const QUESTIONS = [
     ]
   },
   {
-    id: 'partnerRoast',
-    type: 'text',
+    id: 'grandparentGrief',
+    type: 'pick-one-other',
     tier: 'core',
-    question: 'Roast me\nfor what?',
-    placeholder: 'Habits, kinks, things they know too well…',
-    hint: 'Goes straight to Bhenchod Bartender',
+    question: 'Grandparents\ndying turn you on?',
+    hint: 'Funeral horniness · grief kink · be fucking honest',
     required: false,
-    maxLength: 150
+    autoAdvance: true,
+    otherPlaceholder: 'Your unhinged truth…',
+    otherMaxLength: 80,
+    options: [
+      { label: 'Yes — hard', sub: 'Loss gets me wet', value: 'grief_yes' },
+      { label: 'Sometimes', sub: 'Only when drunk / destroyed', value: 'grief_sometimes' },
+      { label: 'No — sacred line', sub: 'Death is off limits', value: 'grief_never' },
+      { label: 'Only the fantasy', sub: 'Thought not action', value: 'grief_fantasy_only' }
+    ]
   },
   {
-    id: 'mediaFaves',
-    type: 'movie-search',
+    id: 'shittyDriver',
+    type: 'pick-one-other',
     tier: 'core',
-    question: 'Favorite movie\nor show?',
-    placeholder: 'Paatal Lok, Dhurandhar, Farzi…',
-    hint: 'Tap suggestions — up to 3 titles',
-    required: false
+    question: 'Shitty fucking\ndriver?',
+    hint: 'How you behave behind the wheel',
+    required: false,
+    autoAdvance: true,
+    otherPlaceholder: 'Describe your driving sins…',
+    otherMaxLength: 60,
+    options: [
+      { label: 'Elite — never', sub: 'Lane discipline king', value: 'driver_elite' },
+      { label: 'Average chaos', sub: 'Speeding + vibes', value: 'driver_avg' },
+      { label: 'Shitty driver', sub: 'Should not have a license', value: 'driver_shitty' },
+      { label: 'Mobile weapon', sub: 'Curbs, horns, rage', value: 'driver_weapon' }
+    ]
+  },
+  {
+    id: 'fucksPerDay',
+    type: 'pick-one',
+    tier: 'core',
+    question: 'Fucks per day\n(out loud)?',
+    hint: 'How often you say fuck — tap your tier',
+    required: false,
+    autoAdvance: true,
+    options: [
+      { label: '0 – 10', sub: 'Suspiciously polite', value: 'fuck_rare' },
+      { label: '11 – 30', sub: 'Normal degenerate', value: 'fuck_normal' },
+      { label: '31 – 60', sub: 'Fuck is punctuation', value: 'fuck_heavy' },
+      { label: '61 – 100', sub: 'Violence against English', value: 'fuck_machine' },
+      { label: '100+', sub: 'Should be fined per syllable', value: 'fuck_god' }
+    ]
+  },
+  {
+    id: 'happyTrigger',
+    type: 'pick-one-other',
+    tier: 'core',
+    question: 'Really fucking\nhappy when…',
+    hint: 'What actually lights you up',
+    required: false,
+    autoAdvance: true,
+    otherPlaceholder: 'What makes you grin like a psycho…',
+    otherMaxLength: 80,
+    options: [
+      { label: 'Partner submitting', sub: 'Power + praise', value: 'happy_power' },
+      { label: 'Almost caught', sub: 'Risk + adrenaline', value: 'happy_risk' },
+      { label: 'Winning / dominating', sub: 'Cards, bed, life', value: 'happy_win' },
+      { label: 'Being degraded', sub: 'Trash talk hits', value: 'happy_degrade' },
+      { label: 'Drunk & loud', sub: 'BAC + chaos', value: 'happy_drunk' }
+    ]
+  },
+  {
+    id: 'angryTrigger',
+    type: 'pick-one-other',
+    tier: 'core',
+    question: 'Really fucking\nangry when…',
+    hint: 'What snaps you — bartender will poke this',
+    required: false,
+    autoAdvance: true,
+    otherPlaceholder: 'What makes you see red…',
+    otherMaxLength: 80,
+    options: [
+      { label: 'Lied to / bluffed', sub: 'GFY bullshit energy', value: 'angry_lied' },
+      { label: 'Disrespected', sub: 'Tone, eye-roll, brat', value: 'angry_disrespect' },
+      { label: 'Losing control', sub: 'Cards or dynamic', value: 'angry_control' },
+      { label: 'Ignored sexually', sub: 'Cold shoulder', value: 'angry_ignored' },
+      { label: 'Bad drivers', sub: 'Road rage soul', value: 'angry_drivers' }
+    ]
+  },
+  {
+    id: 'tabooRisk',
+    type: 'pick-one-other',
+    tier: 'core',
+    question: 'Filthiest risk\nthat works?',
+    hint: 'What actually gets you going',
+    required: false,
+    autoAdvance: true,
+    otherPlaceholder: 'Your real risk kink…',
+    otherMaxLength: 80,
+    options: [
+      { label: 'Almost caught', sub: 'Panic fuck energy', value: 'caught_rush' },
+      { label: 'Family taboo', sub: 'Wrong bloodline', value: 'family_taboo' },
+      { label: 'Strangers / public', sub: 'No names, all eyes', value: 'public_stranger' },
+      { label: 'Pain & fear', sub: 'Hurt me, scare me', value: 'pain_fear' },
+      { label: 'CNC / force', sub: 'Taken, not asked', value: 'cnc_risk' }
+    ]
   },
   {
     id: 'quickKinks',
     type: 'quick-picks',
     tier: 'core',
-    question: 'Pick 3\ninterests',
-    hint: 'Tap up to 3 — bartender ammo',
+    question: 'Pick 3\nfilth kinks',
+    hint: 'Tap chips only — up to 3',
     max: 3,
     options: KINKS.slice(0, 18),
     required: false
@@ -78,14 +171,14 @@ const QUESTIONS = [
     id: '_gate',
     type: 'gate',
     question: 'Core file\nlocked.',
-    hint: 'Core file done in ~30 seconds. Play now or add more filth?'
+    hint: 'Tap-only filth done · play or stack more'
   },
   {
     id: 'age',
     type: 'pick-one',
     tier: 'extended',
     question: 'How old are\nyou, fucker?',
-    hint: '18+ only — tap your range',
+    hint: '18+ only · tap your range',
     required: false,
     autoAdvance: true,
     options: [
@@ -100,43 +193,135 @@ const QUESTIONS = [
     type: 'kinks-limits',
     tier: 'extended',
     question: 'Kinks &\nHard Limits',
-    hint: 'Into stuff up top · sacred lines down bottom',
+    hint: 'Tap chips · add custom only if you must',
     kinkOptions: KINKS,
     limitOptions: LIMITS,
     required: false
   },
   {
-    id: 'fantasyConfess',
-    type: 'text',
+    id: 'fantasyPick',
+    type: 'pick-one-other',
     tier: 'extended',
-    question: "Dirtiest fantasy\nyou'll admit?",
-    placeholder: 'The one that would end you on roast night...',
+    question: "Fantasy you'd\nactually do?",
+    hint: 'Tap a scenario — or Other',
     required: false,
-    maxLength: 120
+    autoAdvance: true,
+    otherPlaceholder: 'Your real scenario…',
+    otherMaxLength: 100,
+    options: [
+      { label: 'CNC at a funeral', sub: 'Grief + force', value: 'fantasy_funeral_cnc' },
+      { label: 'Public almost-caught', sub: 'Door unlocked', value: 'fantasy_public' },
+      { label: 'Free use weekend', sub: 'No asking', value: 'fantasy_freeuse' },
+      { label: 'Humiliation roast', sub: 'Room watches', value: 'fantasy_humiliation' },
+      { label: 'Drunk raw chaos', sub: 'No memory', value: 'fantasy_drunk' }
+    ]
   },
   {
-    id: '_drink',
-    type: 'drink-why',
+    id: 'favDrink',
+    type: 'pick-one-other',
     tier: 'extended',
     question: "What's your\nfucking poison?",
-    hint: 'Drink + why the fuck you drink it',
-    required: false
+    hint: 'Tap drink — scan later in-game',
+    required: false,
+    autoAdvance: true,
+    otherPlaceholder: 'Name your drink…',
+    otherMaxLength: 40,
+    options: [
+      { label: 'Beer', sub: 'Pint life', value: 'Beer' },
+      { label: 'Wine', sub: 'Classy filth', value: 'Wine' },
+      { label: 'Whiskey / shot', sub: 'Punishment pour', value: 'Whiskey' },
+      { label: 'Cocktail', sub: 'Sugar + sin', value: 'Cocktail' },
+      { label: 'Tequila', sub: 'Bad decisions', value: 'Tequila' },
+      { label: 'Seltzer / light', sub: 'Fake innocence', value: 'Seltzer' }
+    ]
   },
   {
-    id: 'swearWord',
-    type: 'text',
+    id: 'swearPick',
+    type: 'pick-one-other',
     tier: 'extended',
-    question: "Fav fucking\nswear word?",
-    placeholder: 'e.g. bhenchod, fuck, cunt...',
+    question: 'Go-to fucking\nswear?',
+    hint: 'What slips out when you cum or crash',
     required: false,
-    maxLength: 30
+    autoAdvance: true,
+    otherPlaceholder: 'Your signature curse…',
+    otherMaxLength: 30,
+    options: [
+      { label: 'Fuck', sub: 'Classic', value: 'fuck' },
+      { label: 'Bhenchod', sub: 'Desi destruction', value: 'bhenchod' },
+      { label: 'Madarchod', sub: 'Nuclear', value: 'madarchod' },
+      { label: 'Cunt / bitch', sub: 'English blade', value: 'cunt' },
+      { label: 'Shit + fuck combo', sub: 'Stacked profanity', value: 'shit_fuck' }
+    ]
   }
 ];
 
-const MEDIA_QUICK = [
-  'Paatal Lok', 'Mirzapur', 'Dhurandhar', 'Farzi',
-  'Sacred Games', 'Scam 1992', 'Dhootha', 'Delhi Crime'
-];
+/** Human-readable lines for bartender (preset values + raw other text). */
+const PROFILE_LABELS = {
+  grandparentGrief: {
+    grief_yes: 'Admits grief/death (grandparents dying) is a turn-on',
+    grief_sometimes: 'Sometimes horny around grief / funerals',
+    grief_never: 'Grief/death is a hard limit',
+    grief_fantasy_only: 'Grief kink — fantasy only'
+  },
+  shittyDriver: {
+    driver_elite: 'Claims elite driver',
+    driver_avg: 'Average chaotic driver',
+    driver_shitty: 'Admits shitty fucking driver',
+    driver_weapon: 'Car is a weapon — road rage'
+  },
+  fucksPerDay: {
+    fuck_rare: 'Says fuck 0–10×/day (suspicious)',
+    fuck_normal: 'Says fuck 11–30×/day',
+    fuck_heavy: 'Says fuck 31–60×/day',
+    fuck_machine: 'Says fuck 61–100×/day',
+    fuck_god: 'Says fuck 100+×/day'
+  },
+  happyTrigger: {
+    happy_power: 'Happy when partner submits',
+    happy_risk: 'Happy when almost caught',
+    happy_win: 'Happy when winning / dominating',
+    happy_degrade: 'Happy when degraded',
+    happy_drunk: 'Happy when drunk & loud'
+  },
+  angryTrigger: {
+    angry_lied: 'Rage when lied to / bluffed',
+    angry_disrespect: 'Rage when disrespected',
+    angry_control: 'Rage when losing control',
+    angry_ignored: 'Rage when ignored sexually',
+    angry_drivers: 'Rage at shitty drivers'
+  },
+  tabooRisk: {
+    caught_rush: 'Turned on by almost-caught risk',
+    family_taboo: 'Family taboo risk',
+    public_stranger: 'Public / stranger risk',
+    pain_fear: 'Pain & fear kink',
+    cnc_risk: 'CNC / force fantasy risk'
+  },
+  fantasyPick: {
+    fantasy_funeral_cnc: 'Fantasy: CNC at a funeral',
+    fantasy_public: 'Fantasy: public almost-caught',
+    fantasy_freeuse: 'Fantasy: free use weekend',
+    fantasy_humiliation: 'Fantasy: humiliation in front of room',
+    fantasy_drunk: 'Fantasy: drunk raw chaos'
+  },
+  swearPick: {
+    fuck: 'Swears: fuck',
+    bhenchod: 'Swears: bhenchod',
+    madarchod: 'Swears: madarchod',
+    cunt: 'Swears: cunt/bitch',
+    shit_fuck: 'Swears: shit+fuck stacked'
+  }
+};
+
+function _profileLine(id, val) {
+  if (!val) return null;
+  const map = PROFILE_LABELS[id];
+  if (map?.[val]) return map[val];
+  return String(val);
+}
+
+/** Legacy movie-search step (not in QUESTIONS; kept for old profile edits). */
+const MEDIA_QUICK = [];
 
 // ─── Module state ─────────────────────────────────────────────────────────────
 let _idx = 0;
@@ -194,7 +379,7 @@ export function initProfile(el, onComplete) {
     <nav class="pf-steps" id="pf-steps" aria-label="Question steps"></nav>
     <div class="pf-intro">
       <div class="pf-intro-label">Your Filth File</div>
-      <div class="pf-intro-sub">Core file in ~60 sec · Play now at the gate · Skip anytime</div>
+      <div class="pf-intro-sub">Tap answers only · Other if you must type · Skip anytime</div>
     </div>
     <div class="pf-area" id="pf-area"></div>
     <div class="pf-bottom" id="pf-bottom">
@@ -302,12 +487,27 @@ export function buildProfileContext(profile) {
     profile.age                                  ? `Age: ${profile.age}`                                                        : null,
     profile.describe5?.filter(Boolean).length    ? `Describes self as: ${profile.describe5.filter(Boolean).join(', ')}`        : null,
     profile.kinks?.length                        ? `Kinks: ${profile.kinks.join(', ')}`                                        : null,
-    profile.fantasyConfess                       ? `Dirtiest admitted fantasy: ${profile.fantasyConfess}`                      : null,
-    profile.partnerRoast                         ? `Roast them for: ${profile.partnerRoast}`                                   : null,
-    profile.mediaFaves?.length                   ? `Dark cinema they love: ${profile.mediaFaves.join(', ')}`                   : null,
-    profile.favDrink                             ? `Drink of choice: ${profile.favDrink}`                                      : null,
-    profile.drinkWhy                             ? `Why they drink it: ${profile.drinkWhy}`                                    : null,
-    profile.swearWord                            ? `Fav swear word: ${profile.swearWord}`                                      : null,
+    _profileLine('grandparentGrief', profile.grandparentGrief ?? profile.tabooGrief)
+      ? `Grief/grandparents: ${_profileLine('grandparentGrief', profile.grandparentGrief ?? profile.tabooGrief)}` : null,
+    _profileLine('shittyDriver', profile.shittyDriver)
+      ? `Driving: ${_profileLine('shittyDriver', profile.shittyDriver)}` : null,
+    _profileLine('fucksPerDay', profile.fucksPerDay)
+      ? `Profanity: ${_profileLine('fucksPerDay', profile.fucksPerDay)}` : null,
+    _profileLine('happyTrigger', profile.happyTrigger)
+      ? `Happy when: ${_profileLine('happyTrigger', profile.happyTrigger)}` : null,
+    _profileLine('angryTrigger', profile.angryTrigger)
+      ? `Angry when: ${_profileLine('angryTrigger', profile.angryTrigger)}` : null,
+    _profileLine('tabooRisk', profile.tabooRisk)
+      ? `Risk kink: ${_profileLine('tabooRisk', profile.tabooRisk)}` : null,
+    _profileLine('fantasyPick', profile.fantasyPick ?? profile.fantasyConfess)
+      ? `Fantasy: ${_profileLine('fantasyPick', profile.fantasyPick ?? profile.fantasyConfess)}` : null,
+    profile.favDrink                             ? `Drink: ${profile.favDrink}`                                                : null,
+    _profileLine('swearPick', profile.swearPick ?? profile.swearWord)
+      ? `Swears: ${_profileLine('swearPick', profile.swearPick ?? profile.swearWord)}` : null,
+    profile.partnerRoast                         ? `Roast ammo: ${profile.partnerRoast}`                                       : null,
+    profile.filthAdmit                           ? `Filth admit: ${profile.filthAdmit}`                                        : null,
+    profile.mediaFaves?.length                   ? `Legacy media: ${profile.mediaFaves.join(', ')}`                            : null,
+    profile.drinkWhy                             ? `Why they drink: ${profile.drinkWhy}`                                       : null,
     profile.limits?.length                       ? `OFF LIMITS — never reference: ${profile.limits.join(', ')}`                : null,
     // backward-compat
     profile.traits?.length                       ? `Traits: ${profile.traits.join(', ')}`                                      : null,
@@ -339,33 +539,69 @@ function _chipsHTML(options, selected, onClass = 'pf-chip--on') {
   return `${predefined}${custom}`;
 }
 
+function _optionsWithOther(q) {
+  const opts = [...(q.options ?? [])];
+  if (q.type === 'pick-one-other' && !opts.some(o => o.value === '__other__')) {
+    opts.push({ label: 'Other…', value: '__other__', sub: q.otherSub ?? 'Type your own answer' });
+  }
+  return opts;
+}
+
+function _resolvePickOne(q) {
+  let stored;
+  if (q.id === 'height') stored = _answers.height?.value;
+  else if (q.id === 'weight') stored = _answers.weight?.value;
+  else stored = _answers[q.id];
+
+  if (stored == null || stored === '') return { selected: null, otherText: '' };
+
+  const opts = _optionsWithOther(q);
+  const hit = opts.find(o => o.value !== '__other__' && String(o.value) === String(stored));
+  if (hit) return { selected: hit.value, otherText: '' };
+
+  return { selected: '__other__', otherText: String(stored) };
+}
+
 function _pickOneSelected(q) {
-  if (q.id === 'height') return _answers.height?.value;
-  if (q.id === 'weight') return _answers.weight?.value;
-  return _answers[q.id];
+  return _resolvePickOne(q).selected;
+}
+
+function _pickListHTML(q) {
+  const { selected, otherText } = _resolvePickOne(q);
+  const opts = _optionsWithOther(q);
+  const rows = opts.map(o => {
+    const on = selected != null && String(o.value) === String(selected);
+    return `<button type="button" class="pf-pick-row${on ? ' pf-pick-row--on' : ''}" data-val="${_ea(String(o.value))}" role="option" aria-selected="${on}">
+      <span class="pf-pick-copy">
+        <span class="pf-pick-label">${o.label}</span>
+        ${o.sub ? `<span class="pf-pick-sub">${o.sub}</span>` : ''}
+      </span>
+      <span class="pf-pick-check" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>
+    </button>`;
+  }).join('');
+
+  const otherOpen = selected === '__other__';
+  const otherBlock = q.type === 'pick-one-other' ? `
+    <div class="pf-other-wrap${otherOpen ? ' pf-other-wrap--open' : ''}" id="pf-other-wrap">
+      <input class="pf-text-input pf-other-input" id="pf-other-input" type="text"
+        placeholder="${_ea(q.otherPlaceholder ?? 'Type your answer…')}"
+        maxlength="${q.otherMaxLength ?? 80}"
+        autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false"
+        value="${_ea(otherText)}">
+      <p class="pf-other-hint">Tap <strong>Continue</strong> when done</p>
+    </div>` : '';
+
+  return `<div class="pf-pick-list" role="listbox">${rows}</div>${otherBlock}`;
 }
 
 // ─── Input HTML ───────────────────────────────────────────────────────────────
 function _inputHTML(q) {
   const val = _answers[q.id];
 
-  if (q.type === 'pick-one') {
-    const selected = _pickOneSelected(q);
-    return `
-      <div class="pf-pick-list" role="listbox" aria-label="${_ea(q.question.replace(/\n/g, ' '))}">
-        ${q.options.map(o => {
-          const on = selected != null && Number(o.value) === Number(selected);
-          return `<button type="button" class="pf-pick-row${on ? ' pf-pick-row--on' : ''}" data-val="${o.value}" role="option" aria-selected="${on}">
-            <span class="pf-pick-copy">
-              <span class="pf-pick-label">${o.label}</span>
-              ${o.sub ? `<span class="pf-pick-sub">${o.sub}</span>` : ''}
-            </span>
-            <span class="pf-pick-check" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </span>
-          </button>`;
-        }).join('')}
-      </div>`;
+  if (q.type === 'pick-one' || q.type === 'pick-one-other') {
+    return _pickListHTML(q);
   }
 
   if (q.type === 'text') {
@@ -607,15 +843,18 @@ function _render(idx, dir) {
 
   const skip = document.getElementById('pf-skip');
   const cont = document.getElementById('pf-continue');
-  const isPickOne = q.type === 'pick-one';
+  const { selected: pickSel } = (q.type === 'pick-one' || q.type === 'pick-one-other')
+    ? _resolvePickOne(q) : { selected: null };
+  const hideContinue = q.type === 'gate'
+    || (q.autoAdvance && pickSel && pickSel !== '__other__');
   const isGate = q.type === 'gate';
   if (skip) {
     skip.style.display = isGate ? 'none' : '';
-    skip.classList.toggle('pf-skip--solo', isPickOne);
+    skip.classList.toggle('pf-skip--solo', hideContinue);
   }
   if (cont) {
     cont.textContent = idx >= QUESTIONS.length - 1 ? "Let's fucking go" : 'Continue';
-    cont.style.display = (isPickOne || isGate) ? 'none' : '';
+    cont.style.display = hideContinue ? 'none' : '';
     cont.disabled = false;
     cont.classList.remove('pf-continue--busy');
   }
@@ -700,21 +939,37 @@ function _wire(q) {
   const root = _activeCard();
   if (!root) return;
 
-  if (q.type === 'pick-one') {
+  if (q.type === 'pick-one' || q.type === 'pick-one-other') {
+    const opts = _optionsWithOther(q);
     root.querySelectorAll('.pf-pick-row').forEach(btn => {
       _bindTap(btn, () => {
         if (_advancing) return;
         const raw = btn.dataset.val;
-        const option = q.options.find(o => String(o.value) === raw);
+        const option = opts.find(o => String(o.value) === raw);
         if (!option) return;
         root.querySelectorAll('.pf-pick-row').forEach(b => b.classList.remove('pf-pick-row--on'));
         btn.classList.add('pf-pick-row--on');
+
+        if (option.value === '__other__') {
+          _answers[q.id] = '__other__';
+          const wrap = _q('#pf-other-wrap', root);
+          wrap?.classList.add('pf-other-wrap--open');
+          setTimeout(() => _q('#pf-other-input', root)?.focus(), 80);
+          haptic('light');
+          return;
+        }
+
         if (q.id === 'height') _answers.height = { value: option.value, unit: 'ft' };
         else if (q.id === 'weight') _answers.weight = { value: option.value, unit: 'lb' };
         else _answers[q.id] = option.value;
+        if (q.id === 'name') localStorage.setItem('gfy_player_name', String(option.value));
+
         haptic('medium');
-        _continue();
+        if (q.autoAdvance && option.value !== '__other__') _continue();
       });
+    });
+    _q('#pf-other-input', root)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); _continue(); }
     });
   }
 
@@ -927,6 +1182,15 @@ function _readValue(q) {
   switch (q.type) {
     case 'pick-one':
       return _pickOneSelected(q) ?? null;
+    case 'pick-one-other': {
+      const sel = _resolvePickOne(q);
+      if (sel.selected === '__other__') {
+        const text = _q('#pf-other-input', root)?.value?.trim() ?? sel.otherText;
+        return text || null;
+      }
+      if (q.id === 'weight') return sel.selected;
+      return sel.selected;
+    }
     case 'text':
       return _q('#pf-input', root)?.value?.trim() ?? '';
     case 'number': {
@@ -998,6 +1262,15 @@ function _save(q) {
     const { favDrink, drinkWhy } = val || {};
     if (favDrink) _answers.favDrink = favDrink;
     if (drinkWhy) _answers.drinkWhy = drinkWhy;
+  } else if (q.type === 'pick-one-other') {
+    const text = typeof val === 'string' ? val.trim() : '';
+    if (text) {
+      _answers[q.id] = text;
+      if (q.id === 'name') localStorage.setItem('gfy_player_name', text);
+      if (q.id === 'favDrink') _answers.favDrink = text;
+      if (q.id === 'swearPick') _answers.swearWord = text;
+      if (q.id === 'fantasyPick') _answers.fantasyConfess = text;
+    }
   } else if (q.type === 'quick-picks') {
     if (val?.length) _answers.kinks = val;
     else delete _answers.kinks;
