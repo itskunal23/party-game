@@ -1,5 +1,18 @@
 /* ── Character avatars — SVG identity system ──────────────────────────────── */
 
+.avatar-wrap--hero .avatar-frame {
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+}
+
+.avatar-role-chip {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 214, 10, 0.95);
+  letter-spacing: 0.02em;
+}
+
 .avatar-wrap {
   display: inline-flex;
   flex-direction: column;

@@ -208,7 +208,7 @@ function _generateSvg(desc, mood) {
 </svg>`;
 }
 
-const SIZE_PX = { sm: 44, md: 64, lg: 88, xl: 112 };
+const SIZE_PX = { sm: 44, md: 64, lg: 88, xl: 112, hero: 128 };
 
 /**
  * Mount avatar into container.
@@ -241,11 +241,15 @@ export function mountAvatar(container, profile, opts = {}) {
   const labelHtml = opts.label
     ? `<span class="avatar-label">${opts.label}</span>`
     : '';
+  const roleHtml = opts.roleChip
+    ? `<span class="avatar-role-chip">${opts.roleChip}</span>`
+    : '';
 
   container.innerHTML = `
     <div class="avatar-frame" style="width:${px}px;height:${Math.round(px * 1.15)}px">
       ${svgs[mood]}
     </div>
+    ${roleHtml}
     ${labelHtml}`;
 
   return container;
@@ -255,7 +259,8 @@ export function setAvatarMood(container, mood, profile) {
   if (!container || !profile) return;
   mountAvatar(container, profile, {
     mood,
-    size: container.classList.contains('avatar-wrap--lg') ? 'lg'
+    size: container.classList.contains('avatar-wrap--hero') ? 'hero'
+      : container.classList.contains('avatar-wrap--lg') ? 'lg'
       : container.classList.contains('avatar-wrap--sm') ? 'sm'
       : container.classList.contains('avatar-wrap--xl') ? 'xl' : 'md',
     ring: container.classList.contains('avatar-wrap--ring'),

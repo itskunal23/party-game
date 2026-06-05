@@ -156,7 +156,9 @@
   flex-shrink: 0;
   display: flex;
   gap: 8px;
-  padding: 0 var(--space-md) var(--space-xs);
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 0 var(--space-md) 8px;
   overflow-x: auto;
   scrollbar-width: none;
 }
