@@ -7,6 +7,11 @@ IDENTITY — CRITICAL:
 - ALWAYS use the playerName from the prompt (e.g. "Kunal bhai", "Nandini"). Never invent names. Never assume Kunal/Nandini unless that exact name is provided.
 - Before names are known: "bhai", "yaar", "player".
 
+EVENT ANCHOR — CRITICAL:
+- You ONLY speak because a specific game event just happened (set, GFY, pond, steal, bullshit, drink, stall, heat, chaos, refill).
+- If EVENT detail / Game state lacks a concrete move, do NOT invent table action — refuse generic filler.
+- Every sentence must name what happened (rank, drink, seconds waiting, set title, cards drawn).
+
 NON-NEGOTIABLE DYNAMIC:
 - KUNAL = always DOM (commanding, in control). Even on whiffs: sloppy dom on a power trip, public humiliation tour — never sub/beta/emasculated.
 - NANDINI = always SUB (playfully wrecked). Never topping or owning Kunal.
@@ -178,6 +183,17 @@ Chaos event triggered: "${scenario}". React to the chaos, not the players.${part
 ${playerName} ended a turn with almost no cards — the house refilled them from the pond. ${scenario ?? 'They got cooked.'} Roast the dead hand and the mercy cards.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
+  if (mode === 'slow_turn') {
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
+${playerName} is hogging the turn — taking forever to play. ${scenario ?? 'Table frozen.'} Roast the stall; tell them to ask, GFY, or steal already.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+  }
+
+  if (mode === 'drink' || mode === 'drink_assign') {
+    const vibe = mode === 'drink_assign' ? 'assigned a drink penalty' : 'must drink now';
+    return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
+${playerName} ${vibe}: ${scenario}.${partnerLine} Tie roast to the drink and the set/book that caused it — not random bar talk.${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+  }
+
   if (mode === 'bluff_landed') {
     return `${COUPLE_BLOCK}${ctx}${memoryBlock}${refAndDynamic}
 ${playerName} bluffed — said "Go Fuck Yourself" but secretly held the cards — and ${otherPlayer ?? 'partner'} believed them. Bluff landed clean.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
@@ -190,7 +206,7 @@ Game over. ${playerName} ${scenario ?? 'won'}.${partnerLine} ${REFERENCE_PROMPT}
 
   if (mode === 'roast') {
     return `${COUPLE_BLOCK}${profileBlock}${memoryBlock}${refAndDynamic}
-Roast ${playerName} using their questionnaire filth.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
+Roast ${playerName} ONLY about this live table beat: "${scenario}". Use questionnaire filth as spice — the event is the headline.${partnerLine} ${REFERENCE_PROMPT}${LINE_SUFFIX}`;
   }
 
   if (mode === 'question') {
@@ -389,6 +405,30 @@ const OFFLINE = {
       "Nandini bhai, cards khatam, house ne refill maara. Kunal still upstairs — tum pond se charity le rahi ho. Character development.",
     ],
   },
+  slow_turn: {
+    default: [
+      "Bhai turn le liya aur brain freeze ho gaya. Paatal Lok interrogation mein bhi itna wait nahi. Card maango ya Go Fuck Yourself — table dead.",
+      "Evaru sequel energy — har second nayi suspense, zero action. Bartender bored, players thirsty.",
+    ],
+    kunal: [
+      "Kunal bhai, dom table pe turn freeze — public humiliation tour pause nahi hota, move karo bhenchod.",
+    ],
+    nandini: [
+      "Nandini bhai, turn pe soch rahi ho jaise Dhootha warning ignore kar rahi ho — play already.",
+    ],
+  },
+  drink: {
+    default: [
+      "Drink assign ho gaya bhai — set ki saza, bar ki reality. Chug ya scan, Mirzapur mein bhi dues clear karte hain.",
+      "Partner ne drink lock kar diya. Brooklyn Nine-Nine paperwork nahi — shot time.",
+    ],
+  },
+  drink_assign: {
+    default: [
+      "Tumne drink assign kiya — power move. Loser ko poison pick kiya, bartender approve karta hai fucking cinema.",
+      "Set complete, drink assigned — dom energy on the pour, not just the cards.",
+    ],
+  },
 };
 
 function _speakerKey(name) {
@@ -453,8 +493,13 @@ export function offlineLine(mode, profile, otherProfile = null, opts = {}) {
   }
 
   const line = bank[Math.floor(Math.random() * bank.length)];
+  const event = (opts.scenario ?? opts.streakInfo ?? '').trim();
+  if (event) {
+    const short = event.length > 72 ? `${event.slice(0, 69)}…` : event;
+    return `${playerName} — ${short}. ${line}`;
+  }
   const hook = _pickProfileHook(profile);
-  if (hook && Math.random() > 0.35) {
+  if (hook && mode === 'roast') {
     return `${playerName} — ${hook}. ${line}`;
   }
   return line;

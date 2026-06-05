@@ -14,6 +14,15 @@ import {
 import { clearExpiredChaos, maybeTriggerChaos } from './chaos-events.js';
 import { initLandingMotion, wireLandingJoin } from './landing.js';
 import { mountAvatar, prewarmAvatar } from './avatar.js';
+import {
+  homeBartenderLine,
+  canTriggerBartender,
+  buildLiveGameContext,
+  roastAnchorFromGame,
+  saveLastBartenderEvent,
+  gfyModeFromAction,
+  gfyStreakInfo
+} from './bartender-context.js';
 
 let _pendingRoomCode = null;
 
@@ -36,7 +45,8 @@ let state = {
   _shownPendingDrinkKeys: new Set(),
   gameHeat: 0,
   _lastBonusDrawSig: null,
-  _lastHouseRefillSig: null
+  _lastHouseRefillSig: null,
+  _turnWatch: null
 };
 
 let _lastCommentedActionSig = null;
@@ -1415,13 +1425,15 @@ function showChooseLoserDrink(msg) {
   $('drink-choice-scan')?.addEventListener('click', () => {
     panel.classList.add('hidden');
     openDrinkScan(drink => {
+      const drinkLabel = drink.label ?? 'Drink';
       API.send({
         type: 'chooseDrink',
         loserId: loser.id,
-        drinkLabel: drink.label ?? 'Drink',
+        drinkLabel,
         scenario: msg.scenario
       });
       haptic('heavy');
+      _bartenderDrinkAssign(loser, drinkLabel, msg.scenario);
     });
   }, { once: true });
 
@@ -1436,7 +1448,24 @@ function showChooseLoserDrink(msg) {
     });
     panel.classList.add('hidden');
     haptic('heavy');
+    _bartenderDrinkAssign(loser, drinkLabel, msg.scenario);
   }, { once: true });
+}
+
+function _bartenderDrinkAssign(loser, drinkLabel, scenario) {
+  const winner = state.players.find(p => p.id === state.myId);
+  if (!winner || !state.session) return;
+  recordEvent(state.session, {
+    type: 'drink',
+    playerName: winner.name,
+    summary: `${winner.name} assigned ${drinkLabel} to ${loser.name} after set`
+  });
+  _scheduleBartender(1200, 'drink_assign', {
+    playerName: winner.name,
+    scenario: `assigned ${drinkLabel} to ${loser.name} for set "${(scenario ?? '').slice(0, 40)}"`,
+    profile: getProfile(),
+    otherPlayer: loser.name
+  });
 }
 
 function showDrinkAssignedModal(pending) {
@@ -1462,6 +1491,21 @@ function showDrinkAssignedModal(pending) {
     </div>`;
   modal.classList.remove('hidden');
   haptic('heavy');
+
+  if (state.session) {
+    const me = state.players.find(p => p.id === state.myId)?.name ?? 'You';
+    recordEvent(state.session, {
+      type: 'drink',
+      playerName: me,
+      summary: `${me} must drink ${latest.drinkLabel} (${latest.assignedBy ?? latest.toastFor ?? 'partner'})`
+    });
+    _scheduleBartender(2200, 'drink', {
+      playerName: me,
+      scenario: `drink ${latest.drinkLabel} for set "${(latest.scenario ?? '').slice(0, 40)}" — assigned by ${latest.assignedBy ?? latest.toastFor ?? 'partner'}`,
+      profile: getProfile(),
+      otherPlayer: latest.assignedBy ?? latest.toastFor ?? _partnerName(state.myId)
+    });
+  }
 
   $('drink-log-now')?.addEventListener('click', () => {
     modal.classList.add('hidden');
@@ -1823,18 +1867,6 @@ function _sessionContextLabel() {
   return `${state.players?.length ?? 0} players`;
 }
 
-// ─── Home screen profile display ─────────────────────────────────────────────
-const BARTENDER_PREVIEW_LINES = [
-  "Kunal bhai energy loaded — public humiliation tour starts when you miss. Go Fuck Yourself.",
-  "Filth file read. Samay meets Mirzapur — observational destruction only.",
-  "Partner bolenge Go Fuck Yourself. Pond might agree. Bartender definitely will.",
-  "Farzi confidence on the cards. Scam victim ya CEO — tonight decides.",
-  "Band Baaja Baaraat couple chaos — same team, zero corporate tone.",
-  "Nandini bhai, pond character development dega. Card optional.",
-  "Dhurandhar climax confidence, pond reality check. Absolute cinema.",
-  "Table dead? Toxic relationship simulator. Go Fuck Yourself.",
-];
-
 function _homeTraitChips(profile) {
   const chips = [];
   for (const k of (profile.kinks ?? []).slice(0, 2)) {
@@ -1866,8 +1898,7 @@ function updateHomeForProfile(profile) {
     if (traitsEl) traitsEl.innerHTML = _homeTraitChips(profile);
     if (preview) preview.classList.remove('hidden');
     if (previewLine) {
-      const line = BARTENDER_PREVIEW_LINES[Math.floor(Math.random() * BARTENDER_PREVIEW_LINES.length)];
-      previewLine.textContent = line;
+      previewLine.textContent = homeBartenderLine(profile, getLifetime());
     }
 
     // Show lifetime stats if the player has history
@@ -2035,14 +2066,17 @@ function _recordBartenderFranchise(franchise) {
 }
 
 async function triggerBartender(mode, opts = {}) {
-  const now = Date.now();
-  if (now < _aiCooldownUntil) return;
-  _aiCooldownUntil = now + 5000;
-
   const playersContext = opts.playersContext ?? _buildPlayersContext();
   const playerName = opts.playerName ?? 'Player';
   const sessionMemory = opts.sessionMemory ?? _bartenderSessionContext(playerName);
   const profile = opts.profile ?? getProfile();
+  const gameContext = opts.gameContext ?? buildLiveGameContext(state, opts);
+
+  if (!canTriggerBartender(mode, { ...opts, sessionMemory })) return;
+
+  const now = Date.now();
+  if (now < _aiCooldownUntil) return;
+  _aiCooldownUntil = now + 5000;
 
   const result = await apiPost('/api/host', {
     mode,
@@ -2053,15 +2087,143 @@ async function triggerBartender(mode, opts = {}) {
     streakInfo: opts.streakInfo ?? null,
     otherPlayer: opts.otherPlayer ?? null,
     sessionMemory,
-    gameContext: opts.gameContext ?? `${_sessionContextLabel()} session`,
+    gameContext,
     recentFranchises: _bartenderRecentFranchises.slice(-5),
     referenceMode: opts.referenceMode ?? null,
   }).catch(() => null);
 
   if (result?.line) {
     _recordBartenderFranchise(result.franchise);
+    saveLastBartenderEvent({
+      mode,
+      scenario: opts.scenario ?? null,
+      summary: result.line.slice(0, 140)
+    });
     showBartenderTranscript(result.line, playerName);
   }
+}
+
+function _scheduleBartender(delayMs, mode, opts) {
+  setTimeout(() => triggerBartender(mode, opts), delayMs);
+}
+
+/** Table-visible action → bartender (you or partner). */
+function _bartenderForLastAction(action) {
+  if (!action || _dealingLocked) return;
+
+  const sig = JSON.stringify(action);
+  if (sig === _lastCommentedActionSig) return;
+
+  const actor = state.players.find(p => p.id === action.fromId);
+  const target = state.players.find(p => p.id === action.targetId);
+  const actorName = actor?.name ?? '?';
+  const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
+  const actorProfile = _profileForPlayer(actor);
+  const rankName = _rankLabel(action.rank);
+
+  if (action.type === 'gfy') {
+    _lastCommentedActionSig = sig;
+    let subjectId = action.fromId;
+    let subjectName = subjectId === state.myId ? myName : actorName;
+    const stats = state.playerStats[subjectId] ?? {};
+    let mode;
+    let scenario;
+
+    if (action.bluffSucceeded && action.fromId === state.myId) {
+      mode = 'bluff_landed';
+      scenario = `${myName} bluffed ${target?.name ?? 'partner'} on "${rankName}" — Go Fuck Yourself landed`;
+    } else if (action.bluffSucceeded && action.targetId === state.myId) {
+      subjectId = action.fromId;
+      subjectName = actorName;
+      mode = 'bluff_landed';
+      scenario = `${actorName} bluffed ${myName} on "${rankName}" — believed Go Fuck Yourself`;
+    } else {
+      mode = gfyModeFromAction(action, stats);
+      if (action.continueTurn) scenario = `${subjectName} lucky pond draw on "${rankName}"`;
+      else if (action.closeToPond) scenario = `${subjectName} had 3 of "${rankName}", pond miss`;
+      else scenario = `${subjectName} Go Fuck Yourself miss on "${rankName}"`;
+    }
+
+    const streakInfo = gfyStreakInfo(action, state.playerStats[subjectId] ?? {});
+    const referenceMode = (action.continueTurn && (state.playerStats[subjectId]?.gfyMisses ?? 0) >= 3)
+      ? 'comeback'
+      : null;
+    const delay = action.fromId === state.myId && action.closeToPond ? 2800
+      : (mode === 'bluff_landed' ? 2400 : 3700);
+
+    _scheduleBartender(delay, mode, {
+      playerName: subjectName,
+      scenario,
+      profile: subjectId === state.myId ? getProfile() : _profileForPlayer(state.players.find(p => p.id === subjectId)),
+      streakInfo,
+      referenceMode,
+      otherPlayer: target?.name ?? _partnerName(subjectId)
+    });
+    return;
+  }
+
+  if (action.type === 'bullshit_caught' || action.type === 'bullshit_wrong') {
+    if (action.fromId !== state.myId && action.targetId !== state.myId) return;
+    _lastCommentedActionSig = sig;
+    const subjectName = action.fromId === state.myId ? myName : actorName;
+    const vibe = action.type === 'bullshit_caught' ? 'caught a liar' : 'wrong bullshit call — draws 4';
+    _scheduleBartender(3200, 'bullshit', {
+      playerName: subjectName,
+      scenario: `${subjectName} — ${vibe} on "${rankName}"`,
+      profile: action.fromId === state.myId ? getProfile() : actorProfile,
+      streakInfo: vibe,
+      otherPlayer: (action.fromId === state.myId ? target : actor)?.name
+    });
+    return;
+  }
+
+  if (action.type === 'steal' || action.type === 'got') {
+    if (action.fromId !== state.myId && action.targetId !== state.myId) return;
+    _lastCommentedActionSig = sig;
+    const thief = action.fromId === state.myId;
+    const count = action.count ?? 1;
+    const scenario = action.type === 'got'
+      ? `${actorName} stole ${count} card${count > 1 ? 's' : ''} on ask`
+      : thief
+        ? `${myName} stole from ${target?.name ?? 'partner'}`
+        : `${actorName} robbed ${myName}`;
+    _scheduleBartender(2000, 'steal', {
+      playerName: thief ? myName : actorName,
+      scenario,
+      profile: thief ? getProfile() : actorProfile,
+      otherPlayer: _partnerName(action.fromId)
+    });
+  }
+}
+
+function _watchTurnStall(gameState) {
+  if (_dealingLocked || state.screen !== 'game') return;
+  const turnId = gameState?.currentTurnPlayerId;
+  const phase = gameState?.phase;
+  if (!turnId || phase !== 'play') {
+    state._turnWatch = null;
+    return;
+  }
+
+  const sig = `${turnId}-${gameState.pendingAsk ? 'ask' : 'play'}`;
+  const now = Date.now();
+  const stallName = state.players.find(p => p.id === turnId)?.name ?? 'Player';
+
+  if (!state._turnWatch || state._turnWatch.sig !== sig) {
+    state._turnWatch = { sig, playerId: turnId, since: now, fired: false };
+    return;
+  }
+
+  if (state._turnWatch.fired || now - state._turnWatch.since < 32_000) return;
+  state._turnWatch.fired = true;
+
+  const secs = Math.round((now - state._turnWatch.since) / 1000);
+  _scheduleBartender(600, 'slow_turn', {
+    playerName: stallName,
+    scenario: `${stallName} has had the turn for ${secs}s — table waiting`,
+    profile: _profileForPlayer(state.players.find(p => p.id === turnId)),
+    otherPlayer: _partnerName(turnId)
+  });
 }
 
 function _ensureStats(playerId) {
@@ -2249,6 +2411,7 @@ function wireHandlers() {
     state.gameHeat = 0;
     state._lastBonusDrawSig = null;
     state._lastHouseRefillSig = null;
+    state._turnWatch = null;
     showScreen('game');
     Sfx.startAmbient();
     runSetupSequence(msg);
@@ -2380,6 +2543,8 @@ function wireHandlers() {
       showBanner('💸 Card Tax — next GFY miss draws 2');
     }
 
+    _watchTurnStall(msg.gameState);
+
     if (msg.gameState.lastAction) {
       const action = msg.gameState.lastAction;
       const sig = JSON.stringify(action);
@@ -2390,78 +2555,7 @@ function wireHandlers() {
         showActionBanner(action);
       }
 
-      if (sig !== _lastCommentedActionSig) {
-        const myName = state.players.find(p => p.id === state.myId)?.name ?? 'You';
-        const stats = state.playerStats[state.myId] ?? {};
-
-        if (action.type === 'gfy' && action.fromId === state.myId) {
-          _lastCommentedActionSig = sig;
-          let mode;
-          if (action.continueTurn) {
-            mode = 'lucky';
-          } else if (action.closeToPond) {
-            mode = 'close_call';
-          } else if (action.bluffSucceeded) {
-            mode = 'bluff_win';
-          } else {
-            mode = 'gfy';
-          }
-
-          const streakInfo = (!action.continueTurn && !action.closeToPond && (stats.consecutiveMisses ?? 0) > 1)
-            ? `${stats.consecutiveMisses} misses in a row tonight`
-            : (action.continueTurn && (stats.luckyDraws ?? 0) > 1)
-              ? `Lucky draw number ${stats.luckyDraws} tonight`
-              : null;
-
-          const referenceMode = (action.continueTurn && (stats.gfyMisses ?? 0) >= 3)
-            ? 'comeback'
-            : null;
-
-          setTimeout(() => triggerBartender(mode, {
-            playerName: myName,
-            scenario:   SCENARIOS.find(s => s.rank === action.rank)?.name,
-            profile:    getProfile(),
-            streakInfo,
-            referenceMode,
-            otherPlayer: state.players.find(p => p.id === action.targetId)?.name ?? _partnerName(state.myId)
-          }), action.closeToPond ? 2800 : 3700);
-
-        } else if (action.type === 'gfy' && action.bluffSucceeded && action.targetId === state.myId) {
-          // I bluffed and it landed — bartender celebrates my deception
-          _lastCommentedActionSig = sig;
-          setTimeout(() => triggerBartender('bluff_landed', {
-            playerName: myName,
-            profile: getProfile(),
-            otherPlayer: state.players.find(p => p.id === action.fromId)?.name ?? _partnerName(state.myId)
-          }), 2400);
-
-        } else if (
-          (action.type === 'bullshit_caught' || action.type === 'bullshit_wrong')
-          && (action.fromId === state.myId || action.targetId === state.myId)
-        ) {
-          _lastCommentedActionSig = sig;
-          setTimeout(() => triggerBartender('bullshit', {
-            playerName: myName,
-            scenario: _rankLabel(action.rank),
-            profile: getProfile(),
-            streakInfo: action.type === 'bullshit_caught' ? 'caught a liar' : 'wrong bullshit call',
-            otherPlayer: state.players.find(p => p.id === (action.fromId === state.myId ? action.targetId : action.fromId))?.name
-          }), 3200);
-
-        } else if (
-          action.type === 'steal'
-          && (action.fromId === state.myId || action.targetId === state.myId)
-        ) {
-          _lastCommentedActionSig = sig;
-          const thief = action.fromId === state.myId;
-          setTimeout(() => triggerBartender('steal', {
-            playerName: myName,
-            scenario: thief ? `stole from ${state.players.find(p => p.id === action.targetId)?.name}` : `got robbed by ${state.players.find(p => p.id === action.fromId)?.name}`,
-            profile: getProfile(),
-            otherPlayer: state.players.find(p => p.id !== state.myId)?.name
-          }), 2000);
-        }
-      }
+      _bartenderForLastAction(action);
     }
   });
 
@@ -2581,26 +2675,20 @@ function wireUI() {
     const me = state.players.find(p => p.id === state.myId);
     if (!me) return;
 
-    const myBooks = me.books ?? [];
-    const scenario = myBooks[myBooks.length - 1] ?? 'general chaos';
-    const myProfile = getProfile();
-    const stats = state.playerStats[state.myId] ?? {};
-
-    const playersContext = _buildPlayersContext();
-
-    const streakParts = [];
-    if ((stats.consecutiveMisses ?? 0) > 1) streakParts.push(`${stats.consecutiveMisses} consecutive misses`);
-    if ((stats.luckyDraws ?? 0) > 2) streakParts.push(`${stats.luckyDraws} lucky draws tonight`);
-    if ((stats.books ?? 0) > 1) streakParts.push(`${stats.books} books collected`);
+    const anchor = roastAnchorFromGame(state, me.name);
+    if (!anchor) {
+      showBanner('Play a move first — I roast misses, sets, bluffs, steals, and drinks from this table.');
+      return;
+    }
 
     await triggerBartender('roast', {
       playerName: me.name,
-      scenario,
-      profile: myProfile,
-      playersContext,
-      streakInfo: streakParts.length ? streakParts.join(', ') : null,
+      scenario: anchor.scenario,
+      profile: getProfile(),
+      playersContext: _buildPlayersContext(),
+      streakInfo: anchor.streakInfo,
       otherPlayer: _partnerName(state.myId),
-      gameContext: `${_sessionContextLabel()}, books: ${myBooks.length}`,
+      gameContext: buildLiveGameContext(state, anchor),
     });
   });
 
@@ -2703,6 +2791,12 @@ export function init() {
   wireHandlers();
   wireUI();
 
+  setInterval(() => {
+    if (state.screen === 'game' && state.gameState) {
+      _watchTurnStall(state.gameState);
+    }
+  }, 5000);
+
   const bacContainer = $('bac-panel-container');
   if (bacContainer) {
     initBac(bacContainer, drink => {
@@ -2710,6 +2804,21 @@ export function init() {
         ? { ...drink, oz: (drink.oz ?? 12) * 2, label: `${drink.label} (Power Hour)` }
         : drink;
       API.send({ type: 'logDrink', drink: payload });
+      if (state.session) {
+        const me = state.players.find(p => p.id === state.myId)?.name ?? 'You';
+        const label = payload.label ?? drink.label ?? 'drink';
+        recordEvent(state.session, {
+          type: 'drink',
+          playerName: me,
+          summary: `${me} scanned and logged ${label}`
+        });
+        _scheduleBartender(900, 'drink', {
+          playerName: me,
+          scenario: `logged ${label} via drink scan`,
+          profile: getProfile(),
+          otherPlayer: _partnerName(state.myId)
+        });
+      }
     });
   }
 

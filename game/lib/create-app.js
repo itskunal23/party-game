@@ -93,6 +93,8 @@ export function createApp() {
       const line = offlineLine(mode, profile, _otherFromContext(playersContext, playerName), {
         ...refOpts,
         pickedReference: picked,
+        scenario,
+        streakInfo,
       });
       return res.json({ line, franchise: picked?.franchise ?? null });
     }
@@ -120,6 +122,8 @@ export function createApp() {
       const line = offlineLine(mode, profile, _otherFromContext(playersContext, playerName), {
         ...refOpts,
         pickedReference: picked,
+        scenario,
+        streakInfo,
       });
       res.json({ line, franchise: picked?.franchise ?? null });
     }

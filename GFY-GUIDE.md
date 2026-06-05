@@ -280,48 +280,57 @@ Phone-first **bar-table** layout: minimal stats → connected playfield (opponen
 | Game phrase | Say full **Go Fuck Yourself** when partner refuses or pond punishes — **never abbreviate "GFY"** in roast lines |
 | Copyright | **No verbatim dialogue** — inspired situations, catchphrase *energy*, named titles |
 | Format | **Name → what just happened → movie comparison → profanity → punchline** (often ends with standalone *Go Fuck Yourself.*) |
-| Never | Generic "you're bad", corporate AI tone, long paragraphs |
+| Never | Generic "you're bad", corporate AI tone, long paragraphs, **random quotes with no table event** |
+| Event anchor | Every line must cite what just happened (set, GFY, drink, stall, steal, etc.) — client skips calls with no scenario |
 | References | **Assigned reference bank** per player (Nandini: Brooklyn Nine-Nine, Modern Family, Nailed It, etc.; Kunal: his mediaFaves + OTT beats) — specific moments, not title name-drops |
 | Anti-repeat | Same **franchise** not reused within the last **5** bartender lines in a session |
 | mediaFaves | Questionnaire picks boost matching franchises in the bank |
 
 ### When bartender fires automatically
 
+Every line is **anchored to a concrete table event** (rank, set title, drink, stall seconds, chaos title). No random home-screen quotes. If the API has no event detail, the client **skips** the line.
+
 | Trigger | Mode | Who gets roasted |
 |---------|------|------------------|
-| You complete a set (book) | `book` | Set winner — uses their profile |
-| You ask, get GFY'd, draw from pond and **miss** | `gfy` | The asker (you) |
-| You ask, get GFY'd, draw and **match** (lucky) | `lucky` | The asker (you) |
-| Game ends | `game_over` | Winner-focused send-off |
+| Anyone completes a set (book) | `book` | Set winner |
+| GFY + pond miss / lucky draw / close call (3 in hand, pond whiff) | `gfy` / `lucky` / `close_call` | The asker (you or partner) |
+| Bluff lands (Go Fuck Yourself but cards were hidden) | `bluff_landed` | The bluffer |
+| Bullshit call (caught or wrong) | `bullshit` | Caller |
+| Successful ask steal / Gotcha | `steal` | Thief or victim |
+| Table heat ≥ 3 (stalemate loop) | `heat` | Table energy — uses heat level in scenario |
+| Chaos event banner | `chaos` | Event title |
+| House refill (hand almost empty) | `house_refill` | Player refilled |
+| Turn hogging ~32s in play phase | `slow_turn` | Player stalling |
+| Drink assigned after set (winner picks) | `drink_assign` | Winner |
+| Drink modal shown (loser must drink) | `drink` | Loser |
+| Game ends | `game_over` | Winner send-off |
 
 Auto-triggers have a **~5 second cooldown** between lines so roasts don't stack.
 
 ### Manual roast
 
-Tap **🍸 Roast** in the game toolbar anytime. Uses:
-
-- Your profile from this phone
-- Partner's sanitized profile from the server
-- Tonight's stats (miss streaks, lucky draws, books collected)
+Tap **🍸 Roast** only after something happened this match (miss, set, bluff, steal, drink). Uses the **last highlight or session log entry** — not random questionnaire filler.
 
 ### Transcript UI
 
 - Full-screen **Bhenchod Bartender** overlay with the line
 - **Tap anywhere** (or Enter/Space) to dismiss — no auto-hide
-- Home screen shows rotating **preview lines** before you enter a room
+- Home screen shows **last table event** or a short note that the bartender only speaks on real moves
 
-### Modes supported in code (not all wired to UI buttons)
+### Modes supported in code
 
-| Mode | Used today? | Purpose |
-|------|-------------|---------|
-| `book` | ✅ Auto on set | Roast completing a 4-card set |
-| `gfy` | ✅ Auto on miss | Roast after Go Fuck Yourself + bad draw |
-| `lucky` | ✅ Auto on lucky pond | Roast lucky matching draw |
-| `game_over` | ✅ Auto on results | Closing toast |
-| `roast` | ✅ Manual button | On-demand destruction |
-| `steal` | ❌ Not auto-triggered | When someone raids a hand (prompt exists) |
-| `question` | ❌ Not in UI | Filthy question tied to scenario |
-| `dare` | ❌ Not in UI | Dare tied to scenario |
+| Mode | Wired? | Purpose |
+|------|--------|---------|
+| `book` | ✅ | Set complete |
+| `gfy` / `lucky` / `close_call` | ✅ | Pond outcomes |
+| `bluff_landed` | ✅ | Bluff landed |
+| `bullshit` | ✅ | Lie calls |
+| `steal` | ✅ | Ask steals |
+| `heat` / `chaos` / `house_refill` / `slow_turn` | ✅ | Table pacing |
+| `drink` / `drink_assign` | ✅ | Drink penalties |
+| `game_over` | ✅ | Results |
+| `roast` | ✅ Manual (anchored) | Callback on last beat |
+| `question` / `dare` | Side games only | Filthy prompt |
 
 ### What the bartender uses from your filth file
 
